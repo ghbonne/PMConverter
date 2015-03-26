@@ -1,0 +1,39 @@
+Meeting Notes 26/03
+--------------------
+
+DEADLINE: 28/04
+
+- progress:
+	* Gilles B bezig met platform te kiezen
+	* Alexander met het bestuderen v/h het formaat	
+	* Mock-ups: nog te weinig informatie om er te maken (wat wachten op Sylvie)
+
+
+
+- work schedule:
+	* Architectuur tegen zondag-avond finishen (Gilles V)
+	* Zoeken wat al kan geïmplementeerd worden (Gilles V)
+	* Voor elke library license opkijken!
+	* Sylvie moet DRINGEND beginnen aan visualisaties, liefst tegen begin paasvakantie (ook mailing)
+	* Alexander nog werk aan het uitdokteren
+	* Eveline doet verder aan de mockups
+	* write_to_excel(objects, path_to_excel) in het formaat dat wij gekregen hebben (Gilles B. na mail van Jordy)
+
+- trivia:
+	* Sylvie nog niet op slack, ingelicht over alles (mails van Jordy, ...)
+	* Sylvie maakt eerst analyses aan de hand van gegeven excel file, wij baseren ons op haar analyses voor de code
+	* Tom heeft geen documentatie
+	* Indien C#, front-end & back-end scheiden
+
+- C# of Python:
+	* Mail sturen naar de assistent ASAP (Gilles V., de rest CC'en):
+	  ----------------------------------
+		- Is de look & feel zo belangrijk?
+		- Is het belangrijk om later in de toekomst (na delivery) visualisaties toe te voegen aan ons project?
+			--> Evt kan een nieuw framework voor visualisaties in een andere programmeertaal geschreven worden die meer visualisaties ondersteunt
+	* C#: (sneller,) meer visualisaties en mooiere GUI
+	  Python: makkelijker aan te leren, cross-platform	
+
+
+
+
