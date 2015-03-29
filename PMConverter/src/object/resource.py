@@ -1,6 +1,17 @@
 __author__ = 'PM Group 8'
 
-class resource(object):
+
+class Resource(object):
+    """
+    A type of resource described in the project
+
+    :var resource_id: int
+    :var name: String
+    :var type: "Renewable" or "Consumable"
+    :var availability: int, number of units available
+    :var cost_use: float, one-time cost that is incurred every time that the resource is used by an activity
+    :var cost_unit: float, cost per unit
+    """
     "A type of resource described in the project"
     # instance variables:
     # _resourceId: unique number indicating a resource type
@@ -12,8 +23,7 @@ class resource(object):
     # _resourceTotalCost: number indicating total cost attributed to this resource
     # class variables:
 
-
-    def __init__(self):
+    def __init__(self, resource_id, name="", type="", availability="", cost_use=0.0, cost_unit=0.0):
         pass
 
 

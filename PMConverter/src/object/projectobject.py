@@ -1,7 +1,5 @@
 __author__ = 'PM Group 8'
 
-from object.baselineschedule import BaselineScheduleRecord
-
 
 class ProjectObject(object):
     """
