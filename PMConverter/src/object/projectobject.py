@@ -1,23 +1,27 @@
 __author__ = 'PM Group 8'
-from datetime import datetime, timedelta
+
+from object.baselineschedule import BaselineScheduleRecord
 
 
 class ProjectObject(object):
-    "Object that holds all information about a project needed to perform baseline scheduling with risk analysis and project control"
-    # instance variables:
-    # _baselineSchedule: BaselineScheduleRecord
-    # _baselineCosts: dictionary containing fields "Fixed Cost", "Cost/Hour", "Variable Cost" and "Total Cost" if nonezero
-    # _activityList: List of activities in this project
-    # _trackingPeriodsList: List of all tracking periods in this project
-    # _resourcesList: List of all defined resources in this project
-    # class variables:
-    ProjectName = ""
+    """
+    Object that holds all information about a project needed to perform baseline scheduling with risk analysis
+    and project control
 
-    def __init__(self, name="", baselineSchedule=BaselineScheduleRecord(), baselineCosts={}, activityList=list(), trackingPeriodsList=list(), resourcesList=list()):
-        ProjectObject.ProjectName = name
-        self._baselineSchedule = baselineSchedule
-        self._baselineCosts = baselineCosts
-        self._activityList = activityList
-        self._trackingPeriodsList = trackingPeriodsList
-        self._resourcesList = resourcesList
+    :var name: String
+    :var baseline_schedule: BaselineScheduleRecord
+    :var baseline_costs: dictionary containing "Fixed Cost", "Cost/Hour", "Variable Cost" and "Total Cost" if nonzero
+    :var activities: list of Activity
+    :var tracking_periods: list of TrackingPeriod
+    :var resources: list of Resource
+    """
+
+    def __init__(self, name="", baseline_schedule=BaselineScheduleRecord(), baseline_costs={}, activities=[],
+                 tracking_periods=[], resources=[]):
+        self.name = name
+        self._baselineSchedule = baseline_schedule
+        self._baselineCosts = baseline_costs
+        self._activityList = activities
+        self._trackingPeriodsList = tracking_periods
+        self._resourcesList = resources
  

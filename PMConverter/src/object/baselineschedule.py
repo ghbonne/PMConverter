@@ -11,7 +11,7 @@ class BaselineScheduleRecord(object):
     def __init__(self):
         pass
 
-    def getDurationString(self):
+    def get_duration_string(self):
         "Return the duration in desired string format"
 
         if self._duration.seconds > 0:
