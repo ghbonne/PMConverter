@@ -1,3 +1,4 @@
 *.pyproj
 *.sln
 *.suo
+.idea/*
