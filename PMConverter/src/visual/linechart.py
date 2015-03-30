@@ -4,7 +4,7 @@ from visual.visualization import Visualization
 import xlsxwriter
 
 class LineChart(Visualization):
-    def visualize(self, title, labels, data_series, xml_file_path):
+    def visualize(self, title, labels, data_series, workbook):
         """
         add a linechart visualisation to the Excel-file
         :param title: title of the chart
@@ -21,11 +21,10 @@ class LineChart(Visualization):
                         ],
                         ...
                     ]
-        :param xml_file_path: xlsxworkbook
+        :param workbook: xlsxworkbook
         :return:
         """
 
-        workbook = xml_file_path
         worksheet = workbook.add_worksheet()
 
         # Create a new chart object.
