@@ -1,6 +1,6 @@
 __author__ = 'PM Group 8'
 
-from src.convert.fileparser import FileParser
+from convert.fileparser import FileParser
 
 
 class XMLParser(FileParser):

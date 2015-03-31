@@ -1,6 +1,6 @@
 __author__ = 'PM Group 8'
 
-from src.processor.processor import Processor
+from processor.processor import Processor
 
 
 class UIView(object):

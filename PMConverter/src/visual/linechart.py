@@ -23,7 +23,7 @@ class LineChart(Visualization):
                 ]
     """
 
-    def __init__(self,title, labels, data_series):
+    def __init__(self, title, labels, data_series):
         self.title = title
         self.labels = labels
         self.data_series = data_series
