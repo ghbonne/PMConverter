@@ -35,9 +35,9 @@ data_series = [
 
 labels = ['x', 'y']
 
-chart = LineChart()
+chart = LineChart('test', labels, data_series)
 
-chart.visualize('test', labels, data_series, workbook)
+chart.visualize(workbook)
 
 try:
     workbook.close()
@@ -45,3 +45,4 @@ except PermissionError:
     print("Permission denied. Please first close the excel file and try again.")
 
 os.system("start excel.exe " + file)
+
