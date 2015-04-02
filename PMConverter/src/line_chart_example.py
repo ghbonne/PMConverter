@@ -4,7 +4,7 @@ import xlsxwriter
 import os
 from visual.linechart import LineChart
 
-file = 'output'+os.sep+'chart_test.xlsx'
+file = os.path.join(os.path.dirname(__file__), "output/chart_test.xlsx")
 
 workbook = xlsxwriter.Workbook(file)
 worksheet = workbook.add_worksheet()

@@ -14,7 +14,7 @@ class ProjectObject(object):
 
     def __init__(self, name="", activities=[], tracking_periods=[], resources=[]):
         self.name = name
-        self._activityList = activities
-        self._trackingPeriodsList = tracking_periods
-        self._resourcesList = resources
+        self.activities = activities
+        self.tracking_periods = tracking_periods
+        self.resources = resources
  

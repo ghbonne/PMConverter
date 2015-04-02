@@ -1,6 +1,6 @@
 __author__ = 'PM Group 8'
 
-from src.visual.visualization import Visualization
+from visual.visualization import Visualization
 
 
 class PieChart(Visualization):

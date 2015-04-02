@@ -5,6 +5,7 @@ class BaselineScheduleRecord(object):
     """
     Record used in the baseline schedule. Contains the start, end (and calculated from this, the duration),
     the fixed costs, cost per hour and variable costs for every activity
+
     :var start: String (date: dd/mm/yyyy)
     :var end: String (date: dd/mm/yyyy)
     :var fixed_cost: float
