@@ -1,3 +1,5 @@
+import datetime
+
 __author__ = 'PM Group 8'
 
 
@@ -5,14 +7,15 @@ class BaselineScheduleRecord(object):
     """
     Record used in the baseline schedule. Contains the start, end (and calculated from this, the duration),
     the fixed costs, cost per hour and variable costs for every activity
-    :var start: String (date: dd/mm/yyyy)
-    :var end: String (date: dd/mm/yyyy)
+
+    :var start: datetime (date: dd/mm/yyyy)
+    :var end: datetime (date: dd/mm/yyyy)
     :var fixed_cost: float
     :var cost_hourly: float
     :var var_cost: float
     """
 
-    def __init__(self, start="01/01/2001", end="01/01/2001", fixed_cost=0.0, cost_hourly=0.0, var_cost=0.0):
+    def __init__(self, start=datetime.datetime.now(), end=datetime.datetime.now(), fixed_cost=0.0, cost_hourly=0.0, var_cost=0.0):
         self.start = start
         self.end = end
         self.fixed_cost = fixed_cost

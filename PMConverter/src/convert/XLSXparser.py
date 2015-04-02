@@ -6,10 +6,10 @@ from convert.fileparser import FileParser
 class XLSXParser(FileParser):
 
     def __init__(self):
+        super().__init__()
+
+    def to_schedule_object(self, file_path_input):
         pass
 
-    def to_schedule_object(self, file_path):
-        pass
-
-    def from_schedule_object(self, project_object):
+    def from_schedule_object(self, project_object, file_path_output):
         pass
