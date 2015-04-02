@@ -33,16 +33,4 @@ class Activity(object):
         self.risk_analysis = risk_analysis
         self.activity_tracking = activity_tracking
 
-    def get_duration(self):
-        pass
-
-    def get_resource_cost(self):
-        pass
-
-    def list_resources(self):
-        pass
-
-    def get_total_cost(self):
-        pass
-
 
