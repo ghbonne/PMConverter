@@ -1,3 +1,5 @@
+from object.resource import Resource
+
 __author__ = 'PM Group 8'
 
 from object.baselineschedule import BaselineScheduleRecord
@@ -32,14 +34,19 @@ class Activity(object):
         if not isinstance(wbs_id, tuple):
             raise TypeError('wbs_id should be a tuple!')
 
-        if not isinstance(predecessors, list) and not all(isinstance(element, tuple) for element in predecessors):
-            raise TypeError('predecessors should be a list with tuples!')
+        # TODO: check if predecessors[:][0] is Activity, [:][1] = FS, FF, SS or SF and [:][2] = int
+        if not isinstance(predecessors, list) or not all(isinstance(element, tuple) for element in predecessors):
+            raise TypeError('predecessors should be a list with tuples (activity: Activity, '
+                            'relation: [FS, FF, SS, SF], lag: int)!')
 
-        if not isinstance(successors, list) and not all(isinstance(element, tuple) for element in successors):
-            raise TypeError('successors should be a list with tuples!')
+        if not isinstance(successors, list) or not all(isinstance(element, tuple) for element in successors):
+            raise TypeError('successors should be a list with tuples (activity: Activity, '
+                            'relation: [FS, FF, SS, SF], lag: int)!')
 
-        if not isinstance(resources, list) and not all(isinstance(element, tuple) for element in resources):
-            raise TypeError('resources should be a list with tuples!')
+        if(not isinstance(resources, list) or not all(isinstance(element, tuple) for element in resources)
+           or not all(isinstance(element[0], Resource) for element in resources)
+           or not all(isinstance(element[1], int) for element in resources)):
+            raise TypeError('resources should be a list with tuples (resource: Resource, demand: int)!')
 
         if not isinstance(baseline_schedule, BaselineScheduleRecord):
             raise TypeError('baseline_schedule must be a BaselineScheduleRecord object!')

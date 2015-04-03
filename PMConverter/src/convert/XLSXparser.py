@@ -1,7 +1,8 @@
 __author__ = 'PM Group 8'
 
 import xlsxwriter
-import xlrd
+import openpyxl
+#import xlrd
 from convert.fileparser import FileParser
 
 
@@ -11,6 +12,8 @@ class XLSXParser(FileParser):
         super().__init__()
 
     def to_schedule_object(self, file_path_input):
+        workbook = openpyxl.load_workbook(file_path_input)
+        """
         workbook = xlrd.open_workbook(file_path_input)
 
         # Iterate over all worksheets and process them
@@ -23,7 +26,8 @@ class XLSXParser(FileParser):
                 self.process_risk_analysis(workbook.sheet_by_name(name))
             elif "TP" in name:
                 self.process_project_control(workbook.sheet_by_name(name))
-
+        """
+    """
     def process_baseline_schedule(self, sheet):
         for curr_row in range(self.get_number_of_header_lines(sheet), sheet.nrows - 1):
             activity_id = sheet.cell_value(curr_row, 0)
@@ -53,7 +57,7 @@ class XLSXParser(FileParser):
         while not sheet.cell_value(header_lines, 0).isdigit():
             header_lines += 1
         return header_lines
-
+    """
     def from_schedule_object(self, project_object, file_path_output):
         workbook = xlsxwriter.Workbook(file_path_output)
 
