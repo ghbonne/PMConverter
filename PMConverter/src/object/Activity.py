@@ -22,8 +22,8 @@ class Activity(object):
     :var activity_tracking: ActivityTrackingRecord
     """
 
-    def __init__(self, activity_id, name="", wbs_id=(), predecessors = [()],
-                 successors = [()], resources=[()], baseline_schedule=BaselineScheduleRecord(),
+    def __init__(self, activity_id, name="", wbs_id=(), predecessors = [],
+                 successors = [], resources=[], baseline_schedule=BaselineScheduleRecord(),
                  risk_analysis=RiskAnalysisDistribution(), activity_tracking = ActivityTrackingRecord()):
         if not isinstance(activity_id, int):
             raise TypeError('activity_id should be a number!')
@@ -34,13 +34,27 @@ class Activity(object):
         if not isinstance(wbs_id, tuple):
             raise TypeError('wbs_id should be a tuple!')
 
-        # TODO: check if predecessors[:][0] is Activity, [:][1] = FS, FF, SS or SF and [:][2] = int
         if not isinstance(predecessors, list) or not all(isinstance(element, tuple) for element in predecessors):
+            raise TypeError('predecessors should be a list with tuples!')
+
+        if(len(predecessors) > 0 and
+            (not all(len(element) for element in predecessors)
+             or not all(isinstance(element[0], Activity) for element in predecessors)
+             or not all(element[1] in ["FS", "FF", "SS", "SF"] for element in predecessors)
+             or not all(isinstance(element[2], int) for element in predecessors))):
             raise TypeError('predecessors should be a list with tuples (activity: Activity, '
                             'relation: [FS, FF, SS, SF], lag: int)!')
 
         if not isinstance(successors, list) or not all(isinstance(element, tuple) for element in successors):
             raise TypeError('successors should be a list with tuples (activity: Activity, '
+                            'relation: [FS, FF, SS, SF], lag: int)!')
+
+        if(len(successors) > 0 and
+            (not all(len(element) for element in successors)
+             or not all(isinstance(element[0], Activity) for element in successors)
+             or not all(element[1] in ["FS", "FF", "SS", "SF"] for element in successors)
+             or not all(isinstance(element[2], int) for element in successors))):
+            raise TypeError('predecessors should be a list with tuples (activity: Activity, '
                             'relation: [FS, FF, SS, SF], lag: int)!')
 
         if(not isinstance(resources, list) or not all(isinstance(element, tuple) for element in resources)
