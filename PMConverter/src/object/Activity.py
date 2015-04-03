@@ -23,6 +23,32 @@ class Activity(object):
     def __init__(self, activity_id, name="", wbs_id=(), predecessors = [()],
                  successors = [()], resources=[()], baseline_schedule=BaselineScheduleRecord(),
                  risk_analysis=RiskAnalysisDistribution(), activity_tracking = ActivityTrackingRecord()):
+        if not isinstance(activity_id, int):
+            raise TypeError('activity_id should be a number!')
+
+        if not isinstance(name, str):
+            raise TypeError('name should be a string!')
+
+        if not isinstance(wbs_id, tuple):
+            raise TypeError('wbs_id should be a tuple!')
+
+        if not isinstance(predecessors, list) and not all(isinstance(element, tuple) for element in predecessors):
+            raise TypeError('predecessors should be a list with tuples!')
+
+        if not isinstance(successors, list) and not all(isinstance(element, tuple) for element in successors):
+            raise TypeError('successors should be a list with tuples!')
+
+        if not isinstance(resources, list) and not all(isinstance(element, tuple) for element in resources):
+            raise TypeError('resources should be a list with tuples!')
+
+        if not isinstance(baseline_schedule, BaselineScheduleRecord):
+            raise TypeError('baseline_schedule must be a BaselineScheduleRecord object!')
+
+        if not isinstance(risk_analysis, RiskAnalysisDistribution):
+            raise TypeError('risk_analysis must be a RiskAnalysisDistribution object!')
+
+        if not isinstance(activity_tracking, ActivityTrackingRecord):
+            raise TypeError('activity_tracking must be a ActivityTrackingRecord object!')
         self.activity_id = activity_id
         self.name = name
         self.wbs_id = wbs_id
