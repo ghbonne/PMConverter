@@ -24,52 +24,54 @@ class Activity(object):
 
     def __init__(self, activity_id, name="", wbs_id=(), predecessors = [],
                  successors = [], resources=[], baseline_schedule=BaselineScheduleRecord(),
-                 risk_analysis=RiskAnalysisDistribution(), activity_tracking = ActivityTrackingRecord()):
-        if not isinstance(activity_id, int):
-            raise TypeError('activity_id should be a number!')
+                 risk_analysis=RiskAnalysisDistribution(), activity_tracking = ActivityTrackingRecord(),
+                 type_check = True):
+        if type_check:
+            if not isinstance(activity_id, int):
+                raise TypeError('activity_id should be a number!')
 
-        if not isinstance(name, str):
-            raise TypeError('name should be a string!')
+            if not isinstance(name, str):
+                raise TypeError('name should be a string!')
 
-        if not isinstance(wbs_id, tuple):
-            raise TypeError('wbs_id should be a tuple!')
+            if not isinstance(wbs_id, tuple) or not all(isinstance(element, int) for element in wbs_id):
+                raise TypeError('wbs_id should be a tuple!')
 
-        if not isinstance(predecessors, list) or not all(isinstance(element, tuple) for element in predecessors):
-            raise TypeError('predecessors should be a list with tuples!')
+            if not isinstance(predecessors, list) or not all(isinstance(element, tuple) for element in predecessors):
+                raise TypeError('predecessors should be a list with tuples!')
 
-        if(len(predecessors) > 0 and
-            (not all(len(element) for element in predecessors)
-             or not all(isinstance(element[0], Activity) for element in predecessors)
-             or not all(element[1] in ["FS", "FF", "SS", "SF"] for element in predecessors)
-             or not all(isinstance(element[2], int) for element in predecessors))):
-            raise TypeError('predecessors should be a list with tuples (activity: Activity, '
-                            'relation: [FS, FF, SS, SF], lag: int)!')
+            if(len(predecessors) > 0 and
+                (not all(len(element) for element in predecessors)
+                 or not all(isinstance(element[0], Activity) for element in predecessors)
+                 or not all(element[1] in ["FS", "FF", "SS", "SF"] for element in predecessors)
+                 or not all(isinstance(element[2], int) for element in predecessors))):
+                raise TypeError('predecessors should be a list with tuples (activity: Activity, '
+                                'relation: [FS, FF, SS, SF], lag: int)!')
 
-        if not isinstance(successors, list) or not all(isinstance(element, tuple) for element in successors):
-            raise TypeError('successors should be a list with tuples (activity: Activity, '
-                            'relation: [FS, FF, SS, SF], lag: int)!')
+            if not isinstance(successors, list) or not all(isinstance(element, tuple) for element in successors):
+                raise TypeError('successors should be a list with tuples (activity: Activity, '
+                                'relation: [FS, FF, SS, SF], lag: int)!')
 
-        if(len(successors) > 0 and
-            (not all(len(element) for element in successors)
-             or not all(isinstance(element[0], Activity) for element in successors)
-             or not all(element[1] in ["FS", "FF", "SS", "SF"] for element in successors)
-             or not all(isinstance(element[2], int) for element in successors))):
-            raise TypeError('predecessors should be a list with tuples (activity: Activity, '
-                            'relation: [FS, FF, SS, SF], lag: int)!')
+            if(len(successors) > 0 and
+                (not all(len(element) for element in successors)
+                 or not all(isinstance(element[0], Activity) for element in successors)
+                 or not all(element[1] in ["FS", "FF", "SS", "SF"] for element in successors)
+                 or not all(isinstance(element[2], int) for element in successors))):
+                raise TypeError('predecessors should be a list with tuples (activity: Activity, '
+                                'relation: [FS, FF, SS, SF], lag: int)!')
 
-        if(not isinstance(resources, list) or not all(isinstance(element, tuple) for element in resources)
-           or not all(isinstance(element[0], Resource) for element in resources)
-           or not all(isinstance(element[1], int) for element in resources)):
-            raise TypeError('resources should be a list with tuples (resource: Resource, demand: int)!')
+            if(not isinstance(resources, list) or not all(isinstance(element, tuple) for element in resources)
+               or not all(isinstance(element[0], Resource) for element in resources)
+               or not all(isinstance(element[1], int) for element in resources)):
+                raise TypeError('resources should be a list with tuples (resource: Resource, demand: int)!')
 
-        if not isinstance(baseline_schedule, BaselineScheduleRecord):
-            raise TypeError('baseline_schedule must be a BaselineScheduleRecord object!')
+            if not isinstance(baseline_schedule, BaselineScheduleRecord):
+                raise TypeError('baseline_schedule must be a BaselineScheduleRecord object!')
 
-        if not isinstance(risk_analysis, RiskAnalysisDistribution):
-            raise TypeError('risk_analysis must be a RiskAnalysisDistribution object!')
+            if not isinstance(risk_analysis, RiskAnalysisDistribution):
+                raise TypeError('risk_analysis must be a RiskAnalysisDistribution object!')
 
-        if not isinstance(activity_tracking, ActivityTrackingRecord):
-            raise TypeError('activity_tracking must be a ActivityTrackingRecord object!')
+            if not isinstance(activity_tracking, ActivityTrackingRecord):
+                raise TypeError('activity_tracking must be a ActivityTrackingRecord object!')
         self.activity_id = activity_id
         self.name = name
         self.wbs_id = wbs_id
