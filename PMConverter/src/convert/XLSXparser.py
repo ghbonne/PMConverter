@@ -1,8 +1,10 @@
+from line_chart_example import workbook
+from object.riskanalysisdistribution import RiskAnalysisDistribution
+
 __author__ = 'PM Group 8'
 
 import xlsxwriter
 import openpyxl
-#import xlrd
 from convert.fileparser import FileParser
 
 
@@ -13,34 +15,52 @@ class XLSXParser(FileParser):
 
     def to_schedule_object(self, file_path_input):
         workbook = openpyxl.load_workbook(file_path_input)
-        """
-        workbook = xlrd.open_workbook(file_path_input)
-
-        # Iterate over all worksheets and process them
-        for name in workbook.sheet_names():
+        project_control_sheets = []
+        for name in workbook.get_sheet_names():
             if "Baseline Schedule" in name:
-                self.process_baseline_schedule(workbook.sheet_by_name(name))
+                activities_sheet = workbook.get_sheet_by_name(name)
             elif "Resources" in name:
-                self.process_resources(workbook.sheet_by_name(name))
+                resource_sheet = workbook.get_sheet_by_name(name)
             elif "Risk Analysis" in name:
-                self.process_risk_analysis(workbook.sheet_by_name(name))
+                risk_analysis_sheet = workbook.get_sheet_by_name(name)
             elif "TP" in name:
-                self.process_project_control(workbook.sheet_by_name(name))
-        """
-    """
-    def process_baseline_schedule(self, sheet):
-        for curr_row in range(self.get_number_of_header_lines(sheet), sheet.nrows - 1):
-            activity_id = sheet.cell_value(curr_row, 0)
-            activity_name = sheet.cell_value(curr_row, 1)
-            activity_wbs = sheet.cell_value(curr_row, 2)
-            activity_predecessors = sheet.cell_value(curr_row, 3)
-            activity_successors = sheet.cell_value(curr_row, 4)
-            baseline_start = sheet.cell_value(curr_row, 5)
-            baseline_duration = sheet.cell(curr_row, 7)
-            # TODO: parse resources (col 8 and 9)
-            baseline_fixed_cost = sheet.cell_value(curr_row, 10)
-            baseline_hourly_cost = sheet.cell_value(curr_row, 11)
-            baseline_var_cost = sheet.cell_value(curr_row, 12)
+                project_control_sheets.append(workbook.get_sheet_by_name(name))
+        self.process_baseline_schedule(activities_sheet, resource_sheet, risk_analysis_sheet)
+
+    def process_baseline_schedule(self, activities_sheet=None, resource_sheet=None, risk_analysis_sheet=None):
+        # First we process the resources sheet, we store them in a dict, with index the activity_id, to access them
+        # easily later when we are processing the activities.
+
+        # Then we process the risk analysis sheet, again everything is stored in a dict.
+        risk_analysis_dict = {}
+        for curr_row in range(self.get_nr_of_header_lines(risk_analysis_sheet), risk_analysis_sheet.get_highest_row()-1):
+            if risk_analysis_sheet.cell(row=curr_row, column=4).value is not None:
+                risk_ana_dist_type = risk_analysis_sheet.cell(row=curr_row, column=4).value.split(" - ")[0]
+                risk_ana_dist_units = risk_analysis_sheet.cell(row=curr_row, column=4).value.split(" - ")[1]
+                risk_ana_opt_duration = int(risk_analysis_sheet.cell(row=curr_row, column=5).value)
+                risk_ana_prob_duration = int(risk_analysis_sheet.cell(row=curr_row, column=6).value)
+                risk_ana_pess_duration = int(risk_analysis_sheet.cell(row=curr_row, column=7).value)
+                dict_id = int(risk_analysis_sheet.cell(row=curr_row, column=1).value)
+                risk_analysis_dict[dict_id] = RiskAnalysisDistribution(distribution_type=risk_ana_dist_type,
+                                                                       distribution_units=risk_ana_dist_units,
+                                                                       optimistic_duration=risk_ana_opt_duration,
+                                                                       probable_duration=risk_ana_prob_duration,
+                                                                       pessimistic_duration=risk_ana_pess_duration)
+
+        # Finally, the sheet with activities is processed.
+        for curr_row in range(self.get_nr_of_header_lines(activities_sheet), activities_sheet.get_highest_row()-1):
+            activity_id = activities_sheet.cell(row=curr_row, column=1).value
+            activity_name = activities_sheet.cell(row=curr_row, column=2).value
+            activity_wbs = activities_sheet.cell(row=curr_row, column=3).value
+            activity_predecessors = activities_sheet.cell(row=curr_row, column=4).value
+            activity_successors = activities_sheet.cell(row=curr_row, column=5).value
+            baseline_start = activities_sheet.cell(row=curr_row, column=6).value
+            baseline_duration = activities_sheet.cell(row=curr_row, column=8).value
+            baseline_fixed_cost = activities_sheet.cell(row=curr_row, column=11).value
+            baseline_hourly_cost = activities_sheet.cell(row=curr_row, column=12).value
+            baseline_var_cost = activities_sheet.cell(row=curr_row, column=13).value
+            print([activity_id, activity_name, activity_wbs, activity_predecessors, activity_successors,
+                   baseline_start, baseline_duration, baseline_fixed_cost, baseline_hourly_cost, baseline_var_cost])
 
     def process_resources(self, sheet):
         pass
@@ -52,12 +72,12 @@ class XLSXParser(FileParser):
         pass
 
     @staticmethod
-    def get_number_of_header_lines(sheet):
-        header_lines = 0
-        while not sheet.cell_value(header_lines, 0).isdigit():
+    def get_nr_of_header_lines(sheet):
+        header_lines = 1
+        while not sheet.cell(row=header_lines, column=1).value.isdigit():
             header_lines += 1
         return header_lines
-    """
+
     def from_schedule_object(self, project_object, file_path_output):
         workbook = xlsxwriter.Workbook(file_path_output)
 

@@ -20,8 +20,8 @@ bsr1 = BaselineScheduleRecord(datetime.datetime.now(), datetime.datetime.now() +
                              1000)
 bsr2 = BaselineScheduleRecord(datetime.datetime.now(), datetime.datetime.now() + datetime.timedelta(days=10), 10000, 10,
                              100)
-ra1 = RiskAnalysisDistribution("Manual", "Absolute", 402, 480, 812)
-ra2 = RiskAnalysisDistribution("Manual", "Absolute", 402, 480, 812)
+ra1 = RiskAnalysisDistribution("manual", "absolute", 402, 480, 812)
+ra2 = RiskAnalysisDistribution("manual", "absolute", 402, 480, 812)
 act1 = Activity(1, name="App Dev", wbs_id=(1,), resources=[(res1, 10), (res2, 5)], baseline_schedule=bsr1,
                 risk_analysis=ra1)
 act2 = Activity(2, name="Testing", wbs_id=(1, 1,), resources=[(res2, 50)], baseline_schedule=bsr2,

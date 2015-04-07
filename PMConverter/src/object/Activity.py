@@ -9,7 +9,7 @@ from object.riskanalysisdistribution import RiskAnalysisDistribution
 
 class Activity(object):
     """
-    A project consists of multiple activities
+    A project consists of multiple activities.
 
     :var activity_id: int
     :var name: String
@@ -26,6 +26,21 @@ class Activity(object):
                  successors = [], resources=[], baseline_schedule=BaselineScheduleRecord(),
                  risk_analysis=RiskAnalysisDistribution(), activity_tracking = ActivityTrackingRecord(),
                  type_check = True):
+        """
+        Initialize an Activity. The data types of the parameters must be the same as the properties of an Activity.
+
+        :param activity_id:
+        :param name:
+        :param wbs_id:
+        :param predecessors:
+        :param successors:
+        :param resources:
+        :param baseline_schedule:
+        :param risk_analysis:
+        :param activity_tracking:
+        :param type_check:
+        :raises TypeError: one of the parameters is not the right type.
+        """
         if type_check:
             if not isinstance(activity_id, int):
                 raise TypeError('activity_id should be a number!')
@@ -56,7 +71,7 @@ class Activity(object):
                  or not all(isinstance(element[0], Activity) for element in successors)
                  or not all(element[1] in ["FS", "FF", "SS", "SF"] for element in successors)
                  or not all(isinstance(element[2], int) for element in successors))):
-                raise TypeError('predecessors should be a list with tuples (activity: Activity, '
+                raise TypeError('successors should be a list with tuples (activity: Activity, '
                                 'relation: [FS, FF, SS, SF], lag: int)!')
 
             if(not isinstance(resources, list) or not all(isinstance(element, tuple) for element in resources)
@@ -72,6 +87,7 @@ class Activity(object):
 
             if not isinstance(activity_tracking, ActivityTrackingRecord):
                 raise TypeError('activity_tracking must be a ActivityTrackingRecord object!')
+
         self.activity_id = activity_id
         self.name = name
         self.wbs_id = wbs_id
