@@ -9,7 +9,7 @@ class BaselineScheduleRecord(object):
     the fixed costs, cost per hour and variable costs for every activity
 
     :var start: datetime
-    :var duration: datetime
+    :var duration: timedelta
     :var fixed_cost: float
     :var hourly_cost: float
     :var var_cost: float

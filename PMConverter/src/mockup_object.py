@@ -1,7 +1,7 @@
 import datetime
 import os
 from convert.XLSXparser import XLSXParser
-from object.Activity import Activity
+from object.activity import Activity
 from object.baselineschedule import BaselineScheduleRecord
 from object.projectobject import ProjectObject
 from object.resource import Resource
@@ -25,8 +25,8 @@ ra2 = RiskAnalysisDistribution("manual", "absolute", 402, 480, 812)
 act1 = Activity(1, name="App Dev", wbs_id=(1,), resources=[(res1, 10), (res2, 5)], baseline_schedule=bsr1,
                 risk_analysis=ra1)
 act2 = Activity(2, name="Testing", wbs_id=(1, 1,), resources=[(res2, 50)], baseline_schedule=bsr2,
-                predecessors=[(act1, "FS", 0,)], risk_analysis=ra2)
-act1.successors = [(act2, "FS", 0,)]
+                predecessors=[(1, "FS", 0,)], risk_analysis=ra2)
+act1.successors = [(2, "FS", 0,)]
 project_object = ProjectObject(name="PMConverter", activities=[act1, act2], resources=[res1, res2])
 print(project_object.__dict__)
 
@@ -35,6 +35,8 @@ xlsx_parser.from_schedule_object(project_object, os.path.join(os.path.dirname(__
 # Some tests for reading from a XLSX File
 # TODO: refactor to test class
 
-xlsx_parser.to_schedule_object(os.path.join(os.path.dirname(__file__),
+po = xlsx_parser.to_schedule_object(os.path.join(os.path.dirname(__file__),
                                             "../administration/2_Project data input sheet_extended.xlsx"))
 
+# Write the file we just processed to a file
+xlsx_parser.from_schedule_object(po, "test2.xlsx")
