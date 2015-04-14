@@ -14,12 +14,15 @@ xlsx_parser = XLSXParser()
 # Some tests for writing to a XLSX File
 # TODO: refactor to test class
 
+# TODO: multiple resources!
+# TODO: where are the last 2 rows?
+
 res1 = Resource(1, name="Programmer", resource_type="Renewable", cost_unit=100.0)
 res2 = Resource(1, name="Tester", resource_type="Renewable", cost_unit=75.0)
-bsr1 = BaselineScheduleRecord(datetime.datetime.now(), datetime.datetime.now() + datetime.timedelta(days=5), 1000, 0,
-                             1000)
-bsr2 = BaselineScheduleRecord(datetime.datetime.now(), datetime.datetime.now() + datetime.timedelta(days=10), 10000, 10,
-                             100)
+bsr1 = BaselineScheduleRecord(datetime.datetime.now(), datetime.datetime.now() + datetime.timedelta(days=5, hours=0),
+                              datetime.timedelta(days=5, hours=0), 1000, 0, 1000)
+bsr2 = BaselineScheduleRecord(datetime.datetime.now(), datetime.datetime.now() + datetime.timedelta(days=10, hours=0),
+                              datetime.timedelta(days=10, hours=0), 10000, 10, 100)
 ra1 = RiskAnalysisDistribution("manual", "absolute", 402, 480, 812)
 ra2 = RiskAnalysisDistribution("manual", "absolute", 402, 480, 812)
 act1 = Activity(1, name="App Dev", wbs_id=(1,), resources=[(res1, 10), (res2, 5)], baseline_schedule=bsr1,
@@ -40,3 +43,5 @@ po = xlsx_parser.to_schedule_object(os.path.join(os.path.dirname(__file__),
 
 # Write the file we just processed to a file
 xlsx_parser.from_schedule_object(po, "test2.xlsx")
+
+

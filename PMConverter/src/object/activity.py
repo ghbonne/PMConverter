@@ -17,12 +17,13 @@ class Activity(object):
     :var predecessors: list of tuples (activity_id, Relation, lag), relations are (FS (Finish-Start), FF, SS, SF)
     :var successors: list of tuples (activity_id, Relation, lag)
     :var resources: list of tuples (Resource, demand)
+    :var resource_cost: float
     :var baseline_schedule: BaseLineScheduleRecord
     :var risk_analysis: RiskAnalysisDistribution
     :var activity_tracking: ActivityTrackingRecord
     """
 
-    def __init__(self, activity_id, name="", wbs_id=(), predecessors=[], successors=[], resources=[],
+    def __init__(self, activity_id, name="", wbs_id=(), predecessors=[], successors=[], resources=[], resource_cost=0.0,
                  baseline_schedule=BaselineScheduleRecord(), risk_analysis=RiskAnalysisDistribution(),
                  activity_tracking=ActivityTrackingRecord(), type_check = True):
         """
@@ -67,6 +68,9 @@ class Activity(object):
                or not all(isinstance(element[1], int) for element in resources)):
                 raise TypeError('resources should be a list with tuples (resource: Resource, demand: int)!')
 
+            if not isinstance(resource_cost, float):
+                raise TypeError('resource_cost must be a float!')
+
             if not isinstance(baseline_schedule, BaselineScheduleRecord):
                 raise TypeError('baseline_schedule must be a BaselineScheduleRecord object!')
 
@@ -82,6 +86,7 @@ class Activity(object):
         self.predecessors = predecessors
         self.successors = successors
         self.resources = resources
+        self.resource_cost = resource_cost
         self.baseline_schedule = baseline_schedule
         self.risk_analysis = risk_analysis
         self.activity_tracking = activity_tracking

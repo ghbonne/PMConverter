@@ -9,20 +9,24 @@ class BaselineScheduleRecord(object):
     the fixed costs, cost per hour and variable costs for every activity
 
     :var start: datetime
+    :var end: datetime
     :var duration: timedelta
     :var fixed_cost: float
     :var hourly_cost: float
     :var var_cost: float
+    :var total_cost : float
     """
 
-    def __init__(self, start=datetime.datetime.now(), duration=datetime.timedelta(days=10), fixed_cost=0.0,
-                 hourly_cost=0.0, var_cost=0.0):
+    def __init__(self, start=datetime.datetime.now(), end=datetime.datetime.now() + datetime.timedelta(days=10),
+                 duration=datetime.timedelta(days=10), fixed_cost=0.0, hourly_cost=0.0, var_cost=0.0, total_cost=0.0):
         # TODO: Typechecking?
         self.start = start
+        self.end = end
         self.duration = duration
         self.fixed_cost = fixed_cost
         self.hourly_cost = hourly_cost
         self.var_cost = var_cost
+        self.total_cost = total_cost
 
     def get_duration_string(self):
         """

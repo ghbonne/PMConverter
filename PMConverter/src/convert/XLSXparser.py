@@ -1,6 +1,8 @@
+import copy
 import re
 import datetime
 import time
+import math
 from object.activity import Activity
 from object.baselineschedule import BaselineScheduleRecord
 from object.projectobject import ProjectObject
@@ -31,14 +33,21 @@ class XLSXParser(FileParser):
                 risk_analysis_sheet = workbook.get_sheet_by_name(name)
             elif "TP" in name:
                 project_control_sheets.append(workbook.get_sheet_by_name(name))
-        return ProjectObject(activities=self.process_baseline_schedule(activities_sheet, resource_sheet,
-                                                                       risk_analysis_sheet))
 
-    def process_baseline_schedule(self, activities_sheet=None, resource_sheet=None, risk_analysis_sheet=None):
         # First we process the resources sheet, we store them in a dict, with index the resource name, to access them
         # easily later when we are processing the activities.
+        resources_dict = self.process_resources(resource_sheet)
+        # Then we process the risk analysis sheet, again everything is stored in a dict, now the index is activity_id.
+        risk_analysis_dict = self.process_risk_analysis(risk_analysis_sheet)
+        # Finally, the sheet with activities is processed, using the dicts we created above.
+        activities = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict)
+        return ProjectObject(activities=activities, resources=None)
+
+    def process_resources(self, resource_sheet):
+        # We store the resources  in a dict, with as index the resource name, to access them easily later when we
+        # are processing the activities.
         resources_dict = {}
-        for curr_row in range(self.get_nr_of_header_lines(resource_sheet), resource_sheet.get_highest_row()-1):
+        for curr_row in range(self.get_nr_of_header_lines(resource_sheet), resource_sheet.get_highest_row()+1):
             res_id = int(resource_sheet.cell(row=curr_row, column=1).value)
             res_name = resource_sheet.cell(row=curr_row, column=2).value
             res_type = resource_sheet.cell(row=curr_row, column=3).value
@@ -49,10 +58,11 @@ class XLSXParser(FileParser):
             res_cost_unit = float(resource_sheet.cell(row=curr_row, column=6).value)
             resources_dict[res_name] = Resource(resource_id=res_id, name=res_name, resource_type=res_type,
                                                 availability=res_ava, cost_use=res_cost_use, cost_unit=res_cost_unit)
+        return resources_dict
 
-        # Then we process the risk analysis sheet, again everything is stored in a dict, now the index is activity_id.
+    def process_risk_analysis(self, risk_analysis_sheet):
         risk_analysis_dict = {}
-        for curr_row in range(self.get_nr_of_header_lines(risk_analysis_sheet), risk_analysis_sheet.get_highest_row()-1):
+        for curr_row in range(self.get_nr_of_header_lines(risk_analysis_sheet), risk_analysis_sheet.get_highest_row()+1):
             if risk_analysis_sheet.cell(row=curr_row, column=4).value is not None:
                 risk_ana_dist_type = risk_analysis_sheet.cell(row=curr_row, column=4).value.split(" - ")[0]
                 risk_ana_dist_units = risk_analysis_sheet.cell(row=curr_row, column=4).value.split(" - ")[1]
@@ -65,10 +75,14 @@ class XLSXParser(FileParser):
                                                                        optimistic_duration=risk_ana_opt_duration,
                                                                        probable_duration=risk_ana_prob_duration,
                                                                        pessimistic_duration=risk_ana_pess_duration)
+        return risk_analysis_dict
 
-        # Finally, the sheet with activities is processed.
+    def process_project_control(self, sheet):
+        pass
+
+    def process_baseline_schedule(self, activities_sheet, resources_dict, risk_analysis_dict):
         activities = []
-        for curr_row in range(self.get_nr_of_header_lines(activities_sheet), activities_sheet.get_highest_row()-1):
+        for curr_row in range(self.get_nr_of_header_lines(activities_sheet), activities_sheet.get_highest_row()+1):
             activity_id = int(activities_sheet.cell(row=curr_row, column=1).value)
             activity_name = activities_sheet.cell(row=curr_row, column=2).value
             activity_wbs = ()
@@ -76,41 +90,50 @@ class XLSXParser(FileParser):
                 activity_wbs = activity_wbs + (int(number),)
             activity_predecessors = self.process_predecessors(activities_sheet.cell(row=curr_row, column=4).value)
             activity_successors = self.process_successors(activities_sheet.cell(row=curr_row, column=5).value)
-            baseline_start = activities_sheet.cell(row=curr_row, column=6).value
+            activity_resource_cost = 0.0
+            if activities_sheet.cell(row=curr_row, column=10).value:
+                activity_resource_cost = float(activities_sheet.cell(row=curr_row, column=10).value)
+            baseline_start = datetime.datetime.utcfromtimestamp(((activities_sheet.cell(row=curr_row, column=6).value -
+                                                                  25569)*86400))  # Convert to correct date
+            baseline_end = datetime.datetime.utcfromtimestamp(((activities_sheet.cell(row=curr_row, column=7).value -
+                                                                25569)*86400))  # Convert to correct date
             baseline_duration_split = activities_sheet.cell(row=curr_row, column=8).value.split("d")
             baseline_duration_days = int(baseline_duration_split[0])
             baseline_duration_hours = 0
             if baseline_duration_split[1] != '':
-                baseline_duration_hours = int(baseline_duration_split[1][1:-1])
+                baseline_duration_hours = int(baseline_duration_split[1][1:-1])  # first char = " "; last char = "h"
             baseline_duration = datetime.timedelta(days=baseline_duration_days, hours=baseline_duration_hours)
             baseline_fixed_cost = float(activities_sheet.cell(row=curr_row, column=11).value)
-            baseline_hourly_cost = 0
+            baseline_hourly_cost = 0.0
             if activities_sheet.cell(row=curr_row, column=12).value:
                 baseline_hourly_cost = float(activities_sheet.cell(row=curr_row, column=12).value)
-            baseline_var_cost = 0
+            baseline_var_cost = 0.0
             if activities_sheet.cell(row=curr_row, column=13).value:
                 baseline_var_cost = float(activities_sheet.cell(row=curr_row, column=13).value)
-            activity_baseline_schedule = BaselineScheduleRecord(start=baseline_start, duration=baseline_duration,
+            baseline_total_cost = 0.0
+            if activities_sheet.cell(row=curr_row, column=14).value:
+                baseline_total_cost = float(activities_sheet.cell(row=curr_row, column=14).value)
+            activity_baseline_schedule = BaselineScheduleRecord(start=baseline_start, end=baseline_end,
+                                                                duration=baseline_duration,
                                                                 fixed_cost=baseline_fixed_cost,
                                                                 hourly_cost=baseline_hourly_cost,
-                                                                var_cost=baseline_var_cost)
+                                                                var_cost=baseline_var_cost,
+                                                                total_cost=baseline_total_cost)
             activity_risk_analysis = None
             if activity_id in risk_analysis_dict:
                 activity_risk_analysis = risk_analysis_dict[activity_id]
-            # TODO: what happens if there is more than 1 resource?
             activity_resources = []
             if activities_sheet.cell(row=curr_row, column=9).value:
-                activity_resource_name = resources_dict[activities_sheet.cell(row=curr_row, column=9).value
-                                                        .split("[")[0]]
-                activity_resource_demand = 1
-                if len(activities_sheet.cell(row=curr_row, column=9).value.split("[")) > 1:
-                    activity_resource_demand = int(float(activities_sheet.cell(row=curr_row, column=9).value
-                                                         .split("[")[1].split(" ")[0]
-                                                         .translate(str.maketrans(",", "."))))
-                activity_resources.append((activity_resource_name, activity_resource_demand))
+                for activity_resource in activities_sheet.cell(row=curr_row, column=9).value.split(';'):
+                    activity_resource_name = resources_dict[activity_resource.split("[")[0]]
+                    activity_resource_demand = 1
+                    if len(activity_resource.split("[")) > 1:
+                        activity_resource_demand = int(float(activity_resource.split("[")[1].split(" ")[0].translate(str.maketrans(",", "."))))
+                    activity_resources.append((activity_resource_name, activity_resource_demand))
             activities.append(Activity(activity_id, name=activity_name, wbs_id=activity_wbs,
                                        predecessors=activity_predecessors, successors=activity_successors,
                                        baseline_schedule=activity_baseline_schedule,
+                                       resource_cost=activity_resource_cost,
                                        risk_analysis=activity_risk_analysis, resources=activity_resources))
         return activities
 
@@ -164,15 +187,6 @@ class XLSXParser(FileParser):
             return activity_successors
         return []
 
-    def process_resources(self, sheet):
-        pass
-
-    def process_risk_analysis(self, sheet):
-        pass
-
-    def process_project_control(self, sheet):
-        pass
-
     @staticmethod
     def get_nr_of_header_lines(sheet):
         header_lines = 1
@@ -183,14 +197,27 @@ class XLSXParser(FileParser):
     def from_schedule_object(self, project_object, file_path_output):
         workbook = xlsxwriter.Workbook(file_path_output)
 
-        # Formats
-        header = workbook.add_format({'bold': True, 'bg_color': 'blue', 'font_color': 'white', 'text_wrap': True})
-        yellow_cell = workbook.add_format({'bg_color': 'yellow', 'text_wrap': True})
-        cyan_cell = workbook.add_format({'bg_color': 'cyan', 'text_wrap': True})
-        green_cell = workbook.add_format({'bg_color': 'green', 'text_wrap': True})
-        lime_cell = workbook.add_format({'bg_color': 'lime', 'text_wrap': True})
-        navy_cell = workbook.add_format({'bg_color': 'navy', 'text_wrap': True})
-        date_cyan_cell = workbook.add_format({'bg_color': 'cyan', 'text_wrap': True, 'num_format': 'mm/dd/yyyy H:M'})
+        # Lots of formats
+        header = workbook.add_format({'bold': True, 'bg_color': 'blue', 'font_color': 'white', 'text_wrap': True,
+                                      'border': 1, 'font_size': 8})
+        yellow_cell = workbook.add_format({'bg_color': 'yellow', 'text_wrap': True, 'border': 1, 'font_size': 8})
+        cyan_cell = workbook.add_format({'bg_color': 'cyan', 'text_wrap': True, 'border': 1, 'font_size': 8})
+        green_cell = workbook.add_format({'bg_color': 'green', 'text_wrap': True, 'border': 1, 'font_size': 8})
+        navy_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1, 'font_size': 8})
+        date_cyan_cell = workbook.add_format({'bg_color': 'cyan', 'text_wrap': True, 'border': 1,
+                                              'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
+        date_green_cell = workbook.add_format({'bg_color': 'green', 'text_wrap': True, 'border': 1,
+                                              'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
+        date_lime_cell = workbook.add_format({'bg_color': 'lime', 'text_wrap': True, 'border': 1,
+                                              'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
+        money_cyan_cell = workbook.add_format({'bg_color': 'cyan', 'text_wrap': True, 'border': 1,
+                                              'num_format': '#,##0.00 €', 'font_size': 8})
+        money_green_cell = workbook.add_format({'bg_color': 'green', 'text_wrap': True, 'border': 1,
+                                              'num_format': '#,##0.00 €', 'font_size': 8})
+        money_lime_cell = workbook.add_format({'bg_color': 'lime', 'text_wrap': True, 'border': 1,
+                                              'num_format': '#,##0.00 €', 'font_size': 8})
+        money_navy_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1,
+                                              'num_format': '#,##0.00 €', 'font_size': 8})
 
         # Worksheets
         bsch_worksheet = workbook.add_worksheet("Baseline Schedule")
@@ -201,18 +228,20 @@ class XLSXParser(FileParser):
 
         # Set the width of the columns
         bsch_worksheet.set_column(0, 0, 3)
-        bsch_worksheet.set_column(1, 1, 15)
-        bsch_worksheet.set_column(2, 2, 8)
-        bsch_worksheet.set_column(3, 6, 14)
+        bsch_worksheet.set_column(1, 1, 25)
+        bsch_worksheet.set_column(2, 2, 5)
+        bsch_worksheet.set_column(3, 4, 16)
+        bsch_worksheet.set_column(5, 6, 12)
         bsch_worksheet.set_column(7, 7, 8)
         bsch_worksheet.set_column(8, 8, 25)
         bsch_worksheet.set_column(9, 9, 10)
         bsch_worksheet.set_column(10, 11, 15)
+        bsch_worksheet.set_column(13, 13, 12)
 
         # Set the height of rows
         bsch_worksheet.set_row(1, 30)
 
-        # Write header cells
+        # Write header cells (using the header format, and by merging some cells)
         bsch_worksheet.merge_range('A1:C1',
                                    "General", header)
         bsch_worksheet.merge_range('D1:E1', "Relations", header)
@@ -237,41 +266,49 @@ class XLSXParser(FileParser):
 
         # Now we run through all activities to get the required information
         counter = 2
-        deepest_wbs_id = self.get_deepest_wbs(project_object.activities)
         for activity in project_object.activities:
-            if activity.wbs_id == deepest_wbs_id:
+            if self.is_lowest_level_activity(project_object.activities, activity):
                 # Write activity of lowest level
                 bsch_worksheet.write_number(counter, 0, activity.activity_id, green_cell)
                 bsch_worksheet.write(counter, 1, str(activity.name), green_cell)
                 self.write_wbs(bsch_worksheet, counter, 2, activity.wbs_id, navy_cell)
-                bsch_worksheet.write(counter, 3, str(activity.predecessors), green_cell)
-                bsch_worksheet.write(counter, 4, str(activity.successors), green_cell)
-                bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.start, green_cell)
-                bsch_worksheet.write(counter, 6, self.get_end_date(activity), lime_cell)
-                bsch_worksheet.write_datetime(counter, 7, activity.baseline_schedule.duration, green_cell)
-                bsch_worksheet.write(counter, 8, self.list_resources(activity), yellow_cell)
-                bsch_worksheet.write_number(counter, 9, self.get_resource_cost(activity), navy_cell)
-                bsch_worksheet.write_number(counter, 10, activity.baseline_schedule.fixed_cost, green_cell)
-                bsch_worksheet.write_number(counter, 11, activity.baseline_schedule.hourly_cost, lime_cell)
-                bsch_worksheet.write_number(counter, 12, activity.baseline_schedule.var_cost, green_cell)
-                bsch_worksheet.write_number(counter, 13, self.get_total_cost(activity), navy_cell)
+                self.write_predecessors(bsch_worksheet, counter, 3, activity.predecessors, green_cell)
+                self.write_successors(bsch_worksheet, counter, 4, activity.successors, green_cell)
+                bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.start, date_green_cell)
+                bsch_worksheet.write_datetime(counter, 6, activity.baseline_schedule.end, date_lime_cell)
+                if activity.baseline_schedule.duration.seconds != 0:
+                    duration = str(activity.baseline_schedule.duration.days) + "d " \
+                               + str(int(activity.baseline_schedule.duration.seconds / 3600)) + "h"
+                else:
+                    duration = str(activity.baseline_schedule.duration.days) + "d "
+                bsch_worksheet.write(counter, 7, duration, green_cell)
+                self.write_resources(bsch_worksheet, counter, 8, activity.resources, yellow_cell)
+                bsch_worksheet.write_number(counter, 9, activity.resource_cost, money_navy_cell)
+                bsch_worksheet.write_number(counter, 10, activity.baseline_schedule.fixed_cost, money_green_cell)
+                bsch_worksheet.write_number(counter, 11, activity.baseline_schedule.hourly_cost, money_lime_cell)
+                bsch_worksheet.write_number(counter, 12, activity.baseline_schedule.var_cost, money_green_cell)
+                bsch_worksheet.write_number(counter, 13, activity.baseline_schedule.total_cost, money_navy_cell)
             else:
                 # Write aggregated activity
                 bsch_worksheet.write_number(counter, 0, activity.activity_id, yellow_cell)
                 bsch_worksheet.write(counter, 1, str(activity.name), yellow_cell)
                 self.write_wbs(bsch_worksheet, counter, 2, activity.wbs_id, cyan_cell)
-                bsch_worksheet.write(counter, 3, str(activity.predecessors), cyan_cell)
-                bsch_worksheet.write(counter, 4, str(activity.successors), cyan_cell)
-                print(activity.baseline_schedule.start.ctime())
-                bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.start, cyan_cell)
-                bsch_worksheet.write(counter, 6, self.get_end_date(activity), cyan_cell)
-                bsch_worksheet.write_datetime(counter, 7, activity.baseline_schedule.duration, cyan_cell)
-                bsch_worksheet.write(counter, 8, self.list_resources(activity), cyan_cell)
-                bsch_worksheet.write_number(counter, 9, self.get_resource_cost(activity), cyan_cell)
-                bsch_worksheet.write_number(counter, 10, activity.baseline_schedule.fixed_cost, cyan_cell)
-                bsch_worksheet.write_number(counter, 11, activity.baseline_schedule.hourly_cost, cyan_cell)
-                bsch_worksheet.write_number(counter, 12, activity.baseline_schedule.var_cost, cyan_cell)
-                bsch_worksheet.write_number(counter, 13, self.get_total_cost(activity), cyan_cell)
+                self.write_predecessors(bsch_worksheet, counter, 3, activity.predecessors, cyan_cell)
+                self.write_successors(bsch_worksheet, counter, 4, activity.successors, cyan_cell)
+                bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.start, date_cyan_cell)
+                bsch_worksheet.write_datetime(counter, 6, activity.baseline_schedule.end, date_cyan_cell)
+                if activity.baseline_schedule.duration.seconds != 0:
+                    duration = str(activity.baseline_schedule.duration.days) + "d " \
+                               + str(int(activity.baseline_schedule.duration.seconds / 3600)) + "h"
+                else:
+                    duration = str(activity.baseline_schedule.duration.days) + "d "
+                bsch_worksheet.write(counter, 7, duration, cyan_cell)
+                self.write_resources(bsch_worksheet, counter, 8, activity.resources, cyan_cell)
+                bsch_worksheet.write_number(counter, 9, activity.resource_cost, money_cyan_cell)
+                bsch_worksheet.write_number(counter, 10, activity.baseline_schedule.fixed_cost, money_cyan_cell)
+                bsch_worksheet.write_number(counter, 11, activity.baseline_schedule.hourly_cost, money_cyan_cell)
+                bsch_worksheet.write_number(counter, 12, activity.baseline_schedule.var_cost, money_cyan_cell)
+                bsch_worksheet.write_number(counter, 13, activity.baseline_schedule.total_cost, money_cyan_cell)
 
             counter += 1
 
@@ -279,27 +316,67 @@ class XLSXParser(FileParser):
 
     @staticmethod
     def write_wbs(worksheet, row, column, wbs, format):
+        # Instead of writing (x, y, z) write x.y.z
         to_write = ''
-        for number in wbs:
-            to_write = to_write + str(number) + '.'
+        for i in range(0, len(wbs)-1):
+            to_write += str(wbs[i]) + '.'
+        to_write += str(wbs[-1])
         worksheet.write(row, column, to_write, format)
 
     @staticmethod
-    def get_deepest_wbs(activities):
-        wbs_max = 0
-        for activity in activities:
-            if len(activity.wbs_id) > wbs_max:
-                wbs_max = len(activity.wbs_id)
-        return wbs_max
+    def write_successors(worksheet, row, column, successors, format):
+        # Write in format of FSxx;SSxx..
+        to_write = ''
+        if len(successors) > 0:
+            for i in range(0, len(successors)-1):
+                to_write += str(successors[i][1]) + str(successors[i][0])
+                if successors[i][2] != 0:
+                    to_write += "+" + str(successors[i][2])
+                to_write += ";"
+            to_write += str(successors[-1][1]) + str(successors[-1][0])
+            if successors[-1][2] != 0:
+                to_write += "+" + str(successors[-1][2])
+        worksheet.write(row, column, to_write, format)
 
-    def get_end_date(self, activity):
-        return "0"
+    @staticmethod
+    def write_predecessors(worksheet, row, column, predecessors, format):
+        # Write in format of xxSF;xxFF..
+        to_write = ''
+        if len(predecessors) > 0:
+            for i in range(0, len(predecessors)-1):
+                to_write += str(predecessors[i][0]) + str(predecessors[i][1])
+                if predecessors[i][2] != 0:
+                    to_write += "+" + str(predecessors[i][2])
+                to_write += ";"
+            to_write += str(predecessors[-1][1]) + str(predecessors[-1][0])
+            if predecessors[-1][2] != 0:
+                to_write += "+" + str(predecessors[-1][2])
+        worksheet.write(row, column, to_write, format)
 
-    def get_resource_cost(self, activity):
-        return 0
+    @staticmethod
+    def is_lowest_level_activity(activities, activity):
+        # Decide whether an activity is of the lowest level or not. TODO: A possible optimization is just looking at the
+        # Activity next to 'activity' since the list is sorted on wbs_id
+        for other_activity in activities:
+            if other_activity.wbs_id != activity.wbs_id and len(other_activity.wbs_id) > len(activity.wbs_id):
+                for i in range(0, len(activity.wbs_id)):
+                    if activity.wbs_id[i] != other_activity.wbs_id[i]:
+                        break
+                if i == len(activity.wbs_id):
+                    return True
+        return False
 
-    def list_resources(self, activity):
-        return "0"
+    @staticmethod
+    def write_resources(worksheet, row, column, resources, format):
+        to_write = ''
+        if len(resources) > 0:
+            for i in range(0, len(resources)-1):
+                to_write += resources[i][0].name
+                if resources[i][1] > 1:
+                    to_write += " [" + str(float(resources[i][1])) + " #" + str(resources[i][0].availability) + "]; "
+            to_write += resources[-1][0].name
+            if resources[-1][1] > 1:
+                to_write += " [" + str(float(resources[-1][1])) + " #" + str(resources[-1][0].availability) + "]"
+        worksheet.write(row, column, to_write, format)
 
-    def get_total_cost(self, activity):
-        return 0
+
