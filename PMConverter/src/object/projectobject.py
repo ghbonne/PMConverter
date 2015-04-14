@@ -13,6 +13,7 @@ class ProjectObject(object):
     """
 
     def __init__(self, name="", activities=[], tracking_periods=[], resources=[]):
+        # TODO: Typechecking?
         self.name = name
         self.activities = activities
         self.tracking_periods = tracking_periods

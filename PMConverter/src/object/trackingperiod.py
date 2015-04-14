@@ -10,5 +10,6 @@ class TrackingPeriod(object):
     # class variables:
 
     def __init__(self):
+        # TODO: Typechecking?
         pass
 

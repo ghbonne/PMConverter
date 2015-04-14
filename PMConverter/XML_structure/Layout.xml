@@ -1,0 +1,367 @@
+
+--- Project Info ----
+<ProjectInfo>
+	<LastSavedBy>jbatseli</LastSavedBy>
+	<Name>ProjectInfo</Name> 									--- Projectnaam
+	<SavedWithMayorBuild>3</SavedWithMayorBuild>
+	<SavedWithMinorBuild>0</SavedWithMinorBuild>
+	<SavedWithVersion>0</SavedWithVersion>
+	<UniqueID>-1</UniqueID>
+	<UserID>0</UserID>
+</ProjectInfo>
+
+
+
+
+----- ProTrack Settings -----
+
+<Settings>
+	<AbsProjectBuffer>311220071300</AbsProjectBuffer>
+	<ActionEndThreshold>100</ActionEndThreshold>
+	<ActionStartThreshold>60</ActionStartThreshold>
+	<ActiveSensResult>1</ActiveSensResult>
+	<ActiveTrackingPeriod>8</ActiveTrackingPeriod>
+	<AllocationMethod>0</AllocationMethod>
+	<AutomaticBuffer>0</AutomaticBuffer>
+	<ConnectResourceBars>0</ConnectResourceBars>
+	<ConstraintHardness>3</ConstraintHardness>
+	<CurrencyPrecision>2</CurrencyPrecision>
+	<CurrencySymbol>€</CurrencySymbol>
+	<CurrencySymbolPosition>1</CurrencySymbolPosition>
+	<DateTimeFormat>d/MM/yyyy h:mm</DateTimeFormat>
+	<DefaultRowBuffer>50</DefaultRowBuffer>
+	<DrawRelations>1</DrawRelations>
+	<DrawShadow>1</DrawShadow>
+	<DurationFormat>1</DurationFormat>
+	<DurationLevels>2</DurationLevels>
+	<ESSLSSFloat>0</ESSLSSFloat>
+	<GanttStartDate>080220070800</GanttStartDate>
+	<GanttZoomLevel>0.0127138157894736</GanttZoomLevel>
+	<GroupFilter>0</GroupFilter>
+	<HideGraphMarks>0</HideGraphMarks>
+	<Name>Settings</Name>
+	<PlanningEndThreshold>60</PlanningEndThreshold>
+	<PlanningStartThreshold>20</PlanningStartThreshold>
+	<PlanningUnit>1</PlanningUnit>
+	<ResAllocation1Color>12632256</ResAllocation1Color>
+	<ResAllocation2Color>8421504</ResAllocation2Color>
+	<ResAvailableColor>15780518</ResAvailableColor>
+	<ResourceChartEndDate>220520071000</ResourceChartEndDate>
+	<ResourceChartStartDate>060320060000</ResourceChartStartDate>
+	<ResOverAllocationColor>255</ResOverAllocationColor>
+	<ShowCanEditResultsInHelp>1</ShowCanEditResultsInHelp>
+	<ShowCriticalPath>1</ShowCriticalPath>
+	<ShowInputModelInfoInHelp>1</ShowInputModelInfoInHelp>
+	<SyncGanttAndResourceChart>0</SyncGanttAndResourceChart>
+	<UniqueID>-1</UniqueID>
+	<UseResourceScheduling>0</UseResourceScheduling>
+	<UserID>0</UserID>
+	<ViewDateTimeAsUnits>0</ViewDateTimeAsUnits>
+</Settings>
+
+
+
+
+
+---- Defaults ----
+<Defaults>
+	<DefaultCostPerUnit>50</DefaultCostPerUnit>
+	<DefaultDisplayDurationType>0</DefaultDisplayDurationType>
+	<DefaultDistributionType>2</DefaultDistributionType>
+	<DefaultDurationInput>0</DefaultDurationInput>
+	<DefaultLagTime>0</DefaultLagTime>
+	<DefaultNumberOfSimulationRuns>100</DefaultNumberOfSimulationRuns>
+	<DefaultNumberOfTrackingPeriodsGeneration>20</DefaultNumberOfTrackingPeriodsGeneration>
+	<DefaultNumberOfTrackingPeriodsSimulation>50</DefaultNumberOfTrackingPeriodsSimulation>
+	<DefaultRelationType>2</DefaultRelationType>
+	<DefaultResourceRenewable>1</DefaultResourceRenewable>
+	<DefaultSimulationType>0</DefaultSimulationType>
+	<DefaultStartPage>start.html</DefaultStartPage>
+	<DefaultTaskDuration>10</DefaultTaskDuration>
+	<DefaultTrackingPeriodOffset>50</DefaultTrackingPeriodOffset>
+	<DefaultWorkingDaysPerWeek>5</DefaultWorkingDaysPerWeek>
+	<DefaultWorkingHoursPerDay>8</DefaultWorkingHoursPerDay>
+	<Name>Defaults</Name>
+	<UniqueID>-1</UniqueID>
+	<UserID>0</UserID>
+</Defaults>
+
+
+----- Agenda ----
+
+<Agenda>
+	<StartDate>170420060000</StartDate>
+	<NonWorkingHours>
+		<Hour>0</Hour>
+		<Hour>1</Hour>
+		<Hour>2</Hour>
+		<Hour>3</Hour>
+		<Hour>4</Hour>
+		<Hour>5</Hour>
+		<Hour>6</Hour>
+		<Hour>7</Hour>
+		<Hour>12</Hour>
+		<Hour>17</Hour>
+		<Hour>18</Hour>
+		<Hour>19</Hour>
+		<Hour>20</Hour>
+		<Hour>21</Hour>
+		<Hour>22</Hour>
+		<Hour>23</Hour>
+	</NonWorkingHours>
+	<NonWorkingDays>
+		<Day>5</Day>
+		<Day>6</Day>
+	</NonWorkingDays>
+	<Holidays/>
+</Agenda>
+
+
+
+
+
+----Activity ----
+
+<Activity>
+	<BaselineCostByUnit>0</BaselineCostByUnit> 					
+	<BaseLineDuration>480</BaseLineDuration>        	 	-- Duration in hours (8h/workday)--
+	<BaseLineStart>170420060800</BaseLineStart> 			-- Baseline Start: 17/04/2006 08:00
+	<Constraints>
+		<Direction>0</Direction>                            -- Always 0
+		<DueDateEnd>010101000000</DueDateEnd>   			--  Intern?
+		<DueDateStart>010101000000</DueDateStart>           --  Intern?
+		<LockedTimeEnd>010101000000</LockedTimeEnd>         --  Intern?
+		<LockedTimeStart>170420060800</LockedTimeStart>     --  Intern?
+		<Name> </Name>
+		<ReadyTimeEnd>010101000000</ReadyTimeEnd>           --  Intern?
+		<ReadyTimeStart>010101000000</ReadyTimeStart>       --  Intern?
+		<UniqueID>-1</UniqueID>                             -- Always 1
+		<UserID>0</UserID> 									-- Always 0
+	</Constraints>
+	<Distribution>5</Distribution> 							-- see --Distributions-- 
+	<DurationCPMUnits>480</DurationCPMUnits>                -- = BaselineDuration?
+	<FixedBaselineCost>75</FixedBaselineCost>               -- Fixed Cost
+	<IsMilestone>0</IsMilestone>                            
+	<Name>building permit</Name>  							-- Name --
+	<StartCPMUnits>0</StartCPMUnits>
+	<UniqueID>2</UniqueID>                                  -- ID
+	<UserID>0</UserID>
+</Activity>
+
+----- Activity Group --------
+</ActivityGroups>
+	<ActivityGroup>
+		<Expanded>1</Expanded>
+		<Name>construction leave</Name>                         -- Grouping of Activities
+		<UniqueID>66</UniqueID>
+		<UserID>0</UserID>
+	</ActivityGroup>
+…
+</ActivityGroups>
+
+
+--- Distributions ----
+Distribution 1 = Standard no risk (99-100-101)
+Distribution 2 = Standard symetric (80-100-120)
+Distribution 3 = Standard skewed left (80-110-120)
+??? Distribution 4 = Standard skewed right (80-90-120) ??? (Educated guess)
+
+Non-general Distributions are defined:
+<SensitivityDistributions>
+	<TProTrackSensitivityDistribution5>
+		<UniqueID>5</UniqueID>
+		<Name>Task building permit distribution</Name>
+		<StartDuration>383</StartDuration>
+		<EndDuration>812</EndDuration>
+		<Style>0</Style>
+		<Distribution>
+			<X>402</X>
+			<Y>0</Y>
+			<X>480</X>
+			<Y>100</Y>
+			<X>812</X>
+			<Y>0</Y>
+		</Distribution>
+	</TProTrackSensitivityDistribution5>
+
+	<TProTrackSensitivityDistribution6>
+		<UniqueID>6</UniqueID><Name>Task hire contractor distribution</Name><StartDuration>127</StartDuration><EndDuration>411</EndDuration><Style>0</Style><Distribution><X>127</X><Y>0</Y><X>160</X><Y>100</Y><X>326</X><Y>0</Y></Distribution>
+	</TProTrackSensitivityDistribution6>
+
+	<....>
+</SensitivityDistributions>
+
+
+ 
+----- Relation --------
+<Relations>
+	<Relation>
+		<FromTask>3</FromTask>                                 -- Activity 16 is Succesor of 3
+		<Lag>0</Lag> 										   -- ==> Activity 3 is predeccesor of 16
+		<LagKind>0</LagKind> 								--
+		<LagType>2</LagType> 								-- Indicates Finish Start (FS)
+		<Name>Relation</Name>
+		<ToTask>16</ToTask>
+		<UniqueID>5</UniqueID>
+		<UserID>0</UserID>
+	</Relation>
+</Relations>
+
+
+
+
+----- OutlineList ---- 						--- WBS-column --> Excell layout
+<OutlineList>
+		<List>
+			<Child>
+				<Type>1</Type> 				-- 1.1
+				<Data>46</Data>             -- ID
+				<Expanded>1</Expanded>
+				<List>
+					<Child>
+						<Type>2</Type>      -- 1.1.1
+						<Data>2</Data>      -- ID
+					</Child>
+					<Child>
+						<Type>2</Type>      -- 1.1.2
+						<Data>3</Data>      -- ID
+					</Child>
+					<Child>
+						<Type>2</Type>
+						<Data>4</Data>
+					</Child>
+					<Child>
+						<Type>2</Type>
+						<Data>5</Data>
+					</Child>
+					<Child>
+						<Type>2</Type>
+						<Data>16</Data>
+					</Child>
+						<Child>
+							<Type>2</Type>
+							<Data>6</Data>
+						</Child>
+					</List>
+				</Child>
+				
+				... 
+
+	</OutlineList>
+
+
+
+	---  Resources ---
+    --- Definition
+
+	<Resource>
+		<FIELD0>1</FIELD0>            --- ID
+		<FIELD1>plumber</FIELD1>      ---  Name
+		<FIELD768></FIELD768>
+		<FIELD778>#4</FIELD778>       --- Availability
+		<FIELD769>1</FIELD769>        --- Renewable boolean?
+		<FIELD770>0</FIELD770>        --- Cost/use
+		<FIELD771>36</FIELD771>       --- Cost/Unit
+		<FIELD776>8640</FIELD776>     --- Total Cost
+		<FIELD780>4</FIELD780>        --- Availability
+		<FIELD779>-1</FIELD779>       --- ?
+		<FIELD781>0</FIELD781>        --- ?
+		<FIELD782>0.5</FIELD782>      --- ?
+		<FIELD783>1</FIELD783>        --- ?
+	</Resource>
+	<DATEPERCSERIE>
+		<DEFAULTAVAILABILITY>4</DEFAULTAVAILABILITY>
+		<DATEPERCBREAKPOINTS/>
+	</DATEPERCSERIE>
+
+-- extra example
+	<Resource>
+		<FIELD0>3</FIELD0>
+		<FIELD1>team VDW</FIELD1>
+		<FIELD768></FIELD768>
+		<FIELD778>#8</FIELD778>
+		<FIELD769>1</FIELD769>
+		<FIELD770>0</FIELD770>
+		<FIELD771>38.56</FIELD771>
+		<FIELD776>173057.28125</FIELD776>
+		<FIELD780>8</FIELD780>
+		<FIELD779>-1</FIELD779>
+		<FIELD781>0.390830606222153</FIELD781>
+		<FIELD782>0.35456046462059</FIELD782>
+		<FIELD783>0.244444444775581</FIELD783>
+	</Resource>
+	<DATEPERCSERIE>
+		<DEFAULTAVAILABILITY>8</DEFAULTAVAILABILITY>
+		<DATEPERCBREAKPOINTS/>
+	</DATEPERCSERIE>
+
+
+
+	--- Resource assignements --
+
+<ResourceAssignments>
+		<ResourceAssignment>
+			<FIELD1026>4</FIELD1026>  --- # Resources needed (!= Resources available)
+			<FIELD1027>0</FIELD1027>  --- ?
+			<FIELD1024>6</FIELD1024>  ---  activity ID (i.e. Activity 6 needs 4 resources of resource 3)
+			<FIELD1025>3</FIELD1025>  --- resource ID
+		</ResourceAssignment>
+
+		<ResourceAssignment>
+			<FIELD1026>1</FIELD1026>   --- # Resources needed
+			<FIELD1027>0</FIELD1027>
+			<FIELD1024>17</FIELD1024>  ---  activity ID
+			<FIELD1025>3</FIELD1025>
+		</ResourceAssignment>
+</ResourceAssignments>
+
+
+
+--- Tracking Periods ----
+
+<TrackingList>
+		<TrackingPeriod> 							--- Info of Tracking period to be described
+			<Abreviation>Actual</Abreviation>
+			<Description></Description>
+			<EndDate>070720060800</EndDate> 		-- TP Status Date
+			<Name>Preparation1</Name>               -- TP Name
+			<PredictiveLogic>0</PredictiveLogic>
+			<UniqueID>1</UniqueID>
+			<UserID>0</UserID>
+		</TrackingPeriod>
+
+		<TProTrackActivities-1>
+			<Activity>2</Activity>
+			<TProTrackActivityTracking-1>
+				<ActualStart>170420060800</ActualStart>    -- Actual Start
+				<ActualDuration>800</ActualDuration>       -- Actual Duration in hours
+				<ActualCostDev>0</ActualCostDev>           -- Deviation from actual cost?
+				<RemainingDuration>8</RemainingDuration>
+				<RemainingCostDev>0</RemainingCostDev>
+				<PercentageComplete>0.990099012851715</PercentageComplete>  -- percentage completion
+			</TProTrackActivityTracking-1>
+
+			<Activity>3</Activity>
+			<TProTrackActivityTracking-1>
+				<ActualStart>0</ActualStart>
+				<ActualDuration>0</ActualDuration>
+				<ActualCostDev>0</ActualCostDev>
+				<RemainingDuration>160</RemainingDuration>
+				<RemainingCostDev>0</RemainingCostDev>
+				<PercentageComplete>0</PercentageComplete>
+			</TProTrackActivityTracking-1>
+
+			<Activity>4</Activity>
+			<TProTrackActivityTracking-1>
+				<ActualStart>170420060800</ActualStart>
+				<ActualDuration>160</ActualDuration>
+				<ActualCostDev>0</ActualCostDev>
+				<RemainingDuration>0</RemainingDuration>
+				<RemainingCostDev>0</RemainingCostDev>
+				<PercentageComplete>1</PercentageComplete>  --- = 100%
+			</TProTrackActivityTracking-1>
+
+			... for each activity
+
+		</TProTrackActivities-1>
+
