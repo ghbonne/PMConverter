@@ -1,3 +1,5 @@
+from calendar import Calendar
+
 __author__ = 'PM Group 8'
 
 
@@ -10,9 +12,10 @@ class ProjectObject(object):
     :var activities: list of Activity
     :var tracking_periods: list of TrackingPeriod
     :var resources: list of Resource
+    :var calendar: calendar
     """
 
-    def __init__(self, name="", activities=[], tracking_periods=[], resources=[]):
+    def __init__(self, name="", activities=[], tracking_periods=[], resources=[], calendar=Calendar()):
         # TODO: Typechecking?
         self.name = name
         self.activities = activities

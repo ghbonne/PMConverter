@@ -15,8 +15,7 @@ class BaselineScheduleRecord(object):
     :var var_cost: float
     """
 
-    def __init__(self, start=datetime.datetime.now(),
-                 duration=datetime.datetime.now() + datetime.timedelta(days=10), fixed_cost=0.0,
+    def __init__(self, start=datetime.datetime.now(), duration=datetime.timedelta(days=10), fixed_cost=0.0,
                  hourly_cost=0.0, var_cost=0.0):
         # TODO: Typechecking?
         self.start = start
