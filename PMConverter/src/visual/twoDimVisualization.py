@@ -13,7 +13,10 @@ class TwoDimVisualization(Visualization):
         worksheet = workbook.add_worksheet()#todo: debug, remove!
 
         # Create a new chart object.
-        chart = workbook.add_chart({'type': self.type})
+        if self.subtype:
+            chart = workbook.add_chart({'type': self.type, 'subtype': self.subtype.value})
+        else:
+            chart = workbook.add_chart({'type': self.type})
 
         # Configure the series.
         for row in self.data_series:
