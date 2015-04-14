@@ -1,16 +1,16 @@
-__author__ = 'PM Group 8'
+__author__ = 'Eveline'
 
 from visual.twoDimVisualization import TwoDimVisualization
 
 
-class LineChart(TwoDimVisualization):
+class ColumnChart(TwoDimVisualization):
 
     """
     :var title: title of the chart
     :var labels: labels on the x and y-axis. Format: [x-axis,y-axis]
     :var data_series: data
         Format: [
-                    [heading1:String, #first line
+                    [heading1:String, #first dataset
                         [Sheet: String, first_row: int, first_col: int, last_row: int, last_col: int], #x-values
                         [Sheet: String, first_row: int, first_col: int, last_row: int, last_col: int]  #y-values
                     ],
@@ -26,7 +26,7 @@ class LineChart(TwoDimVisualization):
         self.title = title
         self.labels = labels
         self.data_series = data_series
-        super().__init__("line")
+        super().__init__("column")
 
     def visualize(self, workbook):
         """
