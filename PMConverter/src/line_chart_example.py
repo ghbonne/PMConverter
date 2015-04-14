@@ -4,6 +4,10 @@ import xlsxwriter
 import os
 from visual.linechart import LineChart
 from visual.piechart import PieChart
+from visual.columnchart import ColumnChart
+from visual.columnchart import ColumnSubType
+from visual.barchart import BarChart
+from visual.barchart import BarSubType
 
 file = os.path.join(os.path.dirname(__file__), 'output'+os.sep+'chart_test.xlsx')
 
@@ -40,28 +44,35 @@ chart = LineChart('test', labels, data_series)
 
 chart.visualize(workbook)
 
+chart1 = ColumnChart('test', labels, data_series, ColumnSubType.stacked)
 
-#Pie chart
-worksheet = workbook.add_worksheet()
-headings = ['Category', 'Values']
-data = [
-    ['Apple', 'Cherry', 'Pecan'],
-    [60, 30, 10],
-]
+chart1.visualize(workbook)
 
-worksheet.write_row('A1', headings, bold)
-worksheet.write_column('A2', data[0])
-worksheet.write_column('B2', data[1])
-
-
-data_series2 = [
-    ['Sheet3', 1, 0, 3, 0],
-    ['Sheet3', 1, 1, 3, 1]
-]
-
-chart2 = PieChart('PieChart', data_series2)
+chart2 = BarChart('test', labels, data_series, BarSubType.stacked)
 
 chart2.visualize(workbook)
+
+#Pie chart
+# worksheet = workbook.add_worksheet()
+# headings = ['Category', 'Values']
+# data = [
+#     ['Apple', 'Cherry', 'Pecan'],
+#     [60, 30, 10],
+# ]
+#
+# worksheet.write_row('A1', headings, bold)
+# worksheet.write_column('A2', data[0])
+# worksheet.write_column('B2', data[1])
+#
+#
+# data_series2 = [
+#     ['Sheet4', 1, 0, 3, 0],
+#     ['Sheet4', 1, 1, 3, 1]
+# ]
+#
+# chart2 = PieChart('PieChart', data_series2)
+#
+# chart2.visualize(workbook)
 
 
 try:
