@@ -8,5 +8,5 @@ class UIView(object):
 
 if __name__ == '__main__':
     # This is where the main function comes
-    proc = Processor()
+    #proc = Processor()
     pass
