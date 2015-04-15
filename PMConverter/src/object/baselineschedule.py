@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timedelta
 
 __author__ = 'PM Group 8'
 
@@ -18,8 +18,22 @@ class BaselineScheduleRecord(object):
     """
 
     def __init__(self, start=datetime.datetime.now(), end=datetime.datetime.now() + datetime.timedelta(days=10),
-                 duration=datetime.timedelta(days=10), fixed_cost=0.0, hourly_cost=0.0, var_cost=0.0, total_cost=0.0):
-        # TODO: Typechecking?
+                 duration=datetime.timedelta(days=10), fixed_cost=0.0, hourly_cost=0.0, var_cost=0.0, total_cost=0.0, type_check = True):
+        if type_check:
+            if not isinstance(start, datetime):
+                raise TypeError('start should be a datetime')
+            if not isinstance(end, datetime):
+                raise TypeError('end should be a datetime')
+            if not isinstance(duration, timedelta):
+                raise TypeError('duration should be a timedelta')
+            if not isinstance(fixed_cost, float):
+                raise TypeError('fixed_cost should be a float')
+            if not isinstance(hourly_cost, float):
+                raise TypeError('hourly_cost should be a float')
+            if not isinstance(var_cost, float):
+                raise TypeError('var_cost should be a float')
+            if not isinstance(total_cost, float):
+                raise TypeError('total_cost should be a float')
         self.start = start
         self.end = end
         self.duration = duration
