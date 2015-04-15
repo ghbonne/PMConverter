@@ -1,4 +1,4 @@
-from calendar import Calendar
+from object.agenda import Agenda
 from object.activity import Activity
 from object.trackingperiod import TrackingPeriod
 from object.resource import Resource
@@ -18,7 +18,7 @@ class ProjectObject(object):
     :var calendar: calendar
     """
 
-    def __init__(self, name="", activities=[], tracking_periods=[], resources=[], calendar=Calendar(), type_check = True):
+    def __init__(self, name="", activities=[], tracking_periods=[], resources=[], agenda=Agenda(), type_check = True):
         if type_check:
             if not isinstance(name, str):
                 raise  TypeError('name should be a string!')
@@ -28,8 +28,10 @@ class ProjectObject(object):
                 raise TypeError('tracking_periods should be a list of TrackingPeriod objects!')
             if not isinstance(resources, list) or not all(isinstance(element, Resource) for element in resources):
                 raise TypeError('resources should be a list of Resource objects!')
-            #todo: calendar
+            if not isinstance(agenda, Agenda):
+                raise TypeError('agend should be of type Agenda')
         self.name = name
         self.activities = activities
         self.tracking_periods = tracking_periods
         self.resources = resources
+        self.agenda = agenda
