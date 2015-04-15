@@ -23,7 +23,7 @@ class Activity(object):
     :var activity_tracking: ActivityTrackingRecord
     """
 
-    def __init__(self, activity_id, name="", wbs_id=(), predecessors=[], successors=[], resources=[], resource_cost=0.0,
+    def __init__(self, activity_id, name="", wbs_id=(), predecessors=[], successors=[], resources=[], resources_needed=0, resource_cost=0.0,
                  baseline_schedule=BaselineScheduleRecord(), risk_analysis=RiskAnalysisDistribution(),
                  activity_tracking=ActivityTrackingRecord(), type_check = True):
         """
@@ -86,6 +86,7 @@ class Activity(object):
         self.predecessors = predecessors
         self.successors = successors
         self.resources = resources
+        self.resources_needed = resources_needed
         self.resource_cost = resource_cost
         self.baseline_schedule = baseline_schedule
         self.risk_analysis = risk_analysis

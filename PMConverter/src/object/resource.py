@@ -13,7 +13,7 @@ class Resource(object):
     :var cost_unit: float, cost per unit
     """
 
-    def __init__(self, resource_id, name="", resource_type="Renewable", availability="", cost_use=0.0, cost_unit=0.0):
+    def __init__(self, resource_id, name="", resource_type="Renewable", availability="", cost_use=0.0, cost_unit=0.0, total_cost=0.0):
         # TODO: Typechecking?
         if resource_type != "Renewable" and resource_type != "Consumable":
             raise TypeError()
@@ -24,5 +24,6 @@ class Resource(object):
         self.availability = availability
         self.cost_use = cost_use
         self.cost_unit = cost_unit
+        self.total_cost = total_cost
 
 
