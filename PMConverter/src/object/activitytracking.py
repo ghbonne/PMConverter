@@ -47,7 +47,7 @@ class ActivityTrackingRecord(object):
                 raise TypeError('earned_value must be a float!')
             if not isinstance(planned_value, float):
                 raise TypeError('planned_value must be a float!')
-            if not isinstance(percentage_completed, int) and not (0 <= percentage_completed <= 100):
+            if not isinstance(percentage_completed, int) or not (0 <= percentage_completed <= 100):
                 raise TypeError('percentage_completed must be an integer between 0 and 100')
 
         self.tracking_period = tracking_period
