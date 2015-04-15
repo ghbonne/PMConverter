@@ -1,4 +1,7 @@
 from calendar import Calendar
+from object.activity import Activity
+from object.trackingperiod import TrackingPeriod
+from object.resource import Resource
 
 __author__ = 'PM Group 8'
 
@@ -15,10 +18,18 @@ class ProjectObject(object):
     :var calendar: calendar
     """
 
-    def __init__(self, name="", activities=[], tracking_periods=[], resources=[], calendar=Calendar()):
-        # TODO: Typechecking?
+    def __init__(self, name="", activities=[], tracking_periods=[], resources=[], calendar=Calendar(), type_check = True):
+        if type_check:
+            if not isinstance(name, str):
+                raise  TypeError('name should be a string!')
+            if not isinstance(activities, list) or not all(isinstance(element, Activity) for element in activities):
+                raise TypeError('activities should be a list of Activity objects!')
+            if not isinstance(tracking_periods, list) or not all(isinstance(element, TrackingPeriod) for element in tracking_periods):
+                raise TypeError('tracking_periods should be a list of TrackingPeriod objects!')
+            if not isinstance(resources, list) or not all(isinstance(element, Resource) for element in resources):
+                raise TypeError('resources should be a list of Resource objects!')
+            #todo: calendar
         self.name = name
         self.activities = activities
         self.tracking_periods = tracking_periods
         self.resources = resources
- 
