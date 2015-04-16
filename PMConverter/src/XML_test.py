@@ -3,6 +3,9 @@ import xml.etree.ElementTree as ET
 from object.activity import Activity
 from object.baselineschedule import BaselineScheduleRecord
 from object.resource import Resource
+from object.riskanalysisdistribution import RiskAnalysisDistribution
+from object.activitytracking import ActivityTrackingRecord
+from object.trackingperiod import TrackingPeriod
 
 tree = ET.parse('project.xml')
 root = tree.getroot()
@@ -10,6 +13,7 @@ root = tree.getroot()
 activity_list=[];
 res_list=[];
 counter = 0
+
 
 ## Activity group, ID, Name
 for activities in root.findall('ActivityGroups'):
@@ -142,12 +146,48 @@ for resource_assignments in root.findall('ResourceAssignments'):
                        else:
                            activity.resources=[resourceTuple]
 
+## Risk Analysis
+distribution_list =  [0 for x in range(len(activity_list))]  # List with possible distributions
+#Standard distributions
+distribution_list[1]= RiskAnalysisDistribution(distribution_type="standard", distribution_units="no risk", optimistic_duration=99,
+                 probable_duration=100, pessimistic_duration=101)
+distribution_list[2]=RiskAnalysisDistribution(distribution_type="standard", distribution_units="symmetric", optimistic_duration=80,
+                 probable_duration=100, pessimistic_duration=120)
+distribution_list[3]=RiskAnalysisDistribution(distribution_type="standard", distribution_units="skewed left", optimistic_duration=80,
+                 probable_duration=110, pessimistic_duration=120)
+distribution_list[4]=RiskAnalysisDistribution(distribution_type="standard", distribution_units="skewed right", optimistic_duration=80,
+                 probable_duration=90, pessimistic_duration=120)
+i=0
+distr=[0, 0, 0]
+for distributions in root.findall('SensitivityDistributions'):
+    for x in range(5, len(activity_list)):
+        distr_string='TProTrackSensitivityDistribution'+str(x)
+        distr_x = distributions.find(distr_string)
+        if distr_x != None:
+            distribution=distr_x.find('Distribution')
+            i=0
+            for X in distribution.findall('X'):
+                distr[i]=int(X.text)
+                i+=1
+        distribution_list[x]=(RiskAnalysisDistribution(distribution_type="manual", distribution_units="absolute",
+                                                          optimistic_duration=distr[0],probable_duration=distr[1], pessimistic_duration=distr[2]))
+
+for activities in root.findall('Activities'):
+    for activity in activities.findall('Activity'):
+        for activity_l in activity_list:
+            if int(activity.find('UniqueID').text) == activity_l.activity_id:
+                distr_number=int(activity.find('Distribution').text)
+                activity_l.risk_analysis=distribution_list[distr_number]
+
+
+
+## Activity Tracking
 
 
 ## Testing
-for activity in activity_list:
-    for x in range(0,len(activity.resources)):
-        print(activity.activity_id, activity.resources[x][0].resource_id)
+#for activity in activity_list:
+ #   for x in range(0,len(activity.resources)):
+  #      print(activity.activity_id, activity.resources[x][0].resource_id)
 
-for resource in res_list:
-    print(resource.resource_id)
+#for distr in distribution_list:
+ #   print(distr)
