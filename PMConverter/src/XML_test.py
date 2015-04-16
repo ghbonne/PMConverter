@@ -135,13 +135,19 @@ for resource_assignments in root.findall('ResourceAssignments'):
         for activity in activity_list:
            if activity.activity_id == activity_ID:
                for resource in res_list:
+                   resourceTuple=(resource, res_needed)
                    if resource.resource_id == res_id:
-                      activity.resources=resource
-                      activity.resources_needed=res_needed
+                       if len(activity.resources) >0:
+                            activity.resources.append(resourceTuple)
+                       else:
+                           activity.resources=[resourceTuple]
+
+
 
 ## Testing
 for activity in activity_list:
-   print(activity.activity_id, activity.resources.resource_id)
+    for x in range(0,len(activity.resources)):
+        print(activity.activity_id, activity.resources[x][0].resource_id)
 
 for resource in res_list:
     print(resource.resource_id)
