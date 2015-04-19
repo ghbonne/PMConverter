@@ -10,10 +10,29 @@ from object.trackingperiod import TrackingPeriod
 tree = ET.parse('project.xml')
 root = tree.getroot()
 
-activity_list=[];
-res_list=[];
+activity_list=[]
+activity_list_wo_groups=[]
+res_list=[]
 counter = 0
+max=0
 
+## max number activity?
+for activities in root.findall('ActivityGroups'):
+    for activity in activities.findall('ActivityGroup'):
+        #UniqueID
+        UniqueID=int(activity.find('UniqueID').text)
+        if(UniqueID > max):
+            max = UniqueID
+for activities in root.findall('Activities'):
+    for activity in activities.findall('Activity'):
+        #UniqueID
+        UniqueID=int(activity.find('UniqueID').text)
+        if(UniqueID > max):
+            max = UniqueID
+
+#Initialize activity list
+activity_list_interim=[None for x in range(max)]
+activity_list_wo_groups_interim=[None for x in range(max)]
 
 ## Activity group, ID, Name
 for activities in root.findall('ActivityGroups'):
@@ -21,18 +40,17 @@ for activities in root.findall('ActivityGroups'):
         #UniqueID
         UniqueID=int(activity.find('UniqueID').text)
         a_g = Activity(int(UniqueID));
-
         #Name
         Name=activity.find('Name').text
         a_g.name= Name
-        activity_list.append(a_g)
+        activity_list_interim[UniqueID-1]=a_g
 
 ## Activity name, ID, BSR
 for activities in root.findall('Activities'):
     for activity in activities.findall('Activity'):
         #UniqueID
-        UniqueID=activity.find('UniqueID').text
-        a = Activity(int(UniqueID));
+        UniqueID=int(activity.find('UniqueID').text)
+        a = Activity((UniqueID));
         #Name
         Name=activity.find('Name').text
         a.name= Name
@@ -53,8 +71,18 @@ for activities in root.findall('Activities'):
         BSR.fixed_cost=FixedBaselineCost
         BSR.var_cost=BaselineCostByUnit
         a.baseline_schedule=BSR
+        activity_list_interim[UniqueID-1]=a
+        activity_list_wo_groups_interim[UniqueID-1]=a
+#print(activity_list)
 
-        activity_list.append(a)
+# Removing empty activities from list (list is sorted)
+for i in range(0, len(activity_list_interim)):
+    if activity_list_interim[i] != None:
+        activity_list.append(activity_list_interim[i])
+    if activity_list_wo_groups_interim[i] != None:
+        activity_list_wo_groups.append(activity_list_wo_groups_interim[i])
+
+
 
 ## Successor/Predeccessors
 for relations in root.findall('Relations'):
@@ -77,16 +105,18 @@ for relations in root.findall('Relations'):
         PredecessorTuple = (Predecessor, LagString, Lag)
 
         for activity in activity_list:
-            if activity.activity_id == int(Predecessor):
-                    if len(activity.successors) > 0:
-                        (activity.successors).append(SuccessorTuple)
+            if activity != None:
+                if activity.activity_id == int(Predecessor):
+                        if len(activity.successors) > 0:
+                            (activity.successors).append(SuccessorTuple)
+                        else:
+                            (activity.successors) = [SuccessorTuple]
+                elif activity.activity_id == int(Successor):
+                    if len(activity.predecessors) > 0:
+                        (activity.predecessors).append(PredecessorTuple)
                     else:
-                        (activity.successors) = [SuccessorTuple]
-            elif activity.activity_id == int(Successor):
-                if len(activity.predecessors) > 0:
-                    (activity.predecessors).append(PredecessorTuple)
-                else:
-                    (activity.predecessors) = [PredecessorTuple]
+                        (activity.predecessors) = [PredecessorTuple]
+
 
 ## WBS
 for outline in root.findall('OutlineList'):
@@ -97,9 +127,10 @@ for outline in root.findall('OutlineList'):
             ID=int(child.find('Data').text)
             #1.x
             for activity in activity_list:
-                if activity.activity_id == ID:
-                    wbsTuple=(1, counter1)
-                    activity.wbs_id=wbsTuple
+                if activity != None:
+                    if activity.activity_id == ID:
+                        wbsTuple=(1, counter1)
+                        activity.wbs_id=wbsTuple
             #1.x.y
             for list2 in child.findall('List'):
                 counter2=0
@@ -107,9 +138,10 @@ for outline in root.findall('OutlineList'):
                     counter2+=1
                     ID2=int(child2.find('Data').text)
                     for activity2 in activity_list:
-                        if activity2.activity_id == ID2:
-                            wbsTuple=(1, counter1, counter2)
-                            activity2.wbs_id=wbsTuple
+                        if activity2 != None:
+                            if activity2.activity_id == ID2:
+                                wbsTuple=(1, counter1, counter2)
+                                activity2.wbs_id=wbsTuple
 
 
 
@@ -137,14 +169,15 @@ for resource_assignments in root.findall('ResourceAssignments'):
         activity_ID=int(resource_assignment.find('FIELD1024').text)
         res_needed=int(resource_assignment.find('FIELD1026').text)
         for activity in activity_list:
-           if activity.activity_id == activity_ID:
-               for resource in res_list:
-                   resourceTuple=(resource, res_needed)
-                   if resource.resource_id == res_id:
-                       if len(activity.resources) >0:
-                            activity.resources.append(resourceTuple)
-                       else:
-                           activity.resources=[resourceTuple]
+            if activity != None:
+               if activity.activity_id == activity_ID:
+                   for resource in res_list:
+                       resourceTuple=(resource, res_needed)
+                       if resource.resource_id == res_id:
+                           if len(activity.resources) >0:
+                                activity.resources.append(resourceTuple)
+                           else:
+                               activity.resources=[resourceTuple]
 
 ## Risk Analysis
 distribution_list =  [0 for x in range(len(activity_list))]  # List with possible distributions
@@ -175,13 +208,53 @@ for distributions in root.findall('SensitivityDistributions'):
 for activities in root.findall('Activities'):
     for activity in activities.findall('Activity'):
         for activity_l in activity_list:
-            if int(activity.find('UniqueID').text) == activity_l.activity_id:
-                distr_number=int(activity.find('Distribution').text)
-                activity_l.risk_analysis=distribution_list[distr_number]
+            if activity != None and activity_l!=None:
+                if int(activity.find('UniqueID').text) == activity_l.activity_id:
+                    distr_number=int(activity.find('Distribution').text)
+                    activity_l.risk_analysis=distribution_list[distr_number]
+
+#print(len(activity_list))
 
 
 
+i=0
+TP_nr=0
 ## Activity Tracking
+for tracking_list in root.findall('TrackingList'):
+    activityTrackingRecord_list=[]
+    for tracking_period in tracking_list.findall('TProTrackActivities-1'):
+        TP_nr+=1
+        activity_nr=0
+        for tracking_activity in tracking_period.findall('TProTrackActivityTracking-1'):
+            actualStart=tracking_activity.find('ActualStart')
+            actualDuration=tracking_activity.find('ActualDuration')
+            actualCostDev=tracking_activity.find('ActualCostDev')
+            remainingDuration=tracking_activity.find('RemainingDuration')
+            remainingCostDev=tracking_activity.find('RemainingCostDev')
+            percentageComplete=tracking_activity.find('PercentageComplete')
+            if len(activityTrackingRecord_list)>0:
+                activityTrackingRecord=ActivityTrackingRecord(trackingPeriod, activity_list_wo_groups[activity_nr],actualStart,
+                                                              actualDuration,plannedActualCost=activity_list_wo_groups[activity_nr].baseline_schedule.total_cost,
+                                                              plannedRemainingCost=,
+                                                              remainingDuration=, remaininCostDev ,actualCostDev, remainingCostDev, )
+                activityTrackingRecord_list=[]
+
+
+
+            activity_nr+=1
+    #TrackingPeriod Activity info
+        count=0
+        for tracking_period_info in tracking_list.findall('TrackingPeriod'):
+            count+=1
+        TP_list=[None for x in range(count)]
+        count=0
+        for tracking_period_info in tracking_list.findall('TrackingPeriod'):
+            name=tracking_period_info.find('Name').text
+            enddate=tracking_period_info.find('EndDate').text
+            TP_list[count]=TrackingPeriod(name,enddate,)
+            count+=1
+
+
 
 
 ## Testing

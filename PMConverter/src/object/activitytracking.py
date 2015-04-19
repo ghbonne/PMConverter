@@ -21,6 +21,22 @@ class ActivityTrackingRecord(object):
     # _plannedValue
     # class variables:
 
-    def __init__(self):
-        pass
+    def __init__(self, trackingPeriod=None, activity=None, actualStart=None, actualDuration=None, plannedActualCost=0, plannedRemainingCost=0,
+                 remainingDuration=None, deviationPAC=None,deviationPRC=None, actualCost=0, remainingCost=0, percentageCompleted=0,
+                 trackingStatus=0, earnedValue=0, plannedValue=0):
+        self.trackingPeriod=trackingPeriod
+        self.activity=activity
+        self.actualStart=actualStart
+        self.actualDuration=actualDuration
+        self.plannedActualCost=plannedActualCost
+        self.plannedRemainingCost=plannedRemainingCost
+        self.remainingDuration=remainingDuration
+        self.deviationPAC=deviationPAC
+        self.deviationPRC=deviationPRC
+        self.actualCost=actualCost
+        self.remainingCost=remainingCost
+        self.percentageCompleted=percentageCompleted
+        self.trackingStatus=trackingStatus
+        self.earnedValue=earnedValue
+        self.plannedValue=plannedValue
 

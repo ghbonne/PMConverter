@@ -9,7 +9,9 @@ class TrackingPeriod(object):
     # _trackingPeriodRecords: List of ActivityTrackingRecords which are nonezero or contain changes w.r.t. previous tracking period
     # class variables:
 
-    def __init__(self):
+    def __init__(self, trackingPeriodName='', trackingPeriodStatusDate='', trackingPeriodRecords=''):
         # TODO: Typechecking?
-        pass
+        self.trackingPeriodName= trackingPeriodName
+        self.trackingPeriodStatusDate=trackingPeriodStatusDate
+        self.trackingPeriodRecords=trackingPeriodRecords
 
