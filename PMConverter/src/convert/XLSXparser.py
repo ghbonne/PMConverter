@@ -41,7 +41,7 @@ class XLSXParser(FileParser):
         risk_analysis_dict = self.process_risk_analysis(risk_analysis_sheet)
         # Finally, the sheet with activities is processed, using the dicts we created above.
         activities = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict)
-        return ProjectObject(activities=activities, resources=None)
+        return ProjectObject(activities=activities, resources=list(resources_dict.values()))
 
     def process_resources(self, resource_sheet):
         # We store the resources  in a dict, with as index the resource name, to access them easily later when we
@@ -99,7 +99,7 @@ class XLSXParser(FileParser):
                                                                 25569)*86400))  # Convert to correct date
             baseline_duration_split = activities_sheet.cell(row=curr_row, column=8).value.split("d")
             baseline_duration_days = int(baseline_duration_split[0])
-            baseline_duration_hours = 0
+            baseline_duration_hours = 0  # We need to set this default value for the next loop
             if baseline_duration_split[1] != '':
                 baseline_duration_hours = int(baseline_duration_split[1][1:-1])  # first char = " "; last char = "h"
             baseline_duration = datetime.timedelta(days=baseline_duration_days, hours=baseline_duration_hours)
@@ -195,6 +195,10 @@ class XLSXParser(FileParser):
         return header_lines
 
     def from_schedule_object(self, project_object, file_path_output):
+        """
+        This is just a lot of writing to excel code, it is ugly..
+
+        """
         workbook = xlsxwriter.Workbook(file_path_output)
 
         # Lots of formats
@@ -217,6 +221,8 @@ class XLSXParser(FileParser):
         money_lime_cell = workbook.add_format({'bg_color': 'lime', 'text_wrap': True, 'border': 1,
                                               'num_format': '#,##0.00 €', 'font_size': 8})
         money_navy_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1,
+                                              'num_format': '#,##0.00 €', 'font_size': 8})
+        money_yellow_cell = workbook.add_format({'bg_color': 'yellow', 'text_wrap': True, 'border': 1,
                                               'num_format': '#,##0.00 €', 'font_size': 8})
 
         # Worksheets
@@ -267,7 +273,7 @@ class XLSXParser(FileParser):
         # Now we run through all activities to get the required information
         counter = 2
         for activity in project_object.activities:
-            if self.is_lowest_level_activity(project_object.activities, activity):
+            if not self.is_not_lowest_level_activity(project_object.activities, activity):
                 # Write activity of lowest level
                 bsch_worksheet.write_number(counter, 0, activity.activity_id, green_cell)
                 bsch_worksheet.write(counter, 1, str(activity.name), green_cell)
@@ -312,6 +318,95 @@ class XLSXParser(FileParser):
 
             counter += 1
 
+        # Write the resources sheet
+
+        # Some small adjustments to rows and columns in the resource sheet
+        res_worksheet.set_row(1, 25)
+        res_worksheet.set_column(1, 1, 15)
+        res_worksheet.set_column(6, 6, 40)
+
+        # Write header cells (using the header format, and by merging some cells)
+        res_worksheet.merge_range('A1:D1', "General", header)
+        res_worksheet.merge_range('E1:F1', "Resource Cost", header)
+        res_worksheet.merge_range('G1:H1', "Resource Demand", header)
+
+        res_worksheet.write('A2', "ID", header)
+        res_worksheet.write('B2', "Name", header)
+        res_worksheet.write('C2', "Type", header)
+        res_worksheet.write('D2', "Availability", header)
+        res_worksheet.write('E2', "Cost/Use", header)
+        res_worksheet.write('F2', "Cost/Unit", header)
+        res_worksheet.write('G2', "Assigned To", header)
+        res_worksheet.write('H2', "Total Cost", header)
+
+        counter = 2
+        for resource in project_object.resources:
+            res_worksheet.write_number(counter, 0, resource.resource_id, yellow_cell)
+            res_worksheet.write(counter, 1, resource.name, yellow_cell)
+            res_worksheet.write(counter, 2, resource.resource_type, yellow_cell)
+            # God knows why we write the availability twice, it was like that in the template
+            useless_availability_string = str(resource.availability) + " #" + str(resource.availability)
+            res_worksheet.write(counter, 3, useless_availability_string, yellow_cell)
+            res_worksheet.write(counter, 4, resource.cost_use, money_yellow_cell)
+            res_worksheet.write(counter, 5, resource.cost_unit, money_yellow_cell)
+            self.write_resource_assign_cost(res_worksheet, counter, 6, resource, project_object.activities, cyan_cell,
+                                            money_cyan_cell)
+            counter += 1
+
+        # Write the risk analysis sheet
+
+        # Adjust some column widths
+        ra_worksheet.set_column(0, 0, 3)
+        ra_worksheet.set_column(1, 1, 18)
+        ra_worksheet.set_column(3, 3, 15)
+        ra_worksheet.set_column(4, 6, 12)
+
+        # Write the headers
+        ra_worksheet.merge_range('A1:B1', "General", header)
+        ra_worksheet.write('C1', "Baseline", header)
+        ra_worksheet.merge_range('D1:G1', "Activity Duration Distribution Profiles", header)
+
+        ra_worksheet.write('A2', "ID", header)
+        ra_worksheet.write('B2', "Name", header)
+        ra_worksheet.write('C2', "Duration", header)
+        ra_worksheet.write('D2', "Description", header)
+        ra_worksheet.write('E2', "Optimistic", header)
+        ra_worksheet.write('F2', "Most Probable", header)
+        ra_worksheet.write('G2', "Pessimistic", header)
+
+        # Write the rows by iterating through the activities (since they are linked to it)
+        counter = 2
+        for activity in project_object.activities:
+            if self.is_not_lowest_level_activity(project_object.activities, activity):
+                ra_worksheet.write_number(counter, 0, activity.activity_id, cyan_cell)
+                ra_worksheet.write(counter, 1, str(activity.name), cyan_cell)
+                if activity.baseline_schedule.duration.seconds != 0:
+                    duration = str(activity.baseline_schedule.duration.days) + "d " \
+                               + str(int(activity.baseline_schedule.duration.seconds / 3600)) + "h"
+                else:
+                    duration = str(activity.baseline_schedule.duration.days) + "d "
+                ra_worksheet.write(counter, 2, duration, cyan_cell)
+                ra_worksheet.write(counter, 3, "", cyan_cell)
+                ra_worksheet.write(counter, 4, "", cyan_cell)
+                ra_worksheet.write(counter, 5, "", cyan_cell)
+                ra_worksheet.write(counter, 6, "", cyan_cell)
+            else:
+                ra_worksheet.write_number(counter, 0, activity.activity_id, navy_cell)
+                ra_worksheet.write(counter, 1, str(activity.name), navy_cell)
+                if activity.baseline_schedule.duration.seconds != 0:
+                    duration = str(activity.baseline_schedule.duration.days) + "d " \
+                               + str(int(activity.baseline_schedule.duration.seconds / 3600)) + "h"
+                else:
+                    duration = str(activity.baseline_schedule.duration.days) + "d "
+                ra_worksheet.write(counter, 2, duration, navy_cell)
+                description = str(activity.risk_analysis.distribution_type) + " - " \
+                              + str(activity.risk_analysis.distribution_units)
+                ra_worksheet.write(counter, 3, description, yellow_cell)
+                ra_worksheet.write_number(counter, 4, activity.risk_analysis.optimistic_duration, yellow_cell)
+                ra_worksheet.write_number(counter, 5, activity.risk_analysis.probable_duration, yellow_cell)
+                ra_worksheet.write_number(counter, 6, activity.risk_analysis.pessimistic_duration, yellow_cell)
+            counter += 1
+
         workbook.close()
 
     @staticmethod
@@ -354,15 +449,15 @@ class XLSXParser(FileParser):
         worksheet.write(row, column, to_write, format)
 
     @staticmethod
-    def is_lowest_level_activity(activities, activity):
-        # Decide whether an activity is of the lowest level or not. TODO: A possible optimization is just looking at the
-        # Activity next to 'activity' since the list is sorted on wbs_id
+    def is_not_lowest_level_activity(activities, activity):
+        # Decide whether an activity is not of the lowest level or not. TODO: A possible optimization is just looking
+        # at the Activity next to 'activity' since the list is sorted on wbs_id
         for other_activity in activities:
             if other_activity.wbs_id != activity.wbs_id and len(other_activity.wbs_id) > len(activity.wbs_id):
                 for i in range(0, len(activity.wbs_id)):
                     if activity.wbs_id[i] != other_activity.wbs_id[i]:
                         break
-                if i == len(activity.wbs_id):
+                if i == len(activity.wbs_id)-1:
                     return True
         return False
 
@@ -379,4 +474,21 @@ class XLSXParser(FileParser):
                 to_write += " [" + str(float(resources[-1][1])) + " #" + str(resources[-1][0].availability) + "]"
         worksheet.write(row, column, to_write, format)
 
+    @staticmethod
+    def write_resource_assign_cost(worksheet, row, column, resource, activities, format, moneyformat):
+        # For every resource, we check to which activities it is assigned and what the total cost is
+        to_write = ''
+        cost = 0
+        for activity in activities:
+            for _resource in activity.resources:
+                if resource == _resource[0]:
+                    if _resource[1] == 1:
+                        to_write += str(activity.activity_id) + ';'
+                    else:
+                        to_write += str(activity.activity_id) + '[' + str(_resource[1]) + ' #' \
+                                    + str(resource.availability) + '];'
+                    cost += (activity.baseline_schedule.duration.days*8 +
+                             activity.baseline_schedule.duration.seconds/3600)*(_resource[1]*resource.cost_unit)
+        worksheet.write(row, column, to_write, format)
+        worksheet.write_number(row, column+1, cost, moneyformat)
 
