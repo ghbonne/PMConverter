@@ -1,6 +1,6 @@
 __author__ = 'PM Group 8'
 from datetime import datetime
-from object.activitytracking import ActivityTrackingRecord
+#from object.activitytracking import ActivityTrackingRecord
 
 
 class TrackingPeriod(object):
@@ -18,8 +18,8 @@ class TrackingPeriod(object):
                 raise TypeError('tracking_period_name should be a string!')
             if not isinstance(tracking_period_statusdate, datetime):
                 raise TypeError('tracking_period_statusdate should be a datetime!')
-            if not isinstance(tracking_period_records, list) or not all(isinstance(element, ActivityTrackingRecord) for element in tracking_period_records) :
-                raise TypeError('tracking_period_records should be a list of ActivityTrackingRecords!')
+            #if not isinstance(tracking_period_records, list) or not all(isinstance(element, ActivityTrackingRecord) for element in tracking_period_records) :
+            #    raise TypeError('tracking_period_records should be a list of ActivityTrackingRecords!')
 
         self.tracking_period_name = tracking_period_name
         self.tracking_period_statusdate = tracking_period_statusdate

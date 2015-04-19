@@ -1,6 +1,6 @@
 __author__ = 'PM Group 8'
 from datetime import datetime, timedelta
-from object.activity import Activity
+#from object.activity import Activity
 from object.trackingperiod import TrackingPeriod
 
 class ActivityTrackingRecord(object):
@@ -24,15 +24,15 @@ class ActivityTrackingRecord(object):
     :var planned_value: float
     """
 
-    def __init__(self, tracking_period, activity, actual_start, actual_duration, planned_actual_cost, planned_remaining_cost, 
-                 remaining_duration, deviation_pac, deviation_prc, actual_cost, remaining_cost, percentage_completed,
-                 tracking_status, earned_value, planned_value, type_check = True):
+    def __init__(self, tracking_period=None, activity=None, actual_start=None, actual_duration=None, planned_actual_cost=0.0, planned_remaining_cost=0.0,
+                 remaining_duration=0, deviation_pac=0.0, deviation_prc=0.0, actual_cost=0.0, remaining_cost=0.0, percentage_completed=0,
+                 tracking_status='Not Started', earned_value=0.0, planned_value=0.0, type_check = True):
         if type_check:
             #todo: tracking_status, actual_start, actual_duration
-            if not isinstance(tracking_period, TrackingPeriod):
-                raise TypeError('tracking_period must be a TrackingPeriod object!')
-            if not isinstance(activity, Activity):
-                raise TypeError('activity must be a Activity object!')
+            #if not isinstance(tracking_period, TrackingPeriod):
+            #    raise TypeError('tracking_period must be a TrackingPeriod object!')
+            #if not isinstance(activity, Activity):
+            #    raise TypeError('activity must be a Activity object!')
             if not isinstance(planned_actual_cost, float):
                 raise TypeError('planned_actual_cost must be a float!')
             if not isinstance(planned_remaining_cost, float):

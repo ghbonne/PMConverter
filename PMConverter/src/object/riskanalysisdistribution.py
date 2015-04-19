@@ -32,7 +32,7 @@ class RiskAnalysisDistribution(object):
     :var pessimistic_duration: int
     """
 
-    def __init__(self, distribution_type="manual", distribution_units="absolute", optimistic_duration=0,
+    def __init__(self, distribution_type=DistributionType.MANUAL, distribution_units=ManualDistributionUnit.ABSOLUTE, optimistic_duration=0,
                  probable_duration=0, pessimistic_duration=0, type_check=True):
         if type_check:
             if not isinstance(distribution_type, DistributionType):

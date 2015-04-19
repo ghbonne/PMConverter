@@ -17,8 +17,8 @@ class BaselineScheduleRecord(object):
     :var total_cost : float
     """
 
-    def __init__(self, start=datetime.datetime.now(), end=datetime.datetime.now() + datetime.timedelta(days=10),
-                 duration=datetime.timedelta(days=10), fixed_cost=0.0, hourly_cost=0.0, var_cost=0.0, total_cost=0.0, type_check = True):
+    def __init__(self, start=datetime.now(), end=datetime.now() + timedelta(days=10),
+                 duration=timedelta(days=10), fixed_cost=0.0, hourly_cost=0.0, var_cost=0.0, total_cost=0.0, type_check = True):
         if type_check:
             if not isinstance(start, datetime):
                 raise TypeError('start should be a datetime')
