@@ -36,7 +36,7 @@ class LineChart(Visualization):
         """
         worksheet = workbook.add_worksheet()
 
-        # Create a new chart object.
+        # Create a new chart objects.
         chart = workbook.add_chart({'type': 'line'})
 
         # Configure the series.

@@ -3,11 +3,11 @@ import re
 import datetime
 import time
 import math
-from object.activity import Activity
-from object.baselineschedule import BaselineScheduleRecord
-from object.projectobject import ProjectObject
-from object.resource import Resource
-from object.riskanalysisdistribution import RiskAnalysisDistribution
+from objects.activity import Activity
+from objects.baselineschedule import BaselineScheduleRecord
+from objects.projectobject import ProjectObject
+from objects.resource import Resource
+from objects.riskanalysisdistribution import RiskAnalysisDistribution
 
 __author__ = 'PM Group 8'
 
@@ -343,7 +343,7 @@ class XLSXParser(FileParser):
         for resource in project_object.resources:
             res_worksheet.write_number(counter, 0, resource.resource_id, yellow_cell)
             res_worksheet.write(counter, 1, resource.name, yellow_cell)
-            res_worksheet.write(counter, 2, resource.resource_type, yellow_cell)
+            res_worksheet.write(counter, 2, resource.resource_type.name, yellow_cell)
             # God knows why we write the availability twice, it was like that in the template
             useless_availability_string = str(resource.availability) + " #" + str(resource.availability)
             res_worksheet.write(counter, 3, useless_availability_string, yellow_cell)
@@ -399,8 +399,8 @@ class XLSXParser(FileParser):
                 else:
                     duration = str(activity.baseline_schedule.duration.days) + "d "
                 ra_worksheet.write(counter, 2, duration, navy_cell)
-                description = str(activity.risk_analysis.distribution_type) + " - " \
-                              + str(activity.risk_analysis.distribution_units)
+                description = str(activity.risk_analysis.distribution_type.name) + " - " \
+                              + str(activity.risk_analysis.distribution_units.name)
                 ra_worksheet.write(counter, 3, description, yellow_cell)
                 ra_worksheet.write_number(counter, 4, activity.risk_analysis.optimistic_duration, yellow_cell)
                 ra_worksheet.write_number(counter, 5, activity.risk_analysis.probable_duration, yellow_cell)

@@ -1,11 +1,11 @@
 import ast #ast.literal_eval
 import xml.etree.ElementTree as ET
-from object.activity import Activity
-from object.baselineschedule import BaselineScheduleRecord
-from object.resource import Resource
-from object.riskanalysisdistribution import RiskAnalysisDistribution
-from object.activitytracking import ActivityTrackingRecord
-from object.trackingperiod import TrackingPeriod
+from objects.activity import Activity
+from objects.baselineschedule import BaselineScheduleRecord
+from objects.resource import Resource
+from objects.riskanalysisdistribution import RiskAnalysisDistribution
+from objects.activitytracking import ActivityTrackingRecord
+from objects.trackingperiod import TrackingPeriod
 
 tree = ET.parse('project.xml')
 root = tree.getroot()
