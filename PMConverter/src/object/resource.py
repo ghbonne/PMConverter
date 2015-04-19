@@ -1,4 +1,11 @@
+from enum import Enum
+
 __author__ = 'PM Group 8'
+
+
+class ResourceType(Enum):
+    RENEWABLE = 'Renewable'
+    CONSUMABLE = 'Consumable'
 
 
 class Resource(object):
@@ -13,10 +20,20 @@ class Resource(object):
     :var cost_unit: float, cost per unit
     """
 
-    def __init__(self, resource_id, name="", resource_type="Renewable", availability="", cost_use=0.0, cost_unit=0.0, total_cost=0.0):
-        # TODO: Typechecking?
-        if resource_type != "Renewable" and resource_type != "Consumable":
-            raise TypeError()
+    def __init__(self, resource_id, name="", resource_type=ResourceType.RENEWABLE, availability="", cost_use=0.0, cost_unit=0.0, type_check = True):
+        if type_check:
+            if not isinstance(resource_id, int):
+                raise TypeError('resource_id should be an integer')
+            if not isinstance(name, str):
+                raise TypeError('name should be an string')
+            if not isinstance(resource_type, ResourceType):
+                raise TypeError('resource_type should be an element of ResourceType enum')
+            if not isinstance(availability, int):
+                raise TypeError('availability should be an integer')
+            if not isinstance(cost_use, float):
+                raise TypeError('cost_use should be an float')
+            if not isinstance(cost_unit, float):
+                raise TypeError('cost_unit should be an float')
 
         self.resource_id = resource_id
         self.name = name
