@@ -19,6 +19,11 @@ class ProjectObject(object):
     """
 
     def __init__(self, name="", activities=[], tracking_periods=[], resources=[], agenda=Agenda(), type_check = True):
+        """
+        Initialize a ProjectObject. The data types of the parameters must be the same as the properties of a ProjectObject.
+
+        :raises TypeError: one of the parameters is not the right type.
+        """
         if type_check:
             if not isinstance(name, str):
                 raise  TypeError('name should be a string!')

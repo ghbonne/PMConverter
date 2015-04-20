@@ -19,6 +19,11 @@ class BaselineScheduleRecord(object):
 
     def __init__(self, start=datetime.now(), end=datetime.now() + timedelta(days=10),
                  duration=timedelta(days=10), fixed_cost=0.0, hourly_cost=0.0, var_cost=0.0, total_cost=0.0, type_check = True):
+        """
+        Initialize a Baselineschedule record. The data types of the parameters must be the same as the properties of an BaselineScheduleRecord.
+
+        :raises TypeError: one of the parameters is not the right type.
+        """
         if type_check:
             if not isinstance(start, datetime):
                 raise TypeError('start should be a datetime')

@@ -34,6 +34,11 @@ class RiskAnalysisDistribution(object):
 
     def __init__(self, distribution_type=DistributionType.MANUAL, distribution_units=ManualDistributionUnit.ABSOLUTE, optimistic_duration=0,
                  probable_duration=0, pessimistic_duration=0, type_check=True):
+        """
+        Initialize a Risk analysis distribution. The data types of the parameters must be the same as the properties of a RisAnalysisDistribution.
+
+        :raises TypeError: one of the parameters is not the right type.
+        """
         if type_check:
             if not isinstance(distribution_type, DistributionType):
                 raise TypeError('distribution_type should be an element of the DistributionType enum')

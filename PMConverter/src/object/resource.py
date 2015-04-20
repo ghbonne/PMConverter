@@ -21,6 +21,11 @@ class Resource(object):
     """
 
     def __init__(self, resource_id, name="", resource_type=ResourceType.RENEWABLE, availability="", cost_use=0.0, cost_unit=0.0, type_check = True):
+        """
+        Initialize a Resource. The data types of the parameters must be the same as the properties of a Resource.
+
+        :raises TypeError: one of the parameters is not the right type.
+        """
         if type_check:
             if not isinstance(resource_id, int):
                 raise TypeError('resource_id should be an integer')

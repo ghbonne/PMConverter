@@ -26,7 +26,12 @@ class ActivityTrackingRecord(object):
 
     def __init__(self, tracking_period=None, activity=None, actual_start=None, actual_duration=None, planned_actual_cost=0.0, planned_remaining_cost=0.0,
                  remaining_duration=0, deviation_pac=0.0, deviation_prc=0.0, actual_cost=0.0, remaining_cost=0.0, percentage_completed=0,
-                 tracking_status='Not Started', earned_value=0.0, planned_value=0.0, type_check = True):
+                 tracking_status='Not Started', earned_value=0.0, planned_value=0.0, type_check=True):
+        """
+        Initialize an Activitytracking record. The data types of the parameters must be the same as the properties of an ActivityTrackingRecord.
+
+        :raises TypeError: one of the parameters is not the right type.
+        """
         if type_check:
             #todo: tracking_status, actual_start, actual_duration
             #if not isinstance(tracking_period, TrackingPeriod):
