@@ -1,15 +1,25 @@
 import ast #ast.literal_eval
 import xml.etree.ElementTree as ET
+<<<<<<< HEAD
+from objects.activity import Activity
 from objects.baselineschedule import BaselineScheduleRecord
 from objects.resource import Resource
 from objects.riskanalysisdistribution import RiskAnalysisDistribution
 from objects.activitytracking import ActivityTrackingRecord
 from objects.trackingperiod import TrackingPeriod
-from objects.resource import ResourceType
-from objects.riskanalysisdistribution import DistributionType
-from objects.riskanalysisdistribution import ManualDistributionUnit
-from objects.riskanalysisdistribution import StandardDistributionUnit
-from objects.activity import Activity
+=======
+from object.activity import Activity
+from object.baselineschedule import BaselineScheduleRecord
+from object.resource import Resource
+from object.riskanalysisdistribution import RiskAnalysisDistribution
+from object.activitytracking import ActivityTrackingRecord
+from object.trackingperiod import TrackingPeriod
+from object.resource import ResourceType
+from object.riskanalysisdistribution import DistributionType
+from object.riskanalysisdistribution import ManualDistributionUnit
+from object.riskanalysisdistribution import StandardDistributionUnit
+#todo: datetime, calendar, extra activity tracking record fields (should already be read)
+>>>>>>> 88c195f29079e8a5f5064983d5337916b1abc897
 
 tree = ET.parse('project.xml')
 root = tree.getroot()
@@ -158,6 +168,14 @@ for resources in root.findall('Resources'):
         availability=resource.find('FIELD778').text
         renewable=bool(resource.find('FIELD769').text)
         if renewable == 1:
+<<<<<<< HEAD
+            renewable_string='Renewable'
+        cost_per_use=resource.find('FIELD770').text
+        cost_per_unit=resource.find('FIELD771').text
+        availability_int=int(resource.find('FIELD780').text)
+        total_cost=float(resource.find('FIELD776').text)
+        res=Resource(res_ID, name, renewable_string, availability, cost_per_use, cost_per_unit, total_cost)
+=======
             res_type= ResourceType.RENEWABLE
         else:
             res_type= ResourceType.CONSUMABLE
@@ -166,6 +184,7 @@ for resources in root.findall('Resources'):
         availability_int=int(resource.find('FIELD780').text)
         total_cost=float(resource.find('FIELD776').text)
         res=Resource(res_ID, name, res_type, availability_int, cost_per_use, cost_per_unit, total_cost)
+>>>>>>> 88c195f29079e8a5f5064983d5337916b1abc897
         res_list.append(res)
 
 ## Resources (Assignment)
@@ -188,7 +207,15 @@ for resource_assignments in root.findall('ResourceAssignments'):
 ## Risk Analysis
 distribution_list =  [0 for x in range(len(activity_list))]  # List with possible distributions
 #Standard distributions
-
+<<<<<<< HEAD
+distribution_list[1]= RiskAnalysisDistribution(distribution_type="standard", distribution_units="no risk", optimistic_duration=99,
+                 probable_duration=100, pessimistic_duration=101)
+distribution_list[2]=RiskAnalysisDistribution(distribution_type="standard", distribution_units="symmetric", optimistic_duration=80,
+                 probable_duration=100, pessimistic_duration=120)
+distribution_list[3]=RiskAnalysisDistribution(distribution_type="standard", distribution_units="skewed left", optimistic_duration=80,
+                 probable_duration=110, pessimistic_duration=120)
+distribution_list[4]=RiskAnalysisDistribution(distribution_type="standard", distribution_units="skewed right", optimistic_duration=80,
+=======
 distribution_list[1]= RiskAnalysisDistribution(distribution_type=DistributionType.STANDARD, distribution_units=StandardDistributionUnit.NO_RISK, optimistic_duration=99,
                  probable_duration=100, pessimistic_duration=101)
 distribution_list[2]=RiskAnalysisDistribution(distribution_type=DistributionType.STANDARD, distribution_units=StandardDistributionUnit.SYMMETRIC, optimistic_duration=80,
@@ -196,6 +223,7 @@ distribution_list[2]=RiskAnalysisDistribution(distribution_type=DistributionType
 distribution_list[3]=RiskAnalysisDistribution(distribution_type=DistributionType.STANDARD, distribution_units=StandardDistributionUnit.SKEWED_LEFT, optimistic_duration=80,
                  probable_duration=110, pessimistic_duration=120)
 distribution_list[4]=RiskAnalysisDistribution(distribution_type=DistributionType.STANDARD, distribution_units=StandardDistributionUnit.SKEWED_RIGHT, optimistic_duration=80,
+>>>>>>> 88c195f29079e8a5f5064983d5337916b1abc897
                  probable_duration=90, pessimistic_duration=120)
 i=0
 distr=[0, 0, 0]
@@ -209,7 +237,11 @@ for distributions in root.findall('SensitivityDistributions'):
             for X in distribution.findall('X'):
                 distr[i]=int(X.text)
                 i+=1
+<<<<<<< HEAD
+        distribution_list[x]=(RiskAnalysisDistribution(distribution_type="manual", distribution_units="absolute",
+=======
         distribution_list[x]=(RiskAnalysisDistribution(distribution_type=DistributionType.MANUAL, distribution_units=ManualDistributionUnit.ABSOLUTE,
+>>>>>>> 88c195f29079e8a5f5064983d5337916b1abc897
                                                           optimistic_duration=distr[0],probable_duration=distr[1], pessimistic_duration=distr[2]))
 
 for activities in root.findall('Activities'):
@@ -223,6 +255,56 @@ for activities in root.findall('Activities'):
 #print(len(activity_list))
 
 
+
+<<<<<<< HEAD
+i=0
+TP_nr=0
+## Activity Tracking
+for tracking_list in root.findall('TrackingList'):
+    activityTrackingRecord_list=[]
+    for tracking_period in tracking_list.findall('TProTrackActivities-1'):
+        TP_nr+=1
+        activity_nr=0
+        for tracking_activity in tracking_period.findall('TProTrackActivityTracking-1'):
+            actualStart=tracking_activity.find('ActualStart')
+            actualDuration=tracking_activity.find('ActualDuration')
+            actualCostDev=tracking_activity.find('ActualCostDev')
+            remainingDuration=tracking_activity.find('RemainingDuration')
+            remainingCostDev=tracking_activity.find('RemainingCostDev')
+            percentageComplete=tracking_activity.find('PercentageComplete')
+            if len(activityTrackingRecord_list)>0:
+                activityTrackingRecord=ActivityTrackingRecord(trackingPeriod, activity_list_wo_groups[activity_nr],actualStart,
+                                                              actualDuration,plannedActualCost=activity_list_wo_groups[activity_nr].baseline_schedule.total_cost,
+                                                              plannedRemainingCost=,
+                                                              remainingDuration=, remaininCostDev ,actualCostDev, remainingCostDev, )
+                activityTrackingRecord_list=[]
+
+
+
+            activity_nr+=1
+    #TrackingPeriod Activity info
+        count=0
+        for tracking_period_info in tracking_list.findall('TrackingPeriod'):
+            count+=1
+        TP_list=[None for x in range(count)]
+        count=0
+        for tracking_period_info in tracking_list.findall('TrackingPeriod'):
+            name=tracking_period_info.find('Name').text
+            enddate=tracking_period_info.find('EndDate').text
+            TP_list[count]=TrackingPeriod(name,enddate,)
+            count+=1
+
+
+
+
+## Testing
+#for activity in activity_list:
+ #   for x in range(0,len(activity.resources)):
+  #      print(activity.activity_id, activity.resources[x][0].resource_id)
+
+#for distr in distribution_list:
+ #   print(distr)
+=======
 
 ## Activity Tracking
 for tracking_list in root.findall('TrackingList'):
@@ -311,3 +393,5 @@ for TP in TP_list:
              'Actual Duration:', ATR.actual_duration,'Remaining Duration', ATR.remaining_duration,
              '%:',ATR.percentage_completed,)
 
+
+>>>>>>> 88c195f29079e8a5f5064983d5337916b1abc897
