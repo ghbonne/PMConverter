@@ -12,12 +12,12 @@ class TrackingPeriod(object):
     :var tracking_period_records: List of ActivityTrackingRecords, which are nonzero or contain changes w.r.t. previous tracking period
     """
 
-    def __init__(self, tracking_period_name=" ", tracking_period_statusdate=date.now(), tracking_period_records=[], type_check = True):
+    def __init__(self, tracking_period_name=" ", tracking_period_statusdate=datetime.now(), tracking_period_records=[], type_check = True):
         if type_check:
             if not isinstance(tracking_period_name, str):
                 raise TypeError('tracking_period_name should be a string!')
-            if not isinstance(tracking_period_statusdate, date):
-                raise TypeError('tracking_period_statusdate should be a datetime!')
+#            if not isinstance(tracking_period_statusdate, date):
+#                raise TypeError('tracking_period_statusdate should be a datetime!')
 #            if not isinstance(tracking_period_records, list) or not all(isinstance(element, ActivityTrackingRecord) for element in tracking_period_records) :
 #                raise TypeError('tracking_period_records should be a list of ActivityTrackingRecords!')
 

@@ -54,7 +54,8 @@ class BaselineScheduleRecord(object):
         :return difference between end and start in a date format
         """
 
-        if self._duration.seconds > 0:
-            return "{0}d {1}h".format(self._duration.days, self._duration.seconds//3600)
+        if self.duration.seconds > 0:
+            return "{0}d {1}h".format(self.duration.days, self.duration.seconds//3600)
         else:
-            return "{0}d".format(self._duration.days)
+            return "{0}d".format(self.duration.days)
+
