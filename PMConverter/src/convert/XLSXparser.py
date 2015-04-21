@@ -17,6 +17,10 @@ from convert.fileparser import FileParser
 
 
 class XLSXParser(FileParser):
+    """
+    Class to convert ProjectObjects to .xlsx files and vice versa. Shout out to John McNamara for his xlsxwriter library
+    and the guys from openpyxl.
+    """
 
     def __init__(self):
         super().__init__()
