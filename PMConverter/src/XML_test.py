@@ -1,25 +1,23 @@
 import ast #ast.literal_eval
+from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
-<<<<<<< HEAD
+
 from objects.activity import Activity
 from objects.baselineschedule import BaselineScheduleRecord
 from objects.resource import Resource
 from objects.riskanalysisdistribution import RiskAnalysisDistribution
 from objects.activitytracking import ActivityTrackingRecord
 from objects.trackingperiod import TrackingPeriod
-=======
-from object.activity import Activity
-from object.baselineschedule import BaselineScheduleRecord
-from object.resource import Resource
-from object.riskanalysisdistribution import RiskAnalysisDistribution
-from object.activitytracking import ActivityTrackingRecord
-from object.trackingperiod import TrackingPeriod
-from object.resource import ResourceType
-from object.riskanalysisdistribution import DistributionType
-from object.riskanalysisdistribution import ManualDistributionUnit
-from object.riskanalysisdistribution import StandardDistributionUnit
-#todo: datetime, calendar, extra activity tracking record fields (should already be read)
->>>>>>> 88c195f29079e8a5f5064983d5337916b1abc897
+from objects.resource import ResourceType
+from objects.riskanalysisdistribution import DistributionType
+from objects.riskanalysisdistribution import ManualDistributionUnit
+from objects.riskanalysisdistribution import StandardDistributionUnit
+from objects.agenda import Agenda
+from objects.projectobject import ProjectObject
+from convert.XLSXparser import XLSXParser
+#todo: extra activity tracking record fields (should already be read)
+
+
 
 tree = ET.parse('project.xml')
 root = tree.getroot()
@@ -29,6 +27,71 @@ activity_list_wo_groups=[]
 res_list=[]
 counter = 0
 max=0
+
+## Project name
+project_name=root.find("NAME").text
+
+## Dateformat
+for settings in root.findall('Settings'):
+    dateformat=settings.find('DateTimeFormat').text
+
+def getdate(datestring=""):
+    if dateformat == "d/MM/yyyy h:mm":
+        if len(datestring) == 12:
+            day=int(datestring[:2])
+            month=int(datestring[2:4])
+            year=int(datestring[4:8])
+            hour=int(datestring[8:10])
+            minute=int(datestring[10:12])
+            date_datetime=datetime(year, month, day, hour, minute)
+            return date_datetime
+        elif len(datestring) == 8:
+            day=int(datestring[:2])
+            month=int(datestring[2:4])
+            year=int(datestring[4:8])
+            date_datetime=datetime(year, month, day)
+            return date_datetime
+        else:
+            return "N/A"
+    elif dateformat == "MM/d/yyyy h:mm":
+        if len(datestring) == 12:
+            month=int(datestring[:2])
+            day=int(datestring[2:4])
+            year=int(datestring[4:8])
+            hour=int(datestring[8:10])
+            minute=int(datestring[10:12])
+            date_datetime=datetime(year, month, day, hour, minute)
+            return date_datetime
+        elif len(datestring) == 8:
+            month=int(datestring[:2])
+            day=int(datestring[2:4])
+            year=int(datestring[4:8])
+            date_datetime=datetime(year, month, day)
+            return date_datetime
+        else:
+            raise("Warning! Dateformat undefined")
+            return "N/A"
+
+## Create Agenda: Working hours, Working days, Holidays
+for agenda in root.findall('Agenda'):
+    project_agenda=Agenda()
+    # working hours
+    for nonworkinghour in agenda.findall('NonWorkingHours'):
+        for hours in nonworkinghour.findall('Hour'):
+            hour=int(hours.text)
+            project_agenda.set_non_working_hour(hour)
+    # working days
+    for nonworkingday in agenda.findall('NonWorkingDays'):
+        for days in nonworkingday.findall('Day'):
+            day=int(days.text)
+            project_agenda.set_non_working_day(day)
+    # Holidays
+    ## No holidays in example xml file: following code is educated guess
+    for holidays in agenda.findall('Holidays'):
+        for holiday in holidays.findall('Holiday'):
+            holiday=int(holiday.text)
+            project_agenda.set_holiday(holiday)
+
 
 ## max number activity?
 for activities in root.findall('ActivityGroups'):
@@ -57,9 +120,12 @@ for activities in root.findall('ActivityGroups'):
         #Name
         Name=activity.find('Name').text
         a_g.name= Name
+
         activity_list_interim[UniqueID-1]=a_g
 
-## Activity name, ID, BSR
+
+
+## Activity name, ID, Baseline schefule
 for activities in root.findall('Activities'):
     for activity in activities.findall('Activity'):
         #UniqueID
@@ -71,23 +137,27 @@ for activities in root.findall('Activities'):
 
         ##BaseLineSchedule
         #Baseline duration (hours)
-        BaselineDuration = activity.find('BaseLineDuration').text
+        BaselineDuration_hours = int(activity.find('BaseLineDuration').text)
+        BaselineDuration=timedelta(hours=BaselineDuration_hours)
         #BaseLineStart
-        BaseLineStart=activity.find('BaseLineStart').text
+        BaseLineStart=getdate(activity.find('BaseLineStart').text)
         #FixedBaselineCost
-        FixedBaselineCost=activity.find('FixedBaselineCost').text
+        FixedBaselineCost=float(activity.find('FixedBaselineCost').text)
         #BaselineCostByUnit
-        BaselineCostByUnit=activity.find('BaselineCostByUnit').text
+        BaselineCostByUnit=float(activity.find('BaselineCostByUnit').text)
 
         BSR = BaselineScheduleRecord()
         BSR.start=BaseLineStart
         BSR.duration=BaselineDuration
         BSR.fixed_cost=FixedBaselineCost
-        BSR.var_cost=BaselineCostByUnit
+        BSR.hourly_cost=BaselineCostByUnit
+        BSR.var_cost = BSR.hourly_cost*BaselineDuration_hours*8
+        BSR.total_cost = BSR.var_cost+BSR.fixed_cost   ## Resource cost is missing
+
         a.baseline_schedule=BSR
         activity_list_interim[UniqueID-1]=a
         activity_list_wo_groups_interim[UniqueID-1]=a
-#print(activity_list)
+
 
 # Removing empty activities from list (list is sorted)
 for i in range(0, len(activity_list_interim)):
@@ -98,7 +168,8 @@ for i in range(0, len(activity_list_interim)):
 
 
 
-## Successor/Predeccessors
+
+## Successor/Predeccessors ##
 for relations in root.findall('Relations'):
     for relation in relations.findall('Relation'):
         # Successors
@@ -132,7 +203,10 @@ for relations in root.findall('Relations'):
                         (activity.predecessors) = [PredecessorTuple]
 
 
-## WBS
+
+
+
+## WBS ##
 for outline in root.findall('OutlineList'):
     counter1=0
     for list in outline.findall('List'):
@@ -159,7 +233,7 @@ for outline in root.findall('OutlineList'):
 
 
 
-
+###### Resources ######
 ## Resources (Definition)
 for resources in root.findall('Resources'):
     for resource in resources.findall('Resource'):
@@ -168,14 +242,6 @@ for resources in root.findall('Resources'):
         availability=resource.find('FIELD778').text
         renewable=bool(resource.find('FIELD769').text)
         if renewable == 1:
-<<<<<<< HEAD
-            renewable_string='Renewable'
-        cost_per_use=resource.find('FIELD770').text
-        cost_per_unit=resource.find('FIELD771').text
-        availability_int=int(resource.find('FIELD780').text)
-        total_cost=float(resource.find('FIELD776').text)
-        res=Resource(res_ID, name, renewable_string, availability, cost_per_use, cost_per_unit, total_cost)
-=======
             res_type= ResourceType.RENEWABLE
         else:
             res_type= ResourceType.CONSUMABLE
@@ -184,7 +250,6 @@ for resources in root.findall('Resources'):
         availability_int=int(resource.find('FIELD780').text)
         total_cost=float(resource.find('FIELD776').text)
         res=Resource(res_ID, name, res_type, availability_int, cost_per_use, cost_per_unit, total_cost)
->>>>>>> 88c195f29079e8a5f5064983d5337916b1abc897
         res_list.append(res)
 
 ## Resources (Assignment)
@@ -199,23 +264,24 @@ for resource_assignments in root.findall('ResourceAssignments'):
                    for resource in res_list:
                        resourceTuple=(resource, res_needed)
                        if resource.resource_id == res_id:
+                           #print(activity.activity_id,activity.baseline_schedule.duration)
+                           activity_duration=activity.baseline_schedule.duration.days * 8 + activity.baseline_schedule.duration.seconds/3600
+                           activity.resource_cost=resource.cost_unit*res_needed*activity_duration
+                           activity.baseline_schedule.total_cost+=activity.resource_cost
                            if len(activity.resources) >0:
                                 activity.resources.append(resourceTuple)
                            else:
                                activity.resources=[resourceTuple]
 
-## Risk Analysis
+
+
+
+
+
+
+### Risk Analysis ###
 distribution_list =  [0 for x in range(len(activity_list))]  # List with possible distributions
 #Standard distributions
-<<<<<<< HEAD
-distribution_list[1]= RiskAnalysisDistribution(distribution_type="standard", distribution_units="no risk", optimistic_duration=99,
-                 probable_duration=100, pessimistic_duration=101)
-distribution_list[2]=RiskAnalysisDistribution(distribution_type="standard", distribution_units="symmetric", optimistic_duration=80,
-                 probable_duration=100, pessimistic_duration=120)
-distribution_list[3]=RiskAnalysisDistribution(distribution_type="standard", distribution_units="skewed left", optimistic_duration=80,
-                 probable_duration=110, pessimistic_duration=120)
-distribution_list[4]=RiskAnalysisDistribution(distribution_type="standard", distribution_units="skewed right", optimistic_duration=80,
-=======
 distribution_list[1]= RiskAnalysisDistribution(distribution_type=DistributionType.STANDARD, distribution_units=StandardDistributionUnit.NO_RISK, optimistic_duration=99,
                  probable_duration=100, pessimistic_duration=101)
 distribution_list[2]=RiskAnalysisDistribution(distribution_type=DistributionType.STANDARD, distribution_units=StandardDistributionUnit.SYMMETRIC, optimistic_duration=80,
@@ -223,7 +289,6 @@ distribution_list[2]=RiskAnalysisDistribution(distribution_type=DistributionType
 distribution_list[3]=RiskAnalysisDistribution(distribution_type=DistributionType.STANDARD, distribution_units=StandardDistributionUnit.SKEWED_LEFT, optimistic_duration=80,
                  probable_duration=110, pessimistic_duration=120)
 distribution_list[4]=RiskAnalysisDistribution(distribution_type=DistributionType.STANDARD, distribution_units=StandardDistributionUnit.SKEWED_RIGHT, optimistic_duration=80,
->>>>>>> 88c195f29079e8a5f5064983d5337916b1abc897
                  probable_duration=90, pessimistic_duration=120)
 i=0
 distr=[0, 0, 0]
@@ -237,11 +302,7 @@ for distributions in root.findall('SensitivityDistributions'):
             for X in distribution.findall('X'):
                 distr[i]=int(X.text)
                 i+=1
-<<<<<<< HEAD
-        distribution_list[x]=(RiskAnalysisDistribution(distribution_type="manual", distribution_units="absolute",
-=======
         distribution_list[x]=(RiskAnalysisDistribution(distribution_type=DistributionType.MANUAL, distribution_units=ManualDistributionUnit.ABSOLUTE,
->>>>>>> 88c195f29079e8a5f5064983d5337916b1abc897
                                                           optimistic_duration=distr[0],probable_duration=distr[1], pessimistic_duration=distr[2]))
 
 for activities in root.findall('Activities'):
@@ -252,59 +313,6 @@ for activities in root.findall('Activities'):
                     distr_number=int(activity.find('Distribution').text)
                     activity_l.risk_analysis=distribution_list[distr_number]
 
-#print(len(activity_list))
-
-
-
-<<<<<<< HEAD
-i=0
-TP_nr=0
-## Activity Tracking
-for tracking_list in root.findall('TrackingList'):
-    activityTrackingRecord_list=[]
-    for tracking_period in tracking_list.findall('TProTrackActivities-1'):
-        TP_nr+=1
-        activity_nr=0
-        for tracking_activity in tracking_period.findall('TProTrackActivityTracking-1'):
-            actualStart=tracking_activity.find('ActualStart')
-            actualDuration=tracking_activity.find('ActualDuration')
-            actualCostDev=tracking_activity.find('ActualCostDev')
-            remainingDuration=tracking_activity.find('RemainingDuration')
-            remainingCostDev=tracking_activity.find('RemainingCostDev')
-            percentageComplete=tracking_activity.find('PercentageComplete')
-            if len(activityTrackingRecord_list)>0:
-                activityTrackingRecord=ActivityTrackingRecord(trackingPeriod, activity_list_wo_groups[activity_nr],actualStart,
-                                                              actualDuration,plannedActualCost=activity_list_wo_groups[activity_nr].baseline_schedule.total_cost,
-                                                              plannedRemainingCost=,
-                                                              remainingDuration=, remaininCostDev ,actualCostDev, remainingCostDev, )
-                activityTrackingRecord_list=[]
-
-
-
-            activity_nr+=1
-    #TrackingPeriod Activity info
-        count=0
-        for tracking_period_info in tracking_list.findall('TrackingPeriod'):
-            count+=1
-        TP_list=[None for x in range(count)]
-        count=0
-        for tracking_period_info in tracking_list.findall('TrackingPeriod'):
-            name=tracking_period_info.find('Name').text
-            enddate=tracking_period_info.find('EndDate').text
-            TP_list[count]=TrackingPeriod(name,enddate,)
-            count+=1
-
-
-
-
-## Testing
-#for activity in activity_list:
- #   for x in range(0,len(activity.resources)):
-  #      print(activity.activity_id, activity.resources[x][0].resource_id)
-
-#for distr in distribution_list:
- #   print(distr)
-=======
 
 ## Activity Tracking
 for tracking_list in root.findall('TrackingList'):
@@ -323,7 +331,7 @@ for tracking_list in root.findall('TrackingList'):
         activityTrackingRecord_list=[]
         for tracking_activity in tracking_period.findall('TProTrackActivityTracking-1'):
             # Read Data
-            actualStart=tracking_activity.find('ActualStart').text
+            actualStart=getdate(tracking_activity.find('ActualStart').text)
             actualDuration=tracking_activity.find('ActualDuration').text
             actualCostDev=tracking_activity.find('ActualCostDev').text
             remainingDuration=tracking_activity.find('RemainingDuration').text
@@ -355,6 +363,7 @@ for tracking_list in root.findall('TrackingList'):
             activityTrackingRecord.planned_remaining_cost=0
             activityTrackingRecord.planned_value=0
             activityTrackingRecord.tracking_period=None
+
             if len(activityTrackingRecord_list)>0:
                 activityTrackingRecord_list.append(activityTrackingRecord)
             else:
@@ -366,32 +375,21 @@ for tracking_list in root.findall('TrackingList'):
         else:
             ATR_matrix=[activityTrackingRecord_list]
 
-    #TrackingPeriod Activity info
-    print(len(ATR_matrix))
+
+#TrackingPeriod Activity info
 count=0
 for tracking_period_info in tracking_list.findall('TrackingPeriod'):
     name=tracking_period_info.find('Name').text
     enddate=tracking_period_info.find('EndDate').text
+    enddate_datetime=getdate(enddate)
     TP_list[count]=TrackingPeriod(name,enddate, ATR_matrix[count])
     count+=1
 
 
 
 
+project_object=ProjectObject(project_name,activity_list,TP_list,res_list,project_agenda)
 
 
-
-
-print(len(activityTrackingRecord_list),'len')
-counter=0
-for TP in TP_list:
-    print('\n\nName:', TP.tracking_period_name, ',\t Date',TP.tracking_period_statusdate)
-    counter=0
-    for ATR in TP.tracking_period_records:
-        counter+=1
-        print('\tActivity ID: ', ATR.activity.activity_id,
-             'Actual Duration:', ATR.actual_duration,'Remaining Duration', ATR.remaining_duration,
-             '%:',ATR.percentage_completed,)
-
-
->>>>>>> 88c195f29079e8a5f5064983d5337916b1abc897
+xlsx_parser = XLSXParser()
+xlsx_parser.from_schedule_object(project_object, "test_alexander.xlsx")

@@ -45,7 +45,11 @@ class XLSXParser(FileParser):
         risk_analysis_dict = self.process_risk_analysis(risk_analysis_sheet)
         # Finally, the sheet with activities is processed, using the dicts we created above.
         activities = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict)
+        tracking_periods = self.process_project_controls(project_control_sheets)
         return ProjectObject(activities=activities, resources=list(resources_dict.values()))
+
+    def process_project_controls(self, project_control_sheets):
+        pass
 
     def process_resources(self, resource_sheet):
         # We store the resources  in a dict, with as index the resource name, to access them easily later when we
@@ -80,9 +84,6 @@ class XLSXParser(FileParser):
                                                                        probable_duration=risk_ana_prob_duration,
                                                                        pessimistic_duration=risk_ana_pess_duration)
         return risk_analysis_dict
-
-    def process_project_control(self, sheet):
-        pass
 
     def process_baseline_schedule(self, activities_sheet, resources_dict, risk_analysis_dict):
         activities = []
