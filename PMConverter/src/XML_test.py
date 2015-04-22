@@ -14,7 +14,7 @@ from object.riskanalysisdistribution import StandardDistributionUnit
 from object.agenda import Agenda
 from object.projectobject import ProjectObject
 from convert.XLSXparser import XLSXParser
-#todo: extra activity tracking record fields (should already be read), other possibilites Lagtype (FS,...)
+#todo: extra activity tracking record fields (should already be read), other possibilites Lagtype (FS,...), Agenda (usage)
 
 
 
@@ -110,6 +110,7 @@ for activities in root.findall('Activities'):
 activity_list_interim=[None for x in range(max)]
 activity_list_wo_groups_interim=[None for x in range(max)]
 
+activity_group_count=0
 ## Activity group, ID, Name
 for activities in root.findall('ActivityGroups'):
     for activity in activities.findall('ActivityGroup'):
@@ -119,7 +120,7 @@ for activities in root.findall('ActivityGroups'):
         #Name
         Name=activity.find('Name').text
         a_g.name= Name
-
+        activity_group_count+=1
         activity_list_interim[UniqueID-1]=a_g
 
 
@@ -390,28 +391,56 @@ for tracking_period_info in tracking_list.findall('TrackingPeriod'):
 
 ### Sort activities based on WBS
 
-project_activity=Activity(activity_id=0, name=project_name,wbs_id= (1,) )
+project_activity=Activity(activity_id=0, name=project_name, wbs_id=(1,))
 activity_list_wbs=[project_activity]
-count1=1
-count2=1
+count1 = 1
+count2 = 1
 
 for activity_group2 in activity_list:
     for activity_group in activity_list:
-        if activity_group.wbs_id == (1,count1):
-            count2=1
+        if activity_group.wbs_id == (1, count1):
+            count2 = 1
             activity_list_wbs.append(activity_group)
-            print(activity_group.wbs_id)
             for activity2 in activity_list:
                 for activity in activity_list:
-                    if activity.wbs_id == (1,count1,count2):
-                        count2+=1
-                        print(activity.wbs_id)
+                    if activity.wbs_id == (1, count1, count2):
+                        count2 += 1
                         activity_list_wbs.append(activity)
-            count1+=1
+            count1 += 1
+
+## Subdividing list into Activity groups
+count1=1
+count2=1
+subgroup_count=[0 for x in range(activity_group_count)]
+# Counting activity groups
+for activity in activity_list_wbs:
+    if activity.wbs_id == (1, count1):
+        count2=1
+        for activity in activity_list_wbs:
+            if activity.wbs_id == (1, count1,count2):
+                subgroup_count[count1-1]+=1
+                count2+=1
+        count1+=1
+
+
+matrix_activity_group=[[] for x in range(activity_group_count)]
+matrix_activity_group[0]=activity_list_wbs[1:(2+subgroup_count[0])]
+
+# Making list per activity group: matrix_activity_group[i] contains all activities which are part of activity group i
+for i in range(1,len(subgroup_count)):
+    matrix_activity_group[i]=activity_list_wbs[1+i+sum(subgroup_count[0:i]):(2+i+sum(subgroup_count[0:i+1]))]
+
+for ag in matrix_activity_group:
+    for i in range(1,len(ag)):
+        ag[0].baseline_schedule.total_cost += ag[i].baseline_schedule.total_cost
+        ag[0].baseline_schedule.fixed_cost += ag[i].baseline_schedule.fixed_cost
+#    print('total:', ag[0].baseline_schedule.total_cost, 'fixed:', ag[0].baseline_schedule.fixed_cost)
+
+
 
 
 ## Make project object
-project_object=ProjectObject(project_name,activity_list_wbs,TP_list,res_list,project_agenda)
+project_object=ProjectObject(project_name, activity_list_wbs, TP_list, res_list, project_agenda)
 
 
 ## Parse to XLS
