@@ -14,7 +14,8 @@ from object.riskanalysisdistribution import StandardDistributionUnit
 from object.agenda import Agenda
 from object.projectobject import ProjectObject
 from convert.XLSXparser import XLSXParser
-#todo: extra activity tracking record fields (should already be read)
+#todo: extra activity tracking record fields (should already be read), other possibilites Lagtype (FS,...)
+
 
 
 tree = ET.parse('project.xml')
@@ -181,7 +182,7 @@ for relations in root.findall('Relations'):
         if LagKind == '0' and LagType == '2':
             LagString='FS'
         else:
-            #TO DO: Other possibilites
+            #TODO: Other possibilites
             0;
 
         SuccessorTuple = (Successor, LagString, Lag)
@@ -362,7 +363,6 @@ for tracking_list in root.findall('TrackingList'):
             activityTrackingRecord.planned_actual_cost=0
             activityTrackingRecord.planned_remaining_cost=0
             activityTrackingRecord.planned_value=0
-            activityTrackingRecord.tracking_period=None
 
             if len(activityTrackingRecord_list)>0:
                 activityTrackingRecord_list.append(activityTrackingRecord)
@@ -383,12 +383,37 @@ for tracking_period_info in tracking_list.findall('TrackingPeriod'):
     enddate=tracking_period_info.find('EndDate').text
     enddate_datetime=getdate(enddate)
     TP_list[count]=TrackingPeriod(name,enddate, ATR_matrix[count])
+    for activityTrackingRecord in ATR_matrix[count]:
+        activityTrackingRecord.tracking_period=TP_list[count]
     count+=1
 
 
+### Sort activities based on WBS
+
+project_activity=Activity(activity_id=0, name=project_name,wbs_id= (1,) )
+activity_list_wbs=[project_activity]
+count1=1
+count2=1
+
+for activity_group2 in activity_list:
+    for activity_group in activity_list:
+        if activity_group.wbs_id == (1,count1):
+            count2=1
+            activity_list_wbs.append(activity_group)
+            print(activity_group.wbs_id)
+            for activity2 in activity_list:
+                for activity in activity_list:
+                    if activity.wbs_id == (1,count1,count2):
+                        count2+=1
+                        print(activity.wbs_id)
+                        activity_list_wbs.append(activity)
+            count1+=1
 
 
-project_object=ProjectObject(project_name,activity_list,TP_list,res_list,project_agenda)
+## Make project object
+project_object=ProjectObject(project_name,activity_list_wbs,TP_list,res_list,project_agenda)
 
+
+## Parse to XLS
 xlsx_parser = XLSXParser()
 xlsx_parser.from_schedule_object(project_object, "test_alexander.xlsx")
