@@ -4,10 +4,12 @@ import datetime
 import time
 import math
 from objects.activity import Activity
+from objects.activitytracking import ActivityTrackingRecord
 from objects.baselineschedule import BaselineScheduleRecord
 from objects.projectobject import ProjectObject
 from objects.resource import Resource
 from objects.riskanalysisdistribution import RiskAnalysisDistribution
+from objects.trackingperiod import TrackingPeriod
 
 __author__ = 'PM Group 8'
 
@@ -44,12 +46,77 @@ class XLSXParser(FileParser):
         # Then we process the risk analysis sheet, again everything is stored in a dict, now the index is activity_id.
         risk_analysis_dict = self.process_risk_analysis(risk_analysis_sheet)
         # Finally, the sheet with activities is processed, using the dicts we created above.
-        activities = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict)
-        tracking_periods = self.process_project_controls(project_control_sheets)
-        return ProjectObject(activities=activities, resources=list(resources_dict.values()))
+        # Again, a new dict is created, to process all tracking periods more easily
+        activities_dict = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict)
+        tracking_periods = self.process_project_controls(project_control_sheets, activities_dict)
+        return ProjectObject(activities=list(activities_dict.values()), resources=list(resources_dict.values()))
 
-    def process_project_controls(self, project_control_sheets):
-        pass
+    def process_project_controls(self, project_control_sheets, activities_dict):
+        for project_control_sheet in project_control_sheets:
+            for curr_row in range(self.get_nr_of_header_lines(project_control_sheet), project_control_sheet.get_highest_row()+1):
+                activity_id = int(project_control_sheet.cell(row=curr_row, column=1).value)
+                actual_start = None  # Set a default value in case there is nothing in that cell
+                if project_control_sheet.cell(row=curr_row, column=12).value:
+                    actual_start = datetime.datetime.utcfromtimestamp(((project_control_sheet.cell(row=curr_row, column=12)
+                                                                        .value - 25569)*86400))  # ugly hack to convert 
+                actual_duration = None
+                if project_control_sheet.cell(row=curr_row, column=13).value:
+                    remaining_duration_split = project_control_sheet.cell(row=curr_row, column=13).value.split("d")
+                    remaining_duration_days = int(remaining_duration_split[0])
+                    remaining_duration_hours = 0  # We need to set this default value for the next loop
+                    if remaining_duration_split[1] != '':
+                        remaining_duration_hours = int(remaining_duration_split[1][1:-1])  # first char = " "; last char = "h"
+                    actual_duration = datetime.timedelta(days=remaining_duration_days, hours=remaining_duration_hours)
+                pac = 0.0
+                if project_control_sheet.cell(row=curr_row, column=14).value:
+                    pac = float(project_control_sheet.cell(row=curr_row, column=14).value)
+                prc = -1.0
+                if project_control_sheet.cell(row=curr_row, column=15).value:
+                    prc = float(project_control_sheet(row=curr_row, column=15).value)
+                remaining_duration = None
+                if project_control_sheet.cell(row=curr_row, column=16).value:
+                    remaining_duration_split = project_control_sheet.cell(row=curr_row, column=16).value.split("d")
+                    remaining_duration_days = int(remaining_duration_split[0])
+                    remaining_duration_hours = 0  # We need to set this default value for the next loop
+                    if remaining_duration_split[1] != '':
+                        remaining_duration_hours = int(remaining_duration_split[1][1:-1])  # first char = " "; last char = "h"
+                    remaining_duration = datetime.timedelta(days=remaining_duration_days, hours=remaining_duration_hours)
+                pac_dev = 0.0
+                if project_control_sheet.cell(row=curr_row, column=17).value:
+                    pac_dev = float(project_control_sheet.cell(row=curr_row, column=17).value)
+                prc_dev = 0.0
+                if project_control_sheet.cell(row=curr_row, column=18).value:
+                    prc_dev = float(project_control_sheet.cell(row=curr_row, column=18).value)
+                actual_cost = 0.0
+                if project_control_sheet.cell(row=curr_row, column=19).value:
+                    actual_cost = float(project_control_sheet.cell(row=curr_row, column=19).value)
+                remaining_cost = 0.0
+                if project_control_sheet.cell(row=curr_row, column=20).value:
+                    remaining_cost = float(project_control_sheet.cell(row=curr_row, column=20).value)
+                print(project_control_sheet.cell(row=curr_row, column=21).value)
+                percentage_completed_str = str(project_control_sheet.cell(row=curr_row, column=21).value)[:-1]  # always given
+                print(percentage_completed_str)
+                print(percentage_completed_str[0])
+                if percentage_completed_str[0] == "\'":
+                    percentage_completed_str = percentage_completed_str[1:]
+                percentage_completed = int(percentage_completed_str)
+                tracking_status = ''
+                if project_control_sheet.cell(row=curr_row, column=22).value:
+                    tracking_status = project_control_sheet.cell(row=curr_row, column=22).value
+                earned_value = float(project_control_sheet.cell(row=curr_row, column=23).value)
+                planned_value = float(project_control_sheet.cell(row=curr_row, column=24).value)
+                act_track_record = ActivityTrackingRecord(tracking_period=TrackingPeriod(),
+                                                          activity=activities_dict[activity_id],
+                                                          actual_start=actual_start, actual_duration=actual_duration,
+                                                          planned_actual_cost=pac, planned_remaining_cost=prc,
+                                                          remaining_duration=remaining_duration, deviation_pac=pac_dev,
+                                                          deviation_prc=prc_dev, actual_cost=actual_cost,
+                                                          remaining_cost=remaining_cost,
+                                                          percentage_completed=percentage_completed,
+                                                          tracking_status=tracking_status, earned_value=earned_value,
+                                                          planned_value=planned_value)
+                print(act_track_record.__dict__)
+
 
     def process_resources(self, resource_sheet):
         # We store the resources  in a dict, with as index the resource name, to access them easily later when we
@@ -86,7 +153,7 @@ class XLSXParser(FileParser):
         return risk_analysis_dict
 
     def process_baseline_schedule(self, activities_sheet, resources_dict, risk_analysis_dict):
-        activities = []
+        activities_dict = {}
         for curr_row in range(self.get_nr_of_header_lines(activities_sheet), activities_sheet.get_highest_row()+1):
             activity_id = int(activities_sheet.cell(row=curr_row, column=1).value)
             activity_name = activities_sheet.cell(row=curr_row, column=2).value
@@ -135,12 +202,12 @@ class XLSXParser(FileParser):
                     if len(activity_resource.split("[")) > 1:
                         activity_resource_demand = int(float(activity_resource.split("[")[1].split(" ")[0].translate(str.maketrans(",", "."))))
                     activity_resources.append((activity_resource_name, activity_resource_demand))
-            activities.append(Activity(activity_id, name=activity_name, wbs_id=activity_wbs,
-                                       predecessors=activity_predecessors, successors=activity_successors,
-                                       baseline_schedule=activity_baseline_schedule,
-                                       resource_cost=activity_resource_cost,
-                                       risk_analysis=activity_risk_analysis, resources=activity_resources))
-        return activities
+            activities_dict[activity_id] = Activity(activity_id, name=activity_name, wbs_id=activity_wbs,
+                                               predecessors=activity_predecessors, successors=activity_successors,
+                                               baseline_schedule=activity_baseline_schedule,
+                                               resource_cost=activity_resource_cost,
+                                               risk_analysis=activity_risk_analysis, resources=activity_resources)
+        return activities_dict
 
     @staticmethod
     def process_predecessors(predecessors):
@@ -195,7 +262,7 @@ class XLSXParser(FileParser):
     @staticmethod
     def get_nr_of_header_lines(sheet):
         header_lines = 1
-        while not sheet.cell(row=header_lines, column=1).value.isdigit():
+        while not(sheet.cell(row=header_lines, column=1).value and sheet.cell(row=header_lines, column=1).value.isdigit()):
             header_lines += 1
         return header_lines
 
