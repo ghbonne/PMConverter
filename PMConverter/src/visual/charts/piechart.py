@@ -13,17 +13,18 @@ class PieChart(Chart):
                 ]
     """
 
-    def __init__(self, title, data_series):
+    def __init__(self, title, data_series, relative=True):
         self.title = title
         self.data_series = data_series
+        self.relative = relative
 
-    def draw(self, workbook):
+    def draw(self, workbook, worksheet, location):
         """
         add a piechart to the excel workbook
         :param workbook: xlsxworkbook
         :return:
         """
-        worksheet = workbook.add_worksheet()
+        #worksheet = workbook.add_worksheet()
 
         # Create a new chart object
         chart = workbook.add_chart({'type': 'pie'})
@@ -35,6 +36,7 @@ class PieChart(Chart):
             'name':       "data",
             'categories': labels,
             'values':     values,
+            'data_labels': {'value': not self.relative, 'percentage': self.relative},
         })
 
         # Add a chart title and axis labels.
@@ -44,4 +46,4 @@ class PieChart(Chart):
         chart.set_style(10)
 
         # Insert chart
-        worksheet.insert_chart('A1', chart)
+        worksheet.insert_chart('I1', chart)
