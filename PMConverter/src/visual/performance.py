@@ -6,9 +6,9 @@ from visual.enums import XAxis
 class Performance(Visualization):
 
     """
-    enkel voor tracking overview!
+    :var x-axis
+
     CPI/SPI
-    instelling: datum of tracking period
     """
 
     def __init__(self):

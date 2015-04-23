@@ -5,7 +5,8 @@ from visual.enums import DataType, LevelOfDetail
 
 class ActualCost(Visualization):
     """
-    zie actual duration
+    :var level_of_detail
+    :var data_type
     """
 
     def __init__(self):

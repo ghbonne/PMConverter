@@ -6,8 +6,9 @@ from visual.enums import DataType
 class ResourceDistribution(Visualization):
 
     """
+    :var data_type
+
     data, name + total cost
-    instelling: absoluut of relatief
     """
 
     def __init__(self):

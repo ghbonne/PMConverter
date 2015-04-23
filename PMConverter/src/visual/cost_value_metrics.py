@@ -5,9 +5,9 @@ from visual.enums import XAxis
 
 class CostValueMetrics(Visualization):
     """
-    enkel voor tracking overview!
+    :var x_axis
+
     data: workpackage name, AC, EV, PV
-    instelling: x-as: per period of per datum
     """
 
     def __init__(self):

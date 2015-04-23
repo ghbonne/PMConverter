@@ -6,9 +6,9 @@ from visual.enums import LevelOfDetail
 class RiskAnalysis(Visualization):
 
     """
-    instelling: workpackage or activites (level of detail)
-    data: naam, baseline duration, optimistic, most probable, pessimistic
+    :var level_of_detail
 
+    data: naam, baseline duration, optimistic, most probable, pessimistic
     """
 
     def __init__(self):

@@ -5,9 +5,9 @@ from visual.enums import XAxis
 
 class SpiTvsPfactor(Visualization):
     """
-    enkel voor tracking overview!
+    :var x-axis
+
     ranges aanpassen!!
-    instelling: datum of tracking period?
     """
 
     def __init__(self):

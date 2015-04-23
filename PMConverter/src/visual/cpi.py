@@ -5,12 +5,11 @@ from visual.enums import XAxis
 
 class CPI(Visualization):
     """
-    enkel voor tracking overview!
-    cpi apart met threshold
-    instelling: threshold,
-                tracking period of datum
     :var threshold
     :var x-axis
+    
+
+    cpi apart met threshold
     """
 
     def __init__(self):

@@ -5,8 +5,7 @@ from visual.enums import XAxis
 
 class SvT(Visualization):
     """
-    enkel voor tracking overview!
-    instelling: tracking period of datum
+    :var x-axis
     """
 
     def __init__(self):

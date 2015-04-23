@@ -5,8 +5,9 @@ from visual.enums import LevelOfDetail, DataType
 
 class ActualDuration(Visualization):
     """
-    instelling: level of detail,
-                relatief of absoluut (indien relatief, extra berekening nodig)
+    :var level_of_detail
+    :var data_type
+
     data: baseline duration, actual duration, percentage completed
     """
 

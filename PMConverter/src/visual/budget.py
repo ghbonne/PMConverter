@@ -5,7 +5,7 @@ from visual.enums import DataType
 
 class CV(Visualization):
     """
-    instelling: absoluut of relatief
+    :var data_type
     """
 
     def __init__(self):
