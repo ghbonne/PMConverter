@@ -61,24 +61,24 @@ class XLSXParser(FileParser):
                                                                         .value - 25569)*86400))  # ugly hack to convert 
                 actual_duration = None
                 if project_control_sheet.cell(row=curr_row, column=13).value:
-                    remaining_duration_split = project_control_sheet.cell(row=curr_row, column=13).value.split("d")
-                    remaining_duration_days = int(remaining_duration_split[0])
-                    remaining_duration_hours = 0  # We need to set this default value for the next loop
-                    if remaining_duration_split[1] != '':
-                        remaining_duration_hours = int(remaining_duration_split[1][1:-1])  # first char = " "; last char = "h"
-                    actual_duration = datetime.timedelta(days=remaining_duration_days, hours=remaining_duration_hours)
+                    actual_duration_split = project_control_sheet.cell(row=curr_row, column=13).value.split("d")
+                    actual_duration_days = int(actual_duration_split[0])
+                    actual_duration_hours = 0  # We need to set this default value for the next loop
+                    if len(actual_duration_split) > 1 and actual_duration_split[1] != '':
+                        actual_duration_hours = int(actual_duration_split[1][1:-1])  # first char = " "; last char = "h"
+                    actual_duration = datetime.timedelta(days=actual_duration_days, hours=actual_duration_hours)
                 pac = 0.0
                 if project_control_sheet.cell(row=curr_row, column=14).value:
                     pac = float(project_control_sheet.cell(row=curr_row, column=14).value)
                 prc = -1.0
                 if project_control_sheet.cell(row=curr_row, column=15).value:
-                    prc = float(project_control_sheet(row=curr_row, column=15).value)
+                    prc = float(project_control_sheet.cell(row=curr_row, column=15).value)
                 remaining_duration = None
                 if project_control_sheet.cell(row=curr_row, column=16).value:
                     remaining_duration_split = project_control_sheet.cell(row=curr_row, column=16).value.split("d")
                     remaining_duration_days = int(remaining_duration_split[0])
                     remaining_duration_hours = 0  # We need to set this default value for the next loop
-                    if remaining_duration_split[1] != '':
+                    if len(remaining_duration_split) > 1 and remaining_duration_split[1] != '':
                         remaining_duration_hours = int(remaining_duration_split[1][1:-1])  # first char = " "; last char = "h"
                     remaining_duration = datetime.timedelta(days=remaining_duration_days, hours=remaining_duration_hours)
                 pac_dev = 0.0
@@ -93,13 +93,21 @@ class XLSXParser(FileParser):
                 remaining_cost = 0.0
                 if project_control_sheet.cell(row=curr_row, column=20).value:
                     remaining_cost = float(project_control_sheet.cell(row=curr_row, column=20).value)
-                print(project_control_sheet.cell(row=curr_row, column=21).value)
-                percentage_completed_str = str(project_control_sheet.cell(row=curr_row, column=21).value)[:-1]  # always given
-                print(percentage_completed_str)
-                print(percentage_completed_str[0])
-                if percentage_completed_str[0] == "\'":
-                    percentage_completed_str = percentage_completed_str[1:]
+                percentage_completed_str = project_control_sheet.cell(row=curr_row, column=21).value  # always given
+                # In the test file, some percentages are strings, some are ints, some are floats (#YOLO)
+                if type(percentage_completed_str) != str:
+                    percentage_completed_str *= 100
+                if type(percentage_completed_str) == float:
+                    percentage_completed_str = int(percentage_completed_str)
+                percentage_completed_str = str(percentage_completed_str)
+                if not percentage_completed_str[-1].isdigit():
+                    percentage_completed_str = percentage_completed_str[:-1]
+                if float(percentage_completed_str) < 1:
+                    percentage_completed_str = float(float(percentage_completed_str)*100)
                 percentage_completed = int(percentage_completed_str)
+                if percentage_completed > 100:
+                    print("Gilles V has made a stupid error by putting some ifs & transformations in XLSXparser.py "
+                          "with the variable percentage_completed_str")
                 tracking_status = ''
                 if project_control_sheet.cell(row=curr_row, column=22).value:
                     tracking_status = project_control_sheet.cell(row=curr_row, column=22).value
@@ -478,6 +486,9 @@ class XLSXParser(FileParser):
                 ra_worksheet.write_number(counter, 5, activity.risk_analysis.probable_duration, yellow_cell)
                 ra_worksheet.write_number(counter, 6, activity.risk_analysis.pessimistic_duration, yellow_cell)
             counter += 1
+
+        # Write the tracking periods
+        #TODO: write tracking periods
 
         workbook.close()
 
