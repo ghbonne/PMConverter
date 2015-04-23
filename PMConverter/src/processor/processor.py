@@ -2,8 +2,8 @@ __author__ = 'PM Group 8'
 
 from convert.XLSXparser import XLSXParser
 from convert.XMLparser import XMLParser
-from visual.linechart import LineChart
-from visual.piechart import PieChart
+from visual.charts.linechart import LineChart
+from visual.charts.piechart import PieChart
 
 
 class Processor(object):

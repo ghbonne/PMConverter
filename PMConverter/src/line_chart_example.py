@@ -1,13 +1,15 @@
 __author__ = 'Eveline'
 
-import xlsxwriter
 import os
-from visual.linechart import LineChart
-from visual.piechart import PieChart
+
+import xlsxwriter
+
+from visual.charts.linechart import LineChart
 from visual.columnchart import ColumnChart
 from visual.columnchart import ColumnSubType
 from visual.barchart import BarChart
 from visual.barchart import BarSubType
+
 
 file = os.path.join(os.path.dirname(__file__), 'output'+os.sep+'chart_test.xlsx')
 
@@ -42,15 +44,15 @@ labels = ['x', 'y']
 
 chart = LineChart('test', labels, data_series)
 
-chart.visualize(workbook)
+chart.draw(workbook)
 
 chart1 = ColumnChart('test', labels, data_series, ColumnSubType.stacked)
 
-chart1.visualize(workbook)
+chart1.draw(workbook)
 
 chart2 = BarChart('test', labels, data_series, BarSubType.stacked)
 
-chart2.visualize(workbook)
+chart2.draw(workbook)
 
 #Pie chart
 # worksheet = workbook.add_worksheet()
