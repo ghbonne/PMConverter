@@ -1,4 +1,8 @@
 __author__ = 'PM Group 8'
+<<<<<<< HEAD
+=======
+from datetime import datetime, timedelta
+>>>>>>> 01934112422f01e2b743f50d9b65b17ac949e72b
 
 
 class ActivityTrackingRecord(object):

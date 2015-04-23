@@ -289,25 +289,25 @@ class XLSXParser(FileParser):
         workbook = xlsxwriter.Workbook(file_path_output)
 
         # Lots of formats
-        header = workbook.add_format({'bold': True, 'bg_color': 'blue', 'font_color': 'white', 'text_wrap': True,
-                                      'border': 1, 'font_size': 8, 'align': 'center'})
+        header = workbook.add_format({'bold': True, 'bg_color': '#316AC5', 'font_color': 'white', 'text_wrap': True,
+                                      'border': 1, 'font_size': 8})
         yellow_cell = workbook.add_format({'bg_color': 'yellow', 'text_wrap': True, 'border': 1, 'font_size': 8})
-        cyan_cell = workbook.add_format({'bg_color': 'cyan', 'text_wrap': True, 'border': 1, 'font_size': 8})
-        green_cell = workbook.add_format({'bg_color': 'green', 'text_wrap': True, 'border': 1, 'font_size': 8})
+        cyan_cell = workbook.add_format({'bg_color': '#D9EAF7', 'text_wrap': True, 'border': 1, 'font_size': 8})
+        green_cell = workbook.add_format({'bg_color': '#9BBB59', 'text_wrap': True, 'border': 1, 'font_size': 8})
         gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1, 'font_size': 8})
-        date_cyan_cell = workbook.add_format({'bg_color': 'cyan', 'text_wrap': True, 'border': 1,
+        date_cyan_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1,
                                               'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
-        date_green_cell = workbook.add_format({'bg_color': 'green', 'text_wrap': True, 'border': 1,
+        date_green_cell = workbook.add_format({'bg_color': '#C4D79B', 'text_wrap': True, 'border': 1,
                                               'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
-        date_lime_cell = workbook.add_format({'bg_color': 'lime', 'text_wrap': True, 'border': 1,
+        date_lime_cell = workbook.add_format({'bg_color': '#9BBB59', 'text_wrap': True, 'border': 1,
                                               'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
         date_gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1,
                                               'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
-        money_cyan_cell = workbook.add_format({'bg_color': 'cyan', 'text_wrap': True, 'border': 1,
+        money_cyan_cell = workbook.add_format({'bg_color': '#D9EAF7', 'text_wrap': True, 'border': 1,
                                               'num_format': '#,##0.00 €', 'font_size': 8})
-        money_green_cell = workbook.add_format({'bg_color': 'green', 'text_wrap': True, 'border': 1,
+        money_green_cell = workbook.add_format({'bg_color': '#C4D79B', 'text_wrap': True, 'border': 1,
                                               'num_format': '#,##0.00 €', 'font_size': 8})
-        money_lime_cell = workbook.add_format({'bg_color': 'lime', 'text_wrap': True, 'border': 1,
+        money_lime_cell = workbook.add_format({'bg_color': '#9BBB59', 'text_wrap': True, 'border': 1,
                                               'num_format': '#,##0.00 €', 'font_size': 8})
         money_navy_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1,
                                               'num_format': '#,##0.00 €', 'font_size': 8})
@@ -371,8 +371,8 @@ class XLSXParser(FileParser):
                 self.write_wbs(bsch_worksheet, counter, 2, activity.wbs_id, gray_cell)
                 self.write_predecessors(bsch_worksheet, counter, 3, activity.predecessors, green_cell)
                 self.write_successors(bsch_worksheet, counter, 4, activity.successors, green_cell)
-                bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.start, date_green_cell)
-                bsch_worksheet.write_datetime(counter, 6, activity.baseline_schedule.end, date_lime_cell)
+                bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.start, date_lime_cell)
+                bsch_worksheet.write_datetime(counter, 6, activity.baseline_schedule.end, date_green_cell)
                 bsch_worksheet.write(counter, 7, self.get_duration_str(activity), green_cell)
                 self.write_resources(bsch_worksheet, counter, 8, activity.resources, yellow_cell)
                 bsch_worksheet.write_number(counter, 9, activity.resource_cost, money_navy_cell)
@@ -594,7 +594,8 @@ class XLSXParser(FileParser):
 
         #TODO: write tracking periods
 
-        workbook.close()
+        #workbook.close()
+        return workbook
 
     @staticmethod
     def get_duration_str(activity):
