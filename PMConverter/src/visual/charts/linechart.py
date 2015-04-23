@@ -35,3 +35,4 @@ class LineChart(TwoDimChart):
         :return:
         """
         super().draw(workbook)
+
