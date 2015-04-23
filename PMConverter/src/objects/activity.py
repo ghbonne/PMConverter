@@ -3,7 +3,6 @@ from objects.resource import Resource
 __author__ = 'PM Group 8'
 
 from objects.baselineschedule import BaselineScheduleRecord
-from objects.activitytracking import ActivityTrackingRecord
 from objects.riskanalysisdistribution import RiskAnalysisDistribution
 
 
