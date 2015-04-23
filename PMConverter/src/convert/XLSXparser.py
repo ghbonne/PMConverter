@@ -289,23 +289,23 @@ class XLSXParser(FileParser):
         workbook = xlsxwriter.Workbook(file_path_output)
 
         # Lots of formats
-        header = workbook.add_format({'bold': True, 'bg_color': 'blue', 'font_color': 'white', 'text_wrap': True,
+        header = workbook.add_format({'bold': True, 'bg_color': '#316AC5', 'font_color': 'white', 'text_wrap': True,
                                       'border': 1, 'font_size': 8})
         yellow_cell = workbook.add_format({'bg_color': 'yellow', 'text_wrap': True, 'border': 1, 'font_size': 8})
-        cyan_cell = workbook.add_format({'bg_color': 'cyan', 'text_wrap': True, 'border': 1, 'font_size': 8})
-        green_cell = workbook.add_format({'bg_color': 'green', 'text_wrap': True, 'border': 1, 'font_size': 8})
+        cyan_cell = workbook.add_format({'bg_color': '#D9EAF7', 'text_wrap': True, 'border': 1, 'font_size': 8})
+        green_cell = workbook.add_format({'bg_color': '#9BBB59', 'text_wrap': True, 'border': 1, 'font_size': 8})
         navy_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1, 'font_size': 8})
-        date_cyan_cell = workbook.add_format({'bg_color': 'cyan', 'text_wrap': True, 'border': 1,
+        date_cyan_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1,
                                               'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
-        date_green_cell = workbook.add_format({'bg_color': 'green', 'text_wrap': True, 'border': 1,
+        date_green_cell = workbook.add_format({'bg_color': '#C4D79B', 'text_wrap': True, 'border': 1,
                                               'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
-        date_lime_cell = workbook.add_format({'bg_color': 'lime', 'text_wrap': True, 'border': 1,
+        date_lime_cell = workbook.add_format({'bg_color': '#9BBB59', 'text_wrap': True, 'border': 1,
                                               'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
-        money_cyan_cell = workbook.add_format({'bg_color': 'cyan', 'text_wrap': True, 'border': 1,
+        money_cyan_cell = workbook.add_format({'bg_color': '#D9EAF7', 'text_wrap': True, 'border': 1,
                                               'num_format': '#,##0.00 €', 'font_size': 8})
-        money_green_cell = workbook.add_format({'bg_color': 'green', 'text_wrap': True, 'border': 1,
+        money_green_cell = workbook.add_format({'bg_color': '#9BBB59', 'text_wrap': True, 'border': 1,
                                               'num_format': '#,##0.00 €', 'font_size': 8})
-        money_lime_cell = workbook.add_format({'bg_color': 'lime', 'text_wrap': True, 'border': 1,
+        money_lime_cell = workbook.add_format({'bg_color': '#9BBB59', 'text_wrap': True, 'border': 1,
                                               'num_format': '#,##0.00 €', 'font_size': 8})
         money_navy_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1,
                                               'num_format': '#,##0.00 €', 'font_size': 8})
@@ -497,7 +497,8 @@ class XLSXParser(FileParser):
         # Write the tracking periods
         #TODO: write tracking periods
 
-        workbook.close()
+        #workbook.close()
+        return workbook
 
     @staticmethod
     def write_wbs(worksheet, row, column, wbs, format):
