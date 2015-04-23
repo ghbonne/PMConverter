@@ -1,8 +1,5 @@
-import copy
 import re
 import datetime
-import time
-import math
 from objects.activity import Activity
 from objects.activitytracking import ActivityTrackingRecord
 from objects.baselineschedule import BaselineScheduleRecord
@@ -49,10 +46,17 @@ class XLSXParser(FileParser):
         # Again, a new dict is created, to process all tracking periods more easily
         activities_dict = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict)
         tracking_periods = self.process_project_controls(project_control_sheets, activities_dict)
-        return ProjectObject(activities=list(activities_dict.values()), resources=list(resources_dict.values()))
+        print(tracking_periods)
+        return ProjectObject(activities=list(activities_dict.values()), resources=list(resources_dict.values()),
+                             tracking_periods=tracking_periods)
 
     def process_project_controls(self, project_control_sheets, activities_dict):
+        tracking_periods = []
         for project_control_sheet in project_control_sheets:
+            tp_date = datetime.datetime.utcfromtimestamp(((project_control_sheet.cell(row=1, column=3)
+                                                           .value - 25569)*86400))
+            tp_name = project_control_sheet.cell(row=1, column=6).value
+            act_track_records = []
             for curr_row in range(self.get_nr_of_header_lines(project_control_sheet), project_control_sheet.get_highest_row()+1):
                 activity_id = int(project_control_sheet.cell(row=curr_row, column=1).value)
                 actual_start = None  # Set a default value in case there is nothing in that cell
@@ -113,8 +117,7 @@ class XLSXParser(FileParser):
                     tracking_status = project_control_sheet.cell(row=curr_row, column=22).value
                 earned_value = float(project_control_sheet.cell(row=curr_row, column=23).value)
                 planned_value = float(project_control_sheet.cell(row=curr_row, column=24).value)
-                act_track_record = ActivityTrackingRecord(tracking_period=TrackingPeriod(),
-                                                          activity=activities_dict[activity_id],
+                act_track_record = ActivityTrackingRecord(activity=activities_dict[activity_id],
                                                           actual_start=actual_start, actual_duration=actual_duration,
                                                           planned_actual_cost=pac, planned_remaining_cost=prc,
                                                           remaining_duration=remaining_duration, deviation_pac=pac_dev,
@@ -123,7 +126,11 @@ class XLSXParser(FileParser):
                                                           percentage_completed=percentage_completed,
                                                           tracking_status=tracking_status, earned_value=earned_value,
                                                           planned_value=planned_value)
-                print(act_track_record.__dict__)
+                act_track_records.append(act_track_record)
+               # print(act_track_record.__dict__)
+            tracking_periods.append(TrackingPeriod(tracking_period_name=tp_name, tracking_period_statusdate=tp_date,
+                                                   tracking_period_records=act_track_records))
+        return tracking_periods
 
 
     def process_resources(self, resource_sheet):
