@@ -290,16 +290,18 @@ class XLSXParser(FileParser):
 
         # Lots of formats
         header = workbook.add_format({'bold': True, 'bg_color': 'blue', 'font_color': 'white', 'text_wrap': True,
-                                      'border': 1, 'font_size': 8})
+                                      'border': 1, 'font_size': 8, 'align': 'center'})
         yellow_cell = workbook.add_format({'bg_color': 'yellow', 'text_wrap': True, 'border': 1, 'font_size': 8})
         cyan_cell = workbook.add_format({'bg_color': 'cyan', 'text_wrap': True, 'border': 1, 'font_size': 8})
         green_cell = workbook.add_format({'bg_color': 'green', 'text_wrap': True, 'border': 1, 'font_size': 8})
-        navy_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1, 'font_size': 8})
+        gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1, 'font_size': 8})
         date_cyan_cell = workbook.add_format({'bg_color': 'cyan', 'text_wrap': True, 'border': 1,
                                               'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
         date_green_cell = workbook.add_format({'bg_color': 'green', 'text_wrap': True, 'border': 1,
                                               'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
         date_lime_cell = workbook.add_format({'bg_color': 'lime', 'text_wrap': True, 'border': 1,
+                                              'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
+        date_gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1,
                                               'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
         money_cyan_cell = workbook.add_format({'bg_color': 'cyan', 'text_wrap': True, 'border': 1,
                                               'num_format': '#,##0.00 €', 'font_size': 8})
@@ -310,6 +312,8 @@ class XLSXParser(FileParser):
         money_navy_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1,
                                               'num_format': '#,##0.00 €', 'font_size': 8})
         money_yellow_cell = workbook.add_format({'bg_color': 'yellow', 'text_wrap': True, 'border': 1,
+                                              'num_format': '#,##0.00 €', 'font_size': 8})
+        money_gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1,
                                               'num_format': '#,##0.00 €', 'font_size': 8})
 
         # Worksheets
@@ -364,17 +368,12 @@ class XLSXParser(FileParser):
                 # Write activity of lowest level
                 bsch_worksheet.write_number(counter, 0, activity.activity_id, green_cell)
                 bsch_worksheet.write(counter, 1, str(activity.name), green_cell)
-                self.write_wbs(bsch_worksheet, counter, 2, activity.wbs_id, navy_cell)
+                self.write_wbs(bsch_worksheet, counter, 2, activity.wbs_id, gray_cell)
                 self.write_predecessors(bsch_worksheet, counter, 3, activity.predecessors, green_cell)
                 self.write_successors(bsch_worksheet, counter, 4, activity.successors, green_cell)
                 bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.start, date_green_cell)
                 bsch_worksheet.write_datetime(counter, 6, activity.baseline_schedule.end, date_lime_cell)
-                if activity.baseline_schedule.duration.seconds != 0:
-                    duration = str(activity.baseline_schedule.duration.days) + "d " \
-                               + str(int(activity.baseline_schedule.duration.seconds / 3600)) + "h"
-                else:
-                    duration = str(activity.baseline_schedule.duration.days) + "d "
-                bsch_worksheet.write(counter, 7, duration, green_cell)
+                bsch_worksheet.write(counter, 7, self.get_duration_str(activity), green_cell)
                 self.write_resources(bsch_worksheet, counter, 8, activity.resources, yellow_cell)
                 bsch_worksheet.write_number(counter, 9, activity.resource_cost, money_navy_cell)
                 bsch_worksheet.write_number(counter, 10, activity.baseline_schedule.fixed_cost, money_green_cell)
@@ -390,12 +389,7 @@ class XLSXParser(FileParser):
                 self.write_successors(bsch_worksheet, counter, 4, activity.successors, cyan_cell)
                 bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.start, date_cyan_cell)
                 bsch_worksheet.write_datetime(counter, 6, activity.baseline_schedule.end, date_cyan_cell)
-                if activity.baseline_schedule.duration.seconds != 0:
-                    duration = str(activity.baseline_schedule.duration.days) + "d " \
-                               + str(int(activity.baseline_schedule.duration.seconds / 3600)) + "h"
-                else:
-                    duration = str(activity.baseline_schedule.duration.days) + "d "
-                bsch_worksheet.write(counter, 7, duration, cyan_cell)
+                bsch_worksheet.write(counter, 7, self.get_duration_str(activity), cyan_cell)
                 self.write_resources(bsch_worksheet, counter, 8, activity.resources, cyan_cell)
                 bsch_worksheet.write_number(counter, 9, activity.resource_cost, money_cyan_cell)
                 bsch_worksheet.write_number(counter, 10, activity.baseline_schedule.fixed_cost, money_cyan_cell)
@@ -467,25 +461,15 @@ class XLSXParser(FileParser):
             if self.is_not_lowest_level_activity(project_object.activities, activity):
                 ra_worksheet.write_number(counter, 0, activity.activity_id, cyan_cell)
                 ra_worksheet.write(counter, 1, str(activity.name), cyan_cell)
-                if activity.baseline_schedule.duration.seconds != 0:
-                    duration = str(activity.baseline_schedule.duration.days) + "d " \
-                               + str(int(activity.baseline_schedule.duration.seconds / 3600)) + "h"
-                else:
-                    duration = str(activity.baseline_schedule.duration.days) + "d "
-                ra_worksheet.write(counter, 2, duration, cyan_cell)
+                ra_worksheet.write(counter, 2, self.get_duration_str(activity), cyan_cell)
                 ra_worksheet.write(counter, 3, "", cyan_cell)
                 ra_worksheet.write(counter, 4, "", cyan_cell)
                 ra_worksheet.write(counter, 5, "", cyan_cell)
                 ra_worksheet.write(counter, 6, "", cyan_cell)
             else:
-                ra_worksheet.write_number(counter, 0, activity.activity_id, navy_cell)
-                ra_worksheet.write(counter, 1, str(activity.name), navy_cell)
-                if activity.baseline_schedule.duration.seconds != 0:
-                    duration = str(activity.baseline_schedule.duration.days) + "d " \
-                               + str(int(activity.baseline_schedule.duration.seconds / 3600)) + "h"
-                else:
-                    duration = str(activity.baseline_schedule.duration.days) + "d "
-                ra_worksheet.write(counter, 2, duration, navy_cell)
+                ra_worksheet.write_number(counter, 0, activity.activity_id, gray_cell)
+                ra_worksheet.write(counter, 1, str(activity.name), gray_cell)
+                ra_worksheet.write(counter, 2, self.get_duration_str(activity), gray_cell)
                 description = str(activity.risk_analysis.distribution_type.name) + " - " \
                               + str(activity.risk_analysis.distribution_units.name)
                 ra_worksheet.write(counter, 3, description, yellow_cell)
@@ -494,10 +478,133 @@ class XLSXParser(FileParser):
                 ra_worksheet.write_number(counter, 6, activity.risk_analysis.pessimistic_duration, yellow_cell)
             counter += 1
 
-        # Write the tracking periods
+        # Write the tracking periods, same drill, multiple sheets, too many bloody columns
+        for i in range(0, len(project_object.tracking_periods)):
+            if i == 0:
+                tracking_period_worksheet = workbook.add_worksheet("Project Control - TP1")
+            else:
+                tracking_period_worksheet = workbook.add_worksheet("TP" + str(i+1))
+
+            # Set column widths and create headers
+            tracking_period_worksheet.set_column(0, 0, 3)
+            tracking_period_worksheet.set_column(1, 1, 18)
+            tracking_period_worksheet.set_column(2, 3, 12)
+            tracking_period_worksheet.set_column(5, 5, 22)
+            tracking_period_worksheet.set_column(11, 11, 12)
+            tracking_period_worksheet.set_column(12, 12, 6)
+            tracking_period_worksheet.set_column(21, 21, 8)
+            tracking_period_worksheet.set_row(3, 30)
+
+            tracking_period_worksheet.write('B1', 'TP Status Date', header)
+            tracking_period_worksheet.write('E1', 'TP Name', header)
+            tracking_period_worksheet.merge_range('A3:B3', "General", header)
+            tracking_period_worksheet.merge_range('C3:E3', "Baseline", header)
+            tracking_period_worksheet.merge_range('F3:G3', "Resource Demand", header)
+            tracking_period_worksheet.merge_range('H3:K3', "Baseline Costs", header)
+            tracking_period_worksheet.merge_range('L3:X3', "Tracking", header)
+            tracking_period_worksheet.write('A4', 'ID', header)
+            tracking_period_worksheet.write('B4', 'Name', header)
+            tracking_period_worksheet.write('C4', 'Baseline Start', header)
+            tracking_period_worksheet.write('D4', 'Baseline End', header)
+            tracking_period_worksheet.write('E4', 'Duration', header)
+            tracking_period_worksheet.write('F4', 'Resource Demand', header)
+            tracking_period_worksheet.write('G4', 'Resource Cost', header)
+            tracking_period_worksheet.write('H4', 'Fixed Cost', header)
+            tracking_period_worksheet.write('I4', 'Cost/Hour', header)
+            tracking_period_worksheet.write('J4', 'Variable Cost', header)
+            tracking_period_worksheet.write('K4', 'Total Cost', header)
+            tracking_period_worksheet.write('L4', 'Actual Start', header)
+            tracking_period_worksheet.write('M4', 'Actual Duration', header)
+            tracking_period_worksheet.write('N4', 'PAC', header)
+            tracking_period_worksheet.write('O4', 'PRC', header)
+            tracking_period_worksheet.write('P4', 'Remaining Duration', header)
+            tracking_period_worksheet.write('Q4', 'PAC Dev', header)
+            tracking_period_worksheet.write('R4', 'PRC Dev', header)
+            tracking_period_worksheet.write('S4', 'Actual Cost', header)
+            tracking_period_worksheet.write('T4', 'Remaining Cost', header)
+            tracking_period_worksheet.write('U4', 'Percentage Completed', header)
+            tracking_period_worksheet.write('V4', 'Tracking', header)
+            tracking_period_worksheet.write('W4', 'Earned Value (EV)', header)
+            tracking_period_worksheet.write('X4', 'Planned Value (PV)', header)
+
+            # Write the data
+            tracking_period_worksheet.write_datetime('C1', project_object.tracking_periods[i].tracking_period_statusdate
+                                                     , date_green_cell)
+            tracking_period_worksheet.write('F1', project_object.tracking_periods[i].tracking_period_name,
+                                                     yellow_cell)
+            counter = 4
+            for atr in project_object.tracking_periods[i].tracking_period_records:  # atr = ActivityTrackingRecord
+                if self.is_not_lowest_level_activity(project_object.activities, atr.activity):
+                    tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, cyan_cell)
+                    tracking_period_worksheet.write(counter, 1, atr.activity.name, cyan_cell)
+                    tracking_period_worksheet.write_datetime(counter, 2, atr.activity.baseline_schedule.start, date_cyan_cell)
+                    tracking_period_worksheet.write_datetime(counter, 3, atr.activity.baseline_schedule.end, date_cyan_cell)
+                    tracking_period_worksheet.write(counter, 4, self.get_duration_str(atr.activity), cyan_cell)
+                    self.write_resources(tracking_period_worksheet, counter, 5, atr.activity.resources, cyan_cell)
+                    tracking_period_worksheet.write_number(counter, 6, atr.activity.resource_cost, money_cyan_cell)
+                    tracking_period_worksheet.write_number(counter, 7, atr.activity.baseline_schedule.fixed_cost, money_cyan_cell)
+                    tracking_period_worksheet.write_number(counter, 8, atr.activity.baseline_schedule.hourly_cost, money_cyan_cell)
+                    tracking_period_worksheet.write_number(counter, 9, atr.activity.baseline_schedule.var_cost, money_cyan_cell)
+                    tracking_period_worksheet.write_number(counter, 10, atr.activity.baseline_schedule.total_cost, money_cyan_cell)
+                    if atr.actual_start:
+                        tracking_period_worksheet.write_datetime(counter, 11, atr.actual_start, date_cyan_cell)
+                    else:
+                        tracking_period_worksheet.write(counter, 11, '', cyan_cell)
+                    tracking_period_worksheet.write(counter, 12, atr.actual_duration, cyan_cell)
+                    tracking_period_worksheet.write_number(counter, 13, atr.planned_actual_cost, money_cyan_cell)
+                    tracking_period_worksheet.write_number(counter, 14, atr.planned_remaining_cost, money_cyan_cell)
+                    tracking_period_worksheet.write(counter, 15, atr.remaining_duration, cyan_cell)
+                    tracking_period_worksheet.write_number(counter, 16, atr.deviation_pac, money_cyan_cell)
+                    tracking_period_worksheet.write_number(counter, 17, atr.deviation_prc, money_cyan_cell)
+                    tracking_period_worksheet.write_number(counter, 18, atr.actual_cost, money_cyan_cell)
+                    tracking_period_worksheet.write_number(counter, 19, atr.remaining_cost, money_cyan_cell)
+                    tracking_period_worksheet.write_number(counter, 20, atr.percentage_completed, cyan_cell)
+                    tracking_period_worksheet.write(counter, 21, atr.tracking_status, cyan_cell)
+                    tracking_period_worksheet.write_number(counter, 22, atr.earned_value, money_cyan_cell)
+                    tracking_period_worksheet.write_number(counter, 23, atr.planned_value, money_cyan_cell)
+                else:
+                    tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, gray_cell)
+                    tracking_period_worksheet.write(counter, 1, atr.activity.name, gray_cell)
+                    tracking_period_worksheet.write_datetime(counter, 2, atr.activity.baseline_schedule.start, date_gray_cell)
+                    tracking_period_worksheet.write_datetime(counter, 3, atr.activity.baseline_schedule.end, date_gray_cell)
+                    tracking_period_worksheet.write(counter, 4, self.get_duration_str(atr.activity), gray_cell)
+                    self.write_resources(tracking_period_worksheet, counter, 5, atr.activity.resources, gray_cell)
+                    tracking_period_worksheet.write_number(counter, 6, atr.activity.resource_cost, money_gray_cell)
+                    tracking_period_worksheet.write_number(counter, 7, atr.activity.baseline_schedule.fixed_cost, money_gray_cell)
+                    tracking_period_worksheet.write_number(counter, 8, atr.activity.baseline_schedule.hourly_cost, money_gray_cell)
+                    tracking_period_worksheet.write_number(counter, 9, atr.activity.baseline_schedule.var_cost, money_gray_cell)
+                    tracking_period_worksheet.write_number(counter, 10, atr.activity.baseline_schedule.total_cost, money_gray_cell)
+                    if atr.actual_start:
+                        tracking_period_worksheet.write_datetime(counter, 11, atr.actual_start, date_green_cell)
+                    else:
+                        tracking_period_worksheet.write(counter, 11, '', green_cell)
+                    tracking_period_worksheet.write(counter, 12, atr.actual_duration, green_cell)
+                    tracking_period_worksheet.write_number(counter, 13, atr.planned_actual_cost, money_gray_cell)
+                    tracking_period_worksheet.write_number(counter, 14, atr.planned_remaining_cost, money_gray_cell)
+                    tracking_period_worksheet.write(counter, 15, atr.remaining_duration, gray_cell)
+                    tracking_period_worksheet.write_number(counter, 16, atr.deviation_pac, money_gray_cell)
+                    tracking_period_worksheet.write_number(counter, 17, atr.deviation_prc, money_gray_cell)
+                    tracking_period_worksheet.write_number(counter, 18, atr.actual_cost, money_green_cell)
+                    tracking_period_worksheet.write_number(counter, 19, atr.remaining_cost, money_gray_cell)
+                    tracking_period_worksheet.write_number(counter, 20, atr.percentage_completed, green_cell)
+                    tracking_period_worksheet.write(counter, 21, atr.tracking_status, gray_cell)
+                    tracking_period_worksheet.write_number(counter, 22, atr.earned_value, money_gray_cell)
+                    tracking_period_worksheet.write_number(counter, 23, atr.planned_value, money_gray_cell)
+                counter += 1
+
         #TODO: write tracking periods
 
         workbook.close()
+
+    @staticmethod
+    def get_duration_str(activity):
+        # Writing a duration requires some converting..
+        if activity.baseline_schedule.duration.seconds != 0:
+            duration = str(activity.baseline_schedule.duration.days) + "d " \
+                       + str(int(activity.baseline_schedule.duration.seconds / 3600)) + "h"
+        else:
+            duration = str(activity.baseline_schedule.duration.days) + "d "
+        return duration
 
     @staticmethod
     def write_wbs(worksheet, row, column, wbs, format):
