@@ -22,7 +22,7 @@
    <item>
     <widget class="QStackedWidget" name="pagesMain">
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="StartPage">
       <layout class="QVBoxLayout" name="verticalLayout">
@@ -258,6 +258,13 @@
            <item row="2" column="1">
             <widget class="QComboBox" name="ddlStep1_OutputFormat"/>
            </item>
+           <item row="3" column="1">
+            <widget class="QCheckBox" name="chkStep1_ExcelExtendedVersion">
+             <property name="text">
+              <string>Extended version</string>
+             </property>
+            </widget>
+           </item>
           </layout>
          </item>
          <item>
@@ -324,7 +331,7 @@
       </layout>
      </widget>
      <widget class="QWidget" name="pageStep2">
-      <layout class="QVBoxLayout" name="verticalLayout_4">
+      <layout class="QVBoxLayout" name="verticalLayout_7">
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_8">
          <item>
@@ -357,31 +364,68 @@
         </widget>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_14">
+        <layout class="QHBoxLayout" name="horizontalLayout_18">
          <item>
-          <widget class="QListWidget" name="listStep2_ChosenVisualisations"/>
+          <layout class="QVBoxLayout" name="verticalLayout_4">
+           <item>
+            <widget class="QListWidget" name="listStep2_ChosenVisualisations"/>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_14">
+             <item>
+              <widget class="QPushButton" name="btnStep2_ImportSettings">
+               <property name="text">
+                <string>Import</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnStep2_ExportSettings">
+               <property name="text">
+                <string>Export</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
          </item>
          <item>
           <layout class="QVBoxLayout" name="verticalLayout_3">
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_11">
              <item>
-              <spacer name="horizontalSpacer_8">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-             <item>
               <widget class="QComboBox" name="ddlStep2_VisualisationType"/>
              </item>
             </layout>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="grpbxStep2_VisualisationDescription">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>100</height>
+              </size>
+             </property>
+             <property name="title">
+              <string>Title of the chosen visualisation</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_9">
+              <item>
+               <widget class="QLabel" name="lblStep2_VisualisationDescription">
+                <property name="text">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#7e7e7e;&quot;&gt;Description of the chosen visualisation&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
            </item>
            <item>
             <widget class="QGroupBox" name="grpbxStep2_VisualisationParameters">
@@ -394,7 +438,7 @@
              <property name="minimumSize">
               <size>
                <width>350</width>
-               <height>350</height>
+               <height>200</height>
               </size>
              </property>
              <property name="title">
@@ -402,10 +446,61 @@
              </property>
              <layout class="QHBoxLayout" name="horizontalLayout_9">
               <item>
-               <widget class="QStackedWidget" name="pagesStep2_Parameters">
-                <widget class="QWidget" name="page_2"/>
-                <widget class="QWidget" name="page_3"/>
-               </widget>
+               <layout class="QFormLayout" name="formLayout">
+                <item row="0" column="0">
+                 <widget class="QLabel" name="lblStep2_Param_LevelOfDetail">
+                  <property name="text">
+                   <string>Level of detail: </string>
+                  </property>
+                  <property name="margin">
+                   <number>3</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QComboBox" name="ddlStep2_Param_LevelOfDetail"/>
+                </item>
+                <item row="2" column="0">
+                 <widget class="QCheckBox" name="chkStep2_Param_AddThreshold">
+                  <property name="text">
+                   <string>Add threshold to data</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="0">
+                 <widget class="QLabel" name="lblStep2_Param_StartingThreshold">
+                  <property name="text">
+                   <string>Threshold start value: </string>
+                  </property>
+                  <property name="margin">
+                   <number>3</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QCheckBox" name="chkStep2_Param_RelativeValues">
+                  <property name="text">
+                   <string>Use relative values</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="1">
+                 <widget class="QDoubleSpinBox" name="dblspnbxStep2_Param_StartThresholdValue"/>
+                </item>
+                <item row="5" column="1">
+                 <widget class="QDoubleSpinBox" name="dblspnbxStep2_Param_EndThresholdValue"/>
+                </item>
+                <item row="5" column="0">
+                 <widget class="QLabel" name="lblStep2_Param_EndingThreshold">
+                  <property name="text">
+                   <string>Threshold end value: </string>
+                  </property>
+                  <property name="margin">
+                   <number>3</number>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
              </layout>
             </widget>
@@ -428,6 +523,13 @@
              <item>
               <layout class="QHBoxLayout" name="horizontalLayout_10">
                <item>
+                <widget class="QPushButton" name="btnStep2_AddVisualisation">
+                 <property name="text">
+                  <string>Add</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QPushButton" name="btnStep2_DeleteVisualisation">
                  <property name="font">
                   <font>
@@ -439,16 +541,22 @@
                  </property>
                 </widget>
                </item>
-               <item>
-                <widget class="QPushButton" name="btnStep2_AddVisualisation">
-                 <property name="text">
-                  <string>+ Add</string>
-                 </property>
-                </widget>
-               </item>
               </layout>
              </item>
             </layout>
+           </item>
+           <item>
+            <spacer name="verticalSpacer_9">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
            </item>
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_12">
@@ -486,7 +594,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="page">
+     <widget class="QWidget" name="pageStep3">
       <layout class="QVBoxLayout" name="verticalLayout_5">
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_15">
@@ -535,9 +643,58 @@
        <item>
         <widget class="QLabel" name="lblStep3_Message">
          <property name="text">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:16pt;&quot;&gt;We are converting your file!&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:16pt;&quot;&gt;&lt;br/&gt;&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:16pt;&quot;&gt;Please wait a moment...&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:16pt;&quot;&gt;&lt;br/&gt;[Waiting]&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:16pt;&quot;&gt;We are converting your file!&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:16pt;&quot;&gt;&lt;br/&gt;&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:16pt;&quot;&gt;Please wait a moment...&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
         </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_20">
+         <item>
+          <spacer name="horizontalSpacer_8">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="lblStep3_WaitingSpinner">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>128</width>
+             <height>128</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>[WAITING]</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_15">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
        </item>
        <item>
         <spacer name="verticalSpacer_6">
@@ -554,12 +711,50 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="page_4">
+     <widget class="QWidget" name="pageConvertingError">
+      <layout class="QVBoxLayout" name="verticalLayout_8">
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_19">
+         <item>
+          <widget class="QLabel" name="lblConvertingError_Title">
+           <property name="text">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:20pt;&quot;&gt;Conversion failed&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_14">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="Line" name="line_6">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTextEdit" name="textEdit"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="pageFinished">
       <layout class="QVBoxLayout" name="verticalLayout_6">
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_16">
          <item>
-          <widget class="QLabel" name="lblStep4_Title">
+          <widget class="QLabel" name="lblFinished_Title">
            <property name="text">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:20pt;&quot;&gt;Done...&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
@@ -601,7 +796,7 @@
         </spacer>
        </item>
        <item>
-        <widget class="QLabel" name="lblStep4_Message">
+        <widget class="QLabel" name="lblFinished_Message">
          <property name="text">
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:16pt;&quot;&gt;Your file is saved to:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
@@ -614,7 +809,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="lblStep4_OutputFilename">
+        <widget class="QLabel" name="lblFinished_OutputFilename">
          <property name="text">
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;[output filename]&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
@@ -655,7 +850,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QCommandLinkButton" name="cmdStep4_End">
+          <widget class="QCommandLinkButton" name="cmdFinished_End">
            <property name="maximumSize">
             <size>
              <width>100</width>
