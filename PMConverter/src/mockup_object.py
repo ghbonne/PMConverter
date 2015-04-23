@@ -43,6 +43,9 @@ po = xlsx_parser.to_schedule_object(os.path.join(os.path.dirname(__file__),
                                             "../administration/2_Project data input sheet_extended.xlsx"))
 
 # Write the file we just processed to a file
-xlsx_parser.from_schedule_object(po, "test2.xlsx")
+wb1 = xlsx_parser.from_schedule_object(po, "test2_extended.xlsx", True)
+wb1.close()
+wb2 = xlsx_parser.from_schedule_object(po, "test2_basic.xlsx", False)
+wb2.close()
 
 
