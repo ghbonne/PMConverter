@@ -54,21 +54,28 @@ class XLSXParser(FileParser):
             # Again, a new dict is created, to process all tracking periods more easily
             activities_dict = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict, True)
             tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, True)
+            if agenda_sheet:
+                agenda = self.process_agenda(agenda_sheet)
+            else:
+                agenda = Agenda()
+
+            return ProjectObject(activities=[i[1] for i in sorted(activities_dict.values(), key=lambda x: x[1].wbs_id)],
+                                 resources=sorted(resources_dict.values(), key=lambda x: x.resource_id),
+                                 tracking_periods=tracking_periods, agenda=agenda)
         else:
             # We are processing the basic version
             resources_dict = self.process_resources(resource_sheet)
             risk_analysis_dict = self.process_risk_analysis(risk_analysis_sheet, False)
             activities_dict = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict, False)
             tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, False)
+            if agenda_sheet:
+                agenda = self.process_agenda(agenda_sheet)
+            else:
+                agenda = Agenda()
 
-        if agenda_sheet:
-            agenda = self.process_agenda(agenda_sheet)
-        else:
-            agenda = Agenda()
-
-        return ProjectObject(activities=sorted(activities_dict.values(), key=lambda x: x.wbs_id),
-                             resources=sorted(resources_dict.values(), key=lambda x: x.resource_id),
-                             tracking_periods=tracking_periods, agenda=agenda)
+            return ProjectObject(activities=[i[1] for i in sorted(activities_dict.values(), key=lambda x: x[0])],
+                                 resources=list(resources_dict.values()), tracking_periods=tracking_periods,
+                                 agenda=agenda)
 
     def process_agenda(self, agenda_sheet):
         working_days = [0]*7
@@ -159,7 +166,7 @@ class XLSXParser(FileParser):
                         tracking_status = project_control_sheet.cell(row=curr_row, column=22).value
                     earned_value = float(project_control_sheet.cell(row=curr_row, column=23).value)
                     planned_value = float(project_control_sheet.cell(row=curr_row, column=24).value)
-                    act_track_record = ActivityTrackingRecord(activity=activities_dict[activity_id],
+                    act_track_record = ActivityTrackingRecord(activity=activities_dict[activity_id][1],
                                                               actual_start=actual_start, actual_duration=actual_duration,
                                                               planned_actual_cost=pac, planned_remaining_cost=prc,
                                                               remaining_duration=remaining_duration, deviation_pac=pac_dev,
@@ -215,7 +222,7 @@ class XLSXParser(FileParser):
                     if percentage_completed > 100:
                         print("Gilles V has made a stupid error by putting some ifs & transformations in XLSXparser.py "
                               "with the variable percentage_completed_str")
-                    act_track_record = ActivityTrackingRecord(activity=activities_dict[activity_id],
+                    act_track_record = ActivityTrackingRecord(activity=activities_dict[activity_id][1],
                                                               actual_start=actual_start, actual_duration=actual_duration,
                                                               actual_cost=actual_cost,
                                                               percentage_completed=percentage_completed)
@@ -322,11 +329,11 @@ class XLSXParser(FileParser):
                         if len(activity_resource.split("[")) > 1:
                             activity_resource_demand = int(float(activity_resource.split("[")[1].split(" ")[0].translate(str.maketrans(",", "."))))
                         activity_resources.append((activity_resource_name, activity_resource_demand))
-                activities_dict[activity_id] = Activity(activity_id, name=activity_name, wbs_id=activity_wbs,
+                activities_dict[activity_id] = (curr_row, Activity(activity_id, name=activity_name, wbs_id=activity_wbs,
                                                    predecessors=activity_predecessors, successors=activity_successors,
                                                    baseline_schedule=activity_baseline_schedule,
                                                    resource_cost=activity_resource_cost,
-                                                   risk_analysis=activity_risk_analysis, resources=activity_resources)
+                                                   risk_analysis=activity_risk_analysis, resources=activity_resources))
         else:
             for curr_row in range(self.get_nr_of_header_lines(activities_sheet), activities_sheet.get_highest_row()+1):
                 activity_id = int(activities_sheet.cell(row=curr_row, column=1).value)
@@ -374,10 +381,10 @@ class XLSXParser(FileParser):
                         if len(activity_resource.split("[")) > 1:
                             activity_resource_demand = int(float(activity_resource.split("[")[1].split(" ")[0].translate(str.maketrans(",", "."))))
                         activity_resources.append((activity_resource_name, activity_resource_demand))
-                activities_dict[activity_id] = Activity(activity_id, name=activity_name,
+                activities_dict[activity_id] = (curr_row, Activity(activity_id, name=activity_name,
                                                    predecessors=activity_predecessors, successors=activity_successors,
                                                    baseline_schedule=activity_baseline_schedule,
-                                                   risk_analysis=activity_risk_analysis, resources=activity_resources)
+                                                   risk_analysis=activity_risk_analysis, resources=activity_resources))
 
         return activities_dict
 
