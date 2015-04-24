@@ -81,6 +81,7 @@ class ActualDuration(Visualization):
                                       'border': 1, 'font_size': 8})
         calculation = workbook.add_format({'bg_color': '#FFF2CC', 'text_wrap': True, 'border': 1, 'font_size': 8})
 
+        worksheet.merge_range('AA3:AC3', "Time", header)
         if self.data_type == DataType.RELATIVE:
             worksheet.write('AA4', 'Relative baseline duration', header)
             worksheet.write('AB4', 'Relative actual duration', header)

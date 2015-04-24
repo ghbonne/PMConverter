@@ -91,10 +91,12 @@ class ActualCost(Visualization):
         calculation = workbook.add_format({'bg_color': '#FFF2CC', 'text_wrap': True, 'border': 1, 'font_size': 8})
 
         if self.data_type == DataType.RELATIVE:
+            worksheet.merge_range('AD3:AF3', "Costs", header)
             worksheet.write('AD4', 'Relative baseline duration', header)
             worksheet.write('AE4', 'Relative actual duration', header)
             worksheet.write('AF4', 'Percentage completed', header)
         else:
+            worksheet.write('AD3', 'Costs', header)
             worksheet.write('AD4', 'Absolute completed', header)
 
         counter = 4
