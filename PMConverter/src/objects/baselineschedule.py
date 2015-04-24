@@ -31,8 +31,6 @@ class BaselineScheduleRecord(object):
                 raise TypeError('fixed_cost should be a float')
             if not isinstance(hourly_cost, float):
                 raise TypeError('hourly_cost should be a float')
-            if not isinstance(var_cost, float):
-                raise TypeError('var_cost should be a float')
             if not isinstance(total_cost, float):
                 raise TypeError('total_cost should be a float')
         self.start = start
