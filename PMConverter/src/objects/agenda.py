@@ -113,3 +113,15 @@ class Agenda(object):
                 else:
                     end_date += timedelta(hours=1)
         return end_date
+
+    def get_duration_working_days(self, duration_hours=0):
+        """
+        :param duration_hours: integer; Working hours needed to complete activity
+        :return: timedelta; working days
+        """
+        working_hours_per_day=0
+        for working_hour in self.working_hours:
+            if working_hour == True:
+                working_hours_per_day+=1
+        working_days=duration_hours/working_hours_per_day
+        return timedelta(days=working_days)
