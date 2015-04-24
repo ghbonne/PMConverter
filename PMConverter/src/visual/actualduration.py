@@ -16,3 +16,10 @@ class ActualDuration(Visualization):
         self.description = ""
         self.parameters = {"level_of_detail": [LevelOfDetail.WORK_PACKAGES, LevelOfDetail.ACTIVITIES],
                            "data_type": [DataType.ABSOLUTE, DataType.RELATIVE]}
+
+    def draw(self, workbook, worksheet, project_object):
+        if not self.level_of_detail:
+            raise Exception("Please first set var level_of_detail")
+        if not self.data_type:
+            raise Exception("Please first set var data_type")
+
