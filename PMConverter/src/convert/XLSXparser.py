@@ -65,7 +65,9 @@ class XLSXParser(FileParser):
             agenda = self.process_agenda(agenda_sheet)
         else:
             agenda = Agenda()
-        return ProjectObject(activities=list(activities_dict.values()), resources=list(resources_dict.values()),
+
+        return ProjectObject(activities=sorted(activities_dict.values(), key=lambda x: x.wbs_id),
+                             resources=sorted(resources_dict.values(), key=lambda x: x.resource_id),
                              tracking_periods=tracking_periods, agenda=agenda)
 
     def process_agenda(self, agenda_sheet):
@@ -432,7 +434,7 @@ class XLSXParser(FileParser):
     @staticmethod
     def get_nr_of_header_lines(sheet):
         header_lines = 1
-        while not(sheet.cell(row=header_lines, column=1).value
+        while not(sheet.cell(row=header_lines, column=1).value is not None
                   and (type(sheet.cell(row=header_lines, column=1).value) is int
                        or sheet.cell(row=header_lines, column=1).value.isdigit())):
             header_lines += 1
