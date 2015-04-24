@@ -484,6 +484,49 @@ class XLSXParser(FileParser):
                 sum_ev += atr.earned_value
         return sum_ev
 
+    def calculate_aggregated_rc(self, tracking_period):
+        sum_rc = 0
+        for atr in tracking_period.tracking_period_records:
+            if not self.is_not_lowest_level_activity(atr.activity):
+                sum_rc += atr.remaining_cost
+        return sum_rc
+
+    def get_bac(self, tracking_period):
+        pv = None
+        for atr in tracking_period.tracking_period_records:
+            if len(atr.activity.wbs_id) == 1:
+                pv = atr.planned_value
+                break
+        if pv:
+            return pv + self.calculate_aggregated_rc(tracking_period)
+        else:
+            return 0
+
+    def calculate_eac(self, ac, bac, ev, pf):
+        print(ac, bac, ev, pf)
+        if pf == 0:
+            return 0
+        return ac + (bac - ev)/pf
+
+    def get_pv(self, tracking_period):
+        pv = None
+        for atr in tracking_period.tracking_period_records:
+            if len(atr.activity.wbs_id) == 1:
+                return atr.planned_value
+
+    def get_pvs(self, tracking_periods):
+        pvs = []
+        for tracking_period in tracking_periods:
+            pvs.append(self.get_pv(tracking_period))
+        return pvs
+
+    def calculate_es(self, tracking_period, tracking_periods):
+        ev = self.calculate_aggregated_ev(tracking_period)
+        pvs = self.get_pvs(tracking_periods)
+        for i in range(0, len(pvs)-1):
+            if pvs[i] <= ev < pvs[i+1]:
+                return
+
     def flatten(self, lst):
         if lst:
             car, *cdr = lst
@@ -1012,9 +1055,6 @@ class XLSXParser(FileParser):
             counter += 1
 
         # Write the tracking overview
-        #if extended:
-        #    pass
-        #else:
         overview_worksheet = workbook.add_worksheet("Tracking Overview")
         overview_worksheet.set_column(0, 13, 15)
         overview_worksheet.set_row(1, 30)
@@ -1052,15 +1092,44 @@ class XLSXParser(FileParser):
             if not self.calculate_aggregated_pv(tracking_period):
                 spi = 0
             else:
-                spi = str(round((self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_pv(tracking_period))*100)) + "%"
+                spi = str(round((self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_pv(tracking_period)*100))) + "%"
             overview_worksheet.write(counter, 8, spi, green_cell)
             cv = self.calculate_aggregated_ev(tracking_period) - self.calculate_aggregated_ac(tracking_period)
             overview_worksheet.write_number(counter, 9, cv, money_green_cell)
             if not self.calculate_aggregated_ac(tracking_period):
                 cpi = 0
             else:
-                cpi = str(round((self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_ac(tracking_period))*100)) + "%"
+                cpi = str(round((self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_ac(tracking_period)*100))) + "%"
             overview_worksheet.write(counter, 10, cpi, green_cell)
+
+            if extended:
+                overview_worksheet.write_number(counter, 23, self.calculate_eac(self.calculate_aggregated_ac(tracking_period),
+                                                                                self.get_bac(tracking_period), self.calculate_aggregated_ev(tracking_period),
+                                                                                1), money_green_cell)
+                if cpi != 0:
+                    cpi = self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_ac(tracking_period)
+                    overview_worksheet.write_number(counter, 24, self.calculate_eac(self.calculate_aggregated_ac(tracking_period),
+                                                                                    self.get_bac(tracking_period), self.calculate_aggregated_ev(tracking_period),
+                                                                                    cpi), money_green_cell)
+                else:
+                    overview_worksheet.write_number(counter, 24, 0, money_green_cell)
+                if spi != 0:
+                    spi = self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_pv(tracking_period)
+                    overview_worksheet.write_number(counter, 25, self.calculate_eac(self.calculate_aggregated_ac(tracking_period),
+                                                                                    self.get_bac(tracking_period), self.calculate_aggregated_ev(tracking_period),
+                                                                                    spi), money_green_cell)
+                else:
+                    overview_worksheet.write_number(counter, 25, 0, money_green_cell)
+
+                if cpi != 0 or spi != 0:
+                    cpi = self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_ac(tracking_period)
+                    spi = self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_pv(tracking_period)
+                    overview_worksheet.write_number(counter, 29, self.calculate_eac(self.calculate_aggregated_ac(tracking_period),
+                                                                                    self.get_bac(tracking_period), self.calculate_aggregated_ev(tracking_period),
+                                                                                    0.8*cpi+0.2*spi), money_green_cell)
+                else:
+                    overview_worksheet.write_number(counter, 29, 0, money_green_cell)
+
             counter += 1
 
         return workbook
