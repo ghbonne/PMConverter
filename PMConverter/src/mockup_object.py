@@ -6,7 +6,10 @@ from objects.baselineschedule import BaselineScheduleRecord
 from objects.projectobject import ProjectObject
 from objects.resource import Resource
 from objects.riskanalysisdistribution import RiskAnalysisDistribution
-
+from visual.charts.piechart import PieChart
+from visual.resourcedistribution import ResourceDistribution
+from visual.riskanalysis import RiskAnalysis
+from visual.enums import DataType, LevelOfDetail
 __author__ = 'gilles'
 
 xlsx_parser = XLSXParser()
@@ -43,6 +46,19 @@ po = xlsx_parser.to_schedule_object(os.path.join(os.path.dirname(__file__),
                                             "../administration/2_Project data input sheet_extended.xlsx"))
 
 # Write the file we just processed to a file
-xlsx_parser.from_schedule_object(po, "test2.xlsx")
+workbook = xlsx_parser.from_schedule_object(po, "output/test2.xlsx")
 
+for worksheet in workbook.worksheets():
+    if worksheet.get_name() == "Resources":
+        vis = ResourceDistribution()
+        vis.data_type = DataType.RELATIVE
+        vis.draw(workbook, worksheet)
+    if worksheet.get_name() == "Risk Analysis":
+        v2 = RiskAnalysis()
+        v2.level_of_detail = LevelOfDetail.ACTIVITIES
+        v2.draw(workbook, worksheet, po)
+
+
+workbook.close()
+os.system("start excel.exe output/test2.xlsx")
 
