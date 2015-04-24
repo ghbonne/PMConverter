@@ -380,11 +380,13 @@ class XMLParser(FileParser):
                 activityTrackingRecord_list=[]
                 for tracking_activity in tracking_period.findall('TProTrackActivityTracking-1'):
                     # Read Data
-                    actualStart=self.getdate(tracking_activity.find('ActualStart').text,dateformat)
-                    actualDuration=tracking_activity.find('ActualDuration').text
-                    actualCostDev=tracking_activity.find('ActualCostDev').text
-                    remainingDuration=tracking_activity.find('RemainingDuration').text
-                    remainingCostDev=tracking_activity.find('RemainingCostDev').text
+                    actualStart=self.getdate(tracking_activity.find('ActualStart').text, dateformat)
+                    actualDuration_hours=int(tracking_activity.find('ActualDuration').text)
+                    actualDuration=project_agenda.get_duration_working_days(duration_hours=actualDuration_hours)
+                    actualCostDev=float(tracking_activity.find('ActualCostDev').text)
+                    remainingDuration_days=int(tracking_activity.find('RemainingDuration').text)
+                    remainingDuration=project_agenda.get_duration_working_days(duration_hours=remainingDuration_days*8)
+                    remainingCostDev=float(tracking_activity.find('RemainingCostDev').text)
                     percentageComplete=float(tracking_activity.find('PercentageComplete').text)*100
                     #Assign Data
                     activityTrackingRecord=ActivityTrackingRecord()
@@ -404,8 +406,8 @@ class XMLParser(FileParser):
                         trackingStatus='Started'
                     activityTrackingRecord.tracking_status=trackingStatus
 
-                    # Already read from previous data fields
-                    #todo
+                    # Should have been already read from previous data fields
+                    #TODO
                     activityTrackingRecord.actual_cost=0
                     activityTrackingRecord.earned_value=0
                     activityTrackingRecord.planned_actual_cost=0
