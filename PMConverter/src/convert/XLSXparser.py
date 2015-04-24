@@ -497,7 +497,7 @@ class XLSXParser(FileParser):
         # Write the tracking periods
         #TODO: write tracking periods
 
-        workbook.close()
+        return workbook
 
     @staticmethod
     def write_wbs(worksheet, row, column, wbs, format):
