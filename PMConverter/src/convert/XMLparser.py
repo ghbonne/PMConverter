@@ -41,7 +41,7 @@ class XMLParser(FileParser):
                     date_datetime=datetime(year, month, day)
                     return date_datetime
                 else:
-                    return "0"
+                    return datetime.max
             elif dateformat == "MM/d/yyyy h:mm":
                 if len(datestring) == 12:
                     month=int(datestring[:2])
@@ -58,7 +58,7 @@ class XMLParser(FileParser):
                     date_datetime=datetime(year, month, day)
                     return date_datetime
                 else:
-                    return "0"
+                    return datetime.max
             else:
                 raise("Warning! Dateformat undefined")
 
@@ -201,7 +201,7 @@ class XMLParser(FileParser):
                 BSR.fixed_cost=FixedBaselineCost
                 BSR.hourly_cost=BaselineCostByUnit
                 BSR.var_cost = BSR.hourly_cost*BaselineDuration_hours
-                BSR.total_cost = BSR.var_cost+BSR.fixed_cost   ## Resource cost is missing
+                BSR.total_cost = BSR.var_cost+BSR.fixed_cost
                 a.baseline_schedule=BSR
                 activity_list_interim[UniqueID-1]=a
                 activity_list_wo_groups_interim[UniqueID-1]=a
@@ -385,7 +385,7 @@ class XMLParser(FileParser):
                     actualDuration=project_agenda.get_duration_working_days(duration_hours=actualDuration_hours)
                     actualCostDev=float(tracking_activity.find('ActualCostDev').text)
                     remainingDuration_days=int(tracking_activity.find('RemainingDuration').text)
-                    remainingDuration=project_agenda.get_duration_working_days(duration_hours=remainingDuration_days*8)
+                    remainingDuration=project_agenda.get_duration_working_days(duration_hours=remainingDuration_days)
                     remainingCostDev=float(tracking_activity.find('RemainingCostDev').text)
                     percentageComplete=float(tracking_activity.find('PercentageComplete').text)*100
                     #Assign Data
@@ -477,6 +477,7 @@ class XMLParser(FileParser):
             matrix_activity_group[i]=activity_list_wbs[1+i+sum(subgroup_count[0:i]):(2+i+sum(subgroup_count[0:i+1]))]
 
         ## Assigning Data to activity groups
+        # TODO Duration
         for ag in matrix_activity_group:
             ## Costs
             total_cost=0
@@ -521,27 +522,6 @@ class XMLParser(FileParser):
         ## Make project object
         project_object=ProjectObject(project_name, activity_list_wbs, TP_list, res_list, project_agenda)
         return project_object
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     def from_schedule_object(self, project_object, file_path_output="output.xml"):
