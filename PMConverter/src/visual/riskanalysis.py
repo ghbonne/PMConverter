@@ -74,5 +74,5 @@ class RiskAnalysis(Visualization):
 
         chart = BarChart(self.title, ["Hours", self.level_of_detail.value], data_series)
 
-        options = {'height': height}
+        options = {'height': height, 'width': 800}
         chart.draw(workbook, worksheet, 'I1', None, options)
