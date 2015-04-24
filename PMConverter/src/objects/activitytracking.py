@@ -1,5 +1,4 @@
 __author__ = 'PM Group 8'
-from datetime import datetime, timedelta
 
 
 class ActivityTrackingRecord(object):

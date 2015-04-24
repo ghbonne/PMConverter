@@ -42,6 +42,7 @@ xlsx_parser.from_schedule_object(project_object, os.path.join(os.path.dirname(__
 # Some tests for reading from a XLSX File
 # TODO: refactor to test class
 
+print("Parsing the extended input sheet")
 po = xlsx_parser.to_schedule_object(os.path.join(os.path.dirname(__file__),
                                             "../administration/2_Project data input sheet_extended.xlsx"))
 
@@ -61,4 +62,5 @@ for worksheet in workbook.worksheets():
 
 workbook.close()
 os.system("start excel.exe output/test2.xlsx")
+
 
