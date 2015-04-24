@@ -46,4 +46,4 @@ class PieChart(Chart):
         chart.set_style(10)
 
         # Insert chart
-        worksheet.insert_chart('I1', chart)
+        worksheet.insert_chart(location, chart, {'x_offset': 25, 'y_offset': 10})
