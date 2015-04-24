@@ -43,9 +43,6 @@ print("Parsing the extended input sheet")
 po = xlsx_parser.to_schedule_object(os.path.join(os.path.dirname(__file__),
                                             "../administration/2_Project data input sheet_extended.xlsx"))
 
-#for activity in po.activities:
-#    print(activity.__dict__)
-
 # Write the file we just processed to a file
 print("Writing it out in the extended form")
 wb1 = xlsx_parser.from_schedule_object(po, "extended_2_extended.xlsx", True)
@@ -57,9 +54,6 @@ wb2.close()
 
 print("Now parsing the basic sheet we just wrote")
 po_basic = xlsx_parser.to_schedule_object(os.path.join(os.path.dirname(__file__), "extended_2_basic.xlsx"))
-
-#for activity in po.activities:
-#    print(activity.__dict__)
 
 print("Writing this basic sheet out in basic form")
 wb3 = xlsx_parser.from_schedule_object(po_basic, "basic_2_basic.xlsx", False)
