@@ -34,3 +34,4 @@ class ResourceDistribution(Visualization):
         chart2 = PieChart('Resources', data_series2, relative)
 
         chart2.draw(workbook, worksheet, 'I1')
+        #TODO: set size of chart!
