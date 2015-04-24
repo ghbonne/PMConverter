@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 from convert.XLSXparser import XLSXParser
 from objects.activity import Activity
 from objects.baselineschedule import BaselineScheduleRecord
@@ -10,6 +11,8 @@ from visual.charts.piechart import PieChart
 from visual.resourcedistribution import ResourceDistribution
 from visual.riskanalysis import RiskAnalysis
 from visual.enums import DataType, LevelOfDetail
+from visual.actualduration import ActualDuration
+from visual.actualcost import ActualCost
 __author__ = 'gilles'
 
 xlsx_parser = XLSXParser()
@@ -58,6 +61,16 @@ for worksheet in workbook.worksheets():
         v2 = RiskAnalysis()
         v2.level_of_detail = LevelOfDetail.ACTIVITIES
         v2.draw(workbook, worksheet, po)
+    if "TP" in worksheet.get_name():
+        tp = int(re.search(r'\d+', worksheet.get_name()).group())
+        v3 = ActualDuration()
+        v3.level_of_detail = LevelOfDetail.ACTIVITIES
+        v3.data_type = DataType.RELATIVE
+        v3.draw(workbook, worksheet, po, tp-1)
+        v4 = ActualCost()
+        v4.level_of_detail = LevelOfDetail.ACTIVITIES
+        v4.data_type = DataType.RELATIVE
+        v4.draw(workbook, worksheet, po, tp-1)
 
 
 workbook.close()
