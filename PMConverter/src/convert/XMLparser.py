@@ -974,7 +974,7 @@ class XMLParser(FileParser):
                             file.write("</ActualStart>")
                             #Actual Duration
                             file.write("<ActualDuration>")
-                            file.write(str(ATR.actual_duration))
+                            file.write(str(ATR.actual_duration.days*8))
                             file.write("</ActualDuration>")
                             #Actual Cost Dev
                             file.write("<ActualCostDev>")
@@ -982,11 +982,11 @@ class XMLParser(FileParser):
                             file.write("</ActualCostDev>")
                             # Remaining Duration
                             file.write("<RemainingDuration>")
-                            file.write(str(ATR.remaining_duration))
+                            file.write(str(ATR.remaining_duration.days*8))
                             file.write("</RemainingDuration>")
                             # Remaining cost dev
                             file.write("<RemainingCostDev>")
-                            file.write(ATR.deviation_prc)
+                            file.write(str(ATR.deviation_prc))
                             file.write("</RemainingCostDev>")
                             #Percentage Complete
                             file.write("<PercentageComplete>")
