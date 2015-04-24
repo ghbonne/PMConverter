@@ -7,17 +7,23 @@ __author__ = 'Eveline'
 class Agenda(object):
 
     """
-    :var working_hours: list of booleans with length 24: True = working hour
-                                                        False = no working hour
-    :var working_days: list of booleans with length 7: True = working day
-                                                       False = no working day
+    :var working_hours: list of booleans with length 24 (index 0 = 00:00 - 01:00): True = working hour
+                                                                                   False = no working hour
+    :var working_days: list of booleans with length 7 (index 0 = Monday): True = working day
+                                                                          False = no working day
     :var holidays: list of holidays
     """
 
-    def __init__(self):
-        self.working_hours = [True] * 24
-        self.working_days = [True] * 7
-        self.holidays = []
+    def __init__(self, working_hours=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+                 working_days=[1, 1, 1, 1, 1, 0, 0], holidays=[]):
+        if len(working_hours) != 24 or not all(working_hours[i] in [0, 1] for i in range(0, len(working_hours))):
+            raise TypeError("Working hours should be a list of 24 bits")
+        if len(working_days) != 7 or not all(working_days[i] in [0, 1] for i in range(0, len(working_days))):
+            raise TypeError("Working days should be a list of 7 bits")
+
+        self.working_hours = working_hours
+        self.working_days = working_days
+        self.holidays = holidays
 
     def is_working_hour(self, hour):
         """

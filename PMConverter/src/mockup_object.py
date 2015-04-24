@@ -45,15 +45,15 @@ po = xlsx_parser.to_schedule_object(os.path.join(os.path.dirname(__file__),
 
 # Write the file we just processed to a file
 print("Writing it out in the extended form")
-wb1 = xlsx_parser.from_schedule_object(po, "test2_extended.xlsx", True)
+wb1 = xlsx_parser.from_schedule_object(po, "extended_2_extended.xlsx", True)
 wb1.close()
 
 print("Writing it out in the basic form")
-wb2 = xlsx_parser.from_schedule_object(po, "test2_basic.xlsx", False)
+wb2 = xlsx_parser.from_schedule_object(po, "extended_2_basic.xlsx", False)
 wb2.close()
 
 print("Now parsing the basic sheet we just wrote")
-po_basic = xlsx_parser.to_schedule_object(os.path.join(os.path.dirname(__file__), "test2_basic.xlsx"))
+po_basic = xlsx_parser.to_schedule_object(os.path.join(os.path.dirname(__file__), "extended_2_basic.xlsx"))
 
 print("Writing this basic sheet out in basic form")
 wb3 = xlsx_parser.from_schedule_object(po_basic, "basic_2_basic.xlsx", False)
