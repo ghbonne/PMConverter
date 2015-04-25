@@ -66,7 +66,7 @@ class CPI(Visualization):
                                       'border': 1, 'font_size': 8})
         calculation = workbook.add_format({'bg_color': '#FFF2CC', 'text_wrap': True, 'border': 1, 'font_size': 8})
 
-        worksheet.write('AG2', 'CPI threshold', header)
+        worksheet.write('AI2', 'CPI threshold', header)
 
         start = 2
         if self.threshold[0] == self.threshold[1]:
