@@ -6,7 +6,7 @@ from visual.enums import XAxis
 class Performance(Visualization):
 
     """
-    :var x-axis
+    :var x_axis: XAxis enum
 
     CPI/SPI
     """
@@ -14,4 +14,4 @@ class Performance(Visualization):
     def __init__(self):
         self.title = "CPI,SPI"
         self.description = ""
-        self.parameters = {"x-axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
+        self.parameters = {"x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}

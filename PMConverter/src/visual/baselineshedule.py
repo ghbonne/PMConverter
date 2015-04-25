@@ -13,4 +13,4 @@ class BaselineSchedule(Visualization):
     def __init__(self):
         self.title = "Baseline Schedule"
         self.description = ""
-        self.parameters = None
+        self.parameters = {}

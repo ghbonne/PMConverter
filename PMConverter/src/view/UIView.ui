@@ -192,9 +192,12 @@
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Preferred</enum>
+           </property>
            <property name="sizeHint" stdset="0">
             <size>
-             <width>40</width>
+             <width>70</width>
              <height>20</height>
             </size>
            </property>
@@ -227,7 +230,7 @@
               <widget class="QLineEdit" name="lineEditStep1_InputFilename">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
+                 <horstretch>3</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
@@ -357,9 +360,12 @@
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Preferred</enum>
+           </property>
            <property name="sizeHint" stdset="0">
             <size>
-             <width>40</width>
+             <width>70</width>
              <height>20</height>
             </size>
            </property>
@@ -456,7 +462,16 @@
          <item>
           <layout class="QVBoxLayout" name="verticalLayout_4">
            <item>
-            <widget class="QListWidget" name="listStep2_ChosenVisualisations"/>
+            <widget class="QListWidget" name="listStep2_ChosenVisualisations">
+             <property name="font">
+              <font>
+               <pointsize>12</pointsize>
+              </font>
+             </property>
+             <property name="spacing">
+              <number>0</number>
+             </property>
+            </widget>
            </item>
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_14">
@@ -507,8 +522,11 @@
              <layout class="QVBoxLayout" name="verticalLayout_9">
               <item>
                <widget class="QLabel" name="lblStep2_VisualisationDescription">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="text">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; color:#7e7e7e;&quot;&gt;Description of the chosen visualisation&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Description of the chosen visualisation&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </widget>
               </item>
@@ -532,9 +550,25 @@
              <property name="title">
               <string>Parameters</string>
              </property>
-             <layout class="QHBoxLayout" name="horizontalLayout_9">
+             <layout class="QVBoxLayout" name="verticalLayout_10">
+              <item>
+               <widget class="QLabel" name="lblStep2_Param_NoParams">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;No parameters to show&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
               <item>
                <layout class="QFormLayout" name="formLayout">
+                <property name="fieldGrowthPolicy">
+                 <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+                </property>
                 <item row="0" column="0">
                  <widget class="QLabel" name="lblStep2_Param_LevelOfDetail">
                   <property name="text">
@@ -547,6 +581,13 @@
                 </item>
                 <item row="0" column="1">
                  <widget class="QComboBox" name="ddlStep2_Param_LevelOfDetail"/>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QCheckBox" name="chkStep2_Param_RelativeValues">
+                  <property name="text">
+                   <string>Use relative values</string>
+                  </property>
+                 </widget>
                 </item>
                 <item row="2" column="0">
                  <widget class="QCheckBox" name="chkStep2_Param_AddThreshold">
@@ -565,18 +606,8 @@
                   </property>
                  </widget>
                 </item>
-                <item row="1" column="0">
-                 <widget class="QCheckBox" name="chkStep2_Param_RelativeValues">
-                  <property name="text">
-                   <string>Use relative values</string>
-                  </property>
-                 </widget>
-                </item>
                 <item row="3" column="1">
                  <widget class="QDoubleSpinBox" name="dblspnbxStep2_Param_StartThresholdValue"/>
-                </item>
-                <item row="5" column="1">
-                 <widget class="QDoubleSpinBox" name="dblspnbxStep2_Param_EndThresholdValue"/>
                 </item>
                 <item row="5" column="0">
                  <widget class="QLabel" name="lblStep2_Param_EndingThreshold">
@@ -588,6 +619,9 @@
                   </property>
                  </widget>
                 </item>
+                <item row="5" column="1">
+                 <widget class="QDoubleSpinBox" name="dblspnbxStep2_Param_EndThresholdValue"/>
+                </item>
                </layout>
               </item>
              </layout>
@@ -595,6 +629,16 @@
            </item>
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_13">
+             <item>
+              <widget class="QLabel" name="lblStep2_ParamsSaved">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Saved changes</string>
+               </property>
+              </widget>
+             </item>
              <item>
               <spacer name="horizontalSpacer_10">
                <property name="orientation">
@@ -682,12 +726,12 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="pageStep3">
+     <widget class="QWidget" name="pageConverting">
       <layout class="QVBoxLayout" name="verticalLayout_5">
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_15">
          <item>
-          <widget class="QLabel" name="lblStep3_Title">
+          <widget class="QLabel" name="lblConverting_Title">
            <property name="text">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:20pt;&quot;&gt;Converting...&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
@@ -729,7 +773,7 @@
         </spacer>
        </item>
        <item>
-        <widget class="QLabel" name="lblStep3_Message">
+        <widget class="QLabel" name="lblConverting_Message">
          <property name="text">
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:16pt;&quot;&gt;We are converting your file!&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:16pt;&quot;&gt;&lt;br/&gt;&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:16pt;&quot;&gt;Please wait a moment...&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
@@ -751,7 +795,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QLabel" name="lblStep3_WaitingSpinner">
+          <widget class="QLabel" name="lblConverting_WaitingSpinner">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>

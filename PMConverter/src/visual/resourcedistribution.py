@@ -6,7 +6,7 @@ from visual.enums import DataType
 class ResourceDistribution(Visualization):
 
     """
-    :var data_type
+    :var data_type: DataType enum
 
     data, name + total cost
     """

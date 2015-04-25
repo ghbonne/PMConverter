@@ -5,7 +5,7 @@ from visual.enums import XAxis
 
 class SpiTvsPfactor(Visualization):
     """
-    :var x-axis
+    :var x_axis: XAxis enum
 
     ranges aanpassen!!
     """
@@ -13,4 +13,4 @@ class SpiTvsPfactor(Visualization):
     def __init__(self):
         self.title = "SPI(t), p-factor"
         self.description = ""
-        self.parameters = {"x-axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
+        self.parameters = {"x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}

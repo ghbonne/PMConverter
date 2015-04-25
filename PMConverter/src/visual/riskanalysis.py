@@ -6,7 +6,7 @@ from visual.enums import LevelOfDetail
 class RiskAnalysis(Visualization):
 
     """
-    :var level_of_detail
+    :var level_of_detail: LevelOfDetail enum
 
     data: naam, baseline duration, optimistic, most probable, pessimistic
     """

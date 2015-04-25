@@ -5,8 +5,8 @@ from visual.enums import LevelOfDetail, DataType
 
 class ActualDuration(Visualization):
     """
-    :var level_of_detail
-    :var data_type
+    :var level_of_detail: LevelOfDetail enum
+    :var data_type; DataType enum
 
     data: baseline duration, actual duration, percentage completed
     """

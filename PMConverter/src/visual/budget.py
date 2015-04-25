@@ -5,7 +5,7 @@ from visual.enums import DataType
 
 class CV(Visualization):
     """
-    :var data_type
+    :var data_type: DataType enum
     """
 
     def __init__(self):

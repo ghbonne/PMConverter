@@ -5,8 +5,8 @@ from visual.enums import DataType, LevelOfDetail
 
 class ActualCost(Visualization):
     """
-    :var level_of_detail
-    :var data_type
+    :var level_of_detail: LevelOfDetail enum
+    :var data_type: DataType enum
     """
 
     def __init__(self):
