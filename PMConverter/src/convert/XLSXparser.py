@@ -4,6 +4,7 @@ import xlsxwriter
 import openpyxl
 import re
 import datetime
+import itertools
 
 from objects.activity import Activity
 from objects.activitytracking import ActivityTrackingRecord
@@ -54,19 +55,28 @@ class XLSXParser(FileParser):
             # Again, a new dict is created, to process all tracking periods more easily
             activities_dict = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict, True)
             tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, True)
+            if agenda_sheet:
+                agenda = self.process_agenda(agenda_sheet)
+            else:
+                agenda = Agenda()
+
+            return ProjectObject(activities=[i[1] for i in sorted(activities_dict.values(), key=lambda x: x[1].wbs_id)],
+                                 resources=sorted(resources_dict.values(), key=lambda x: x.resource_id),
+                                 tracking_periods=tracking_periods, agenda=agenda)
         else:
             # We are processing the basic version
             resources_dict = self.process_resources(resource_sheet)
             risk_analysis_dict = self.process_risk_analysis(risk_analysis_sheet, False)
             activities_dict = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict, False)
             tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, False)
+            if agenda_sheet:
+                agenda = self.process_agenda(agenda_sheet)
+            else:
+                agenda = Agenda()
 
-        if agenda_sheet:
-            agenda = self.process_agenda(agenda_sheet)
-        else:
-            agenda = Agenda()
-        return ProjectObject(activities=list(activities_dict.values()), resources=list(resources_dict.values()),
-                             tracking_periods=tracking_periods, agenda=agenda)
+            return ProjectObject(activities=[i[1] for i in sorted(activities_dict.values(), key=lambda x: x[0])],
+                                 resources=list(resources_dict.values()), tracking_periods=tracking_periods,
+                                 agenda=agenda)
 
     def process_agenda(self, agenda_sheet):
         working_days = [0]*7
@@ -157,7 +167,7 @@ class XLSXParser(FileParser):
                         tracking_status = project_control_sheet.cell(row=curr_row, column=22).value
                     earned_value = float(project_control_sheet.cell(row=curr_row, column=23).value)
                     planned_value = float(project_control_sheet.cell(row=curr_row, column=24).value)
-                    act_track_record = ActivityTrackingRecord(activity=activities_dict[activity_id],
+                    act_track_record = ActivityTrackingRecord(activity=activities_dict[activity_id][1],
                                                               actual_start=actual_start, actual_duration=actual_duration,
                                                               planned_actual_cost=pac, planned_remaining_cost=prc,
                                                               remaining_duration=remaining_duration, deviation_pac=pac_dev,
@@ -213,7 +223,7 @@ class XLSXParser(FileParser):
                     if percentage_completed > 100:
                         print("Gilles V has made a stupid error by putting some ifs & transformations in XLSXparser.py "
                               "with the variable percentage_completed_str")
-                    act_track_record = ActivityTrackingRecord(activity=activities_dict[activity_id],
+                    act_track_record = ActivityTrackingRecord(activity=activities_dict[activity_id][1],
                                                               actual_start=actual_start, actual_duration=actual_duration,
                                                               actual_cost=actual_cost,
                                                               percentage_completed=percentage_completed)
@@ -221,7 +231,6 @@ class XLSXParser(FileParser):
                     tracking_periods.append(TrackingPeriod(tracking_period_name=tp_name, tracking_period_statusdate=tp_date,
                                                            tracking_period_records=act_track_records))
         return tracking_periods
-
 
     def process_resources(self, resource_sheet):
         # We store the resources  in a dict, with as index the resource name, to access them easily later when we
@@ -320,11 +329,11 @@ class XLSXParser(FileParser):
                         if len(activity_resource.split("[")) > 1:
                             activity_resource_demand = int(float(activity_resource.split("[")[1].split(" ")[0].translate(str.maketrans(",", "."))))
                         activity_resources.append((activity_resource_name, activity_resource_demand))
-                activities_dict[activity_id] = Activity(activity_id, name=activity_name, wbs_id=activity_wbs,
+                activities_dict[activity_id] = (curr_row, Activity(activity_id, name=activity_name, wbs_id=activity_wbs,
                                                    predecessors=activity_predecessors, successors=activity_successors,
                                                    baseline_schedule=activity_baseline_schedule,
                                                    resource_cost=activity_resource_cost,
-                                                   risk_analysis=activity_risk_analysis, resources=activity_resources)
+                                                   risk_analysis=activity_risk_analysis, resources=activity_resources))
         else:
             for curr_row in range(self.get_nr_of_header_lines(activities_sheet), activities_sheet.get_highest_row()+1):
                 activity_id = int(activities_sheet.cell(row=curr_row, column=1).value)
@@ -372,10 +381,10 @@ class XLSXParser(FileParser):
                         if len(activity_resource.split("[")) > 1:
                             activity_resource_demand = int(float(activity_resource.split("[")[1].split(" ")[0].translate(str.maketrans(",", "."))))
                         activity_resources.append((activity_resource_name, activity_resource_demand))
-                activities_dict[activity_id] = Activity(activity_id, name=activity_name,
+                activities_dict[activity_id] = (curr_row, Activity(activity_id, name=activity_name,
                                                    predecessors=activity_predecessors, successors=activity_successors,
                                                    baseline_schedule=activity_baseline_schedule,
-                                                   risk_analysis=activity_risk_analysis, resources=activity_resources)
+                                                   risk_analysis=activity_risk_analysis, resources=activity_resources))
 
         return activities_dict
 
@@ -432,11 +441,116 @@ class XLSXParser(FileParser):
     @staticmethod
     def get_nr_of_header_lines(sheet):
         header_lines = 1
-        while not(sheet.cell(row=header_lines, column=1).value
+        while not(sheet.cell(row=header_lines, column=1).value is not None
                   and (type(sheet.cell(row=header_lines, column=1).value) is int
                        or sheet.cell(row=header_lines, column=1).value.isdigit())):
             header_lines += 1
         return header_lines
+
+    def calculate_aggregated_risk(self, activity, activities):
+        if activity.wbs_id:
+            sum_opt = 0
+            sum_prob = 0
+            sum_pes = 0
+            for _activity in self.flatten(self.get_children(activity, activities)):
+                if not _activity.risk_analysis:
+                    _activity.risk_analysis = self.calculate_aggregated_risk(_activity, activities)
+                sum_opt += _activity.risk_analysis.optimistic_duration
+                sum_prob += _activity.risk_analysis.probable_duration
+                sum_pes += _activity.risk_analysis.pessimistic_duration
+            return RiskAnalysisDistribution(optimistic_duration=sum_opt, probable_duration=sum_prob,
+                                            pessimistic_duration=sum_pes)
+        else:
+            return None
+
+    def calculate_aggregated_ac(self, tracking_period):
+        sum_ac = 0
+        for atr in tracking_period.tracking_period_records:
+            if not self.is_not_lowest_level_activity(atr.activity):
+                sum_ac += atr.actual_cost
+        return sum_ac
+
+    def calculate_aggregated_pv(self, tracking_period):
+        sum_pv = 0
+        for atr in tracking_period.tracking_period_records:
+            if not self.is_not_lowest_level_activity(atr.activity):
+                sum_pv += atr.planned_value
+        return sum_pv
+
+    def calculate_aggregated_ev(self, tracking_period):
+        sum_ev = 0
+        for atr in tracking_period.tracking_period_records:
+            if not self.is_not_lowest_level_activity(atr.activity):
+                sum_ev += atr.earned_value
+        return sum_ev
+
+    def calculate_aggregated_rc(self, tracking_period):
+        sum_rc = 0
+        for atr in tracking_period.tracking_period_records:
+            if not self.is_not_lowest_level_activity(atr.activity):
+                sum_rc += atr.remaining_cost
+        return sum_rc
+
+    def get_bac(self, tracking_period):
+        pv = None
+        for atr in tracking_period.tracking_period_records:
+            if len(atr.activity.wbs_id) == 1:
+                pv = atr.planned_value
+                break
+        if pv:
+            return pv + self.calculate_aggregated_rc(tracking_period)
+        else:
+            return 0
+
+    def calculate_eac(self, ac, bac, ev, pf):
+        print(ac, bac, ev, pf)
+        if pf == 0:
+            return 0
+        return ac + (bac - ev)/pf
+
+    def get_pv(self, tracking_period):
+        pv = None
+        for atr in tracking_period.tracking_period_records:
+            if len(atr.activity.wbs_id) == 1:
+                return atr.planned_value
+
+    def get_pvs(self, tracking_periods):
+        pvs = []
+        for tracking_period in tracking_periods:
+            pvs.append(self.get_pv(tracking_period))
+        return pvs
+
+    def calculate_es(self, tracking_period, tracking_periods):
+        ev = self.calculate_aggregated_ev(tracking_period)
+        pvs = self.get_pvs(tracking_periods)
+        for i in range(0, len(pvs)-1):
+            if pvs[i] <= ev < pvs[i+1]:
+                return
+
+    def flatten(self, lst):
+        if lst:
+            car, *cdr = lst
+            if isinstance(car, (list, tuple)):
+                if cdr:
+                    return self.flatten(car) + self.flatten(cdr)
+                return self.flatten(car)
+            if cdr:
+                return [car] + self.flatten(cdr)
+            return [car]
+
+    def get_children(self, activity, activities):
+        # Get children one level below activity
+        children = []
+        for _activity in activities:
+            if activity != _activity and len(activity.wbs_id) == len(_activity.wbs_id)-1:
+                equal = True
+                for i in range(0, len(activity.wbs_id)):
+                    if activity.wbs_id[i] != _activity.wbs_id[i]:
+                        equal = False
+                        break
+                if equal:
+                    children.append(_activity)
+        return children
 
     def from_schedule_object(self, project_object, file_path_output, extended=True):
         """
@@ -547,7 +661,7 @@ class XLSXParser(FileParser):
         # Now we run through all activities to get the required information
         counter = 2
         for activity in project_object.activities:
-            if not self.is_not_lowest_level_activity(project_object.activities, activity):
+            if not self.is_not_lowest_level_activity(activity):
                 # Write activity of lowest level
                 if extended:
                     bsch_worksheet.write_number(counter, 0, activity.activity_id, green_cell)
@@ -688,22 +802,40 @@ class XLSXParser(FileParser):
         # Write the rows by iterating through the activities (since they are linked to it)
         counter = 2
         for activity in project_object.activities:
-            if self.is_not_lowest_level_activity(project_object.activities, activity):
+            if self.is_not_lowest_level_activity(activity):
                 if extended:
                     ra_worksheet.write_number(counter, 0, activity.activity_id, cyan_cell)
                     ra_worksheet.write(counter, 1, str(activity.name), cyan_cell)
                     ra_worksheet.write(counter, 2, self.get_duration_str(activity.baseline_schedule.duration), cyan_cell)
-                    ra_worksheet.write(counter, 3, "", cyan_cell)
-                    ra_worksheet.write(counter, 4, "", cyan_cell)
-                    ra_worksheet.write(counter, 5, "", cyan_cell)
-                    ra_worksheet.write(counter, 6, "", cyan_cell)
+                    ra = self.calculate_aggregated_risk(activity, project_object.activities)
+                    if ra:
+                        description = str(ra.distribution_type.value) + " - " \
+                                          + str(ra.distribution_units.value)
+                        ra_worksheet.write(counter, 3, description, cyan_cell)
+                        ra_worksheet.write(counter, 4, ra.optimistic_duration, cyan_cell)
+                        ra_worksheet.write(counter, 5, ra.probable_duration, cyan_cell)
+                        ra_worksheet.write(counter, 6, ra.pessimistic_duration, cyan_cell)
+                    else:
+                        ra_worksheet.write(counter, 3, "", cyan_cell)
+                        ra_worksheet.write(counter, 4, "", cyan_cell)
+                        ra_worksheet.write(counter, 5, "", cyan_cell)
+                        ra_worksheet.write(counter, 6, "", cyan_cell)
                 else:
                     ra_worksheet.write_number(counter, 0, activity.activity_id, cyan_cell)
                     ra_worksheet.write(counter, 1, str(activity.name), cyan_cell)
-                    ra_worksheet.write(counter, 2, "", cyan_cell)
-                    ra_worksheet.write(counter, 3, "", cyan_cell)
-                    ra_worksheet.write(counter, 4, "", cyan_cell)
-                    ra_worksheet.write(counter, 5, "", cyan_cell)
+                    ra = self.calculate_aggregated_risk(activity, project_object.activities)
+                    if ra:
+                        description = str(ra.distribution_type.value) + " - " \
+                                          + str(ra.distribution_units.value)
+                        ra_worksheet.write(counter, 2, description, cyan_cell)
+                        ra_worksheet.write(counter, 3, ra.optimistic_duration, cyan_cell)
+                        ra_worksheet.write(counter, 4, ra.probable_duration, cyan_cell)
+                        ra_worksheet.write(counter, 5, ra.pessimistic_duration, cyan_cell)
+                    else:
+                        ra_worksheet.write(counter, 2, "", cyan_cell)
+                        ra_worksheet.write(counter, 3, "", cyan_cell)
+                        ra_worksheet.write(counter, 4, "", cyan_cell)
+                        ra_worksheet.write(counter, 5, "", cyan_cell)
             else:
                 if extended:
                     ra_worksheet.write_number(counter, 0, activity.activity_id, gray_cell)
@@ -804,7 +936,7 @@ class XLSXParser(FileParser):
                                                          yellow_cell)
                 counter = 4
                 for atr in project_object.tracking_periods[i].tracking_period_records:  # atr = ActivityTrackingRecord
-                    if self.is_not_lowest_level_activity(project_object.activities, atr.activity):
+                    if self.is_not_lowest_level_activity(atr.activity):
                         tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, cyan_cell)
                         tracking_period_worksheet.write(counter, 1, atr.activity.name, cyan_cell)
                         tracking_period_worksheet.write_datetime(counter, 2, atr.activity.baseline_schedule.start, date_cyan_cell)
@@ -871,7 +1003,7 @@ class XLSXParser(FileParser):
                                                          yellow_cell)
                 counter = 4
                 for atr in project_object.tracking_periods[i].tracking_period_records:  # atr = ActivityTrackingRecord
-                    if self.is_not_lowest_level_activity(project_object.activities, atr.activity):
+                    if self.is_not_lowest_level_activity(atr.activity):
                         tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, cyan_cell)
                         tracking_period_worksheet.write(counter, 1, atr.activity.name, cyan_cell)
                         if atr.actual_start:
@@ -920,6 +1052,88 @@ class XLSXParser(FileParser):
         counter = 1
         for holiday in project_object.agenda.holidays:
             agenda_worksheet.write(1, 6, holiday, yellow_cell)
+            counter += 1
+
+        # Write the tracking overview
+        overview_worksheet = workbook.add_worksheet("Tracking Overview")
+        overview_worksheet.set_column(0, 13, 15)
+        overview_worksheet.set_row(1, 30)
+        overview_worksheet.merge_range('A1:C1', 'General', header)
+        overview_worksheet.merge_range('D1:N1', 'EVM Performance Measures', header)
+        overview_worksheet.write('A2', "Name", header)
+        overview_worksheet.write('B2', "Start Tracking Period", header)
+        overview_worksheet.write('C2', "Status date", header)
+        overview_worksheet.write('D2', "Planned Value (PV)", header)
+        overview_worksheet.write('E2', "Earned Value (EV)", header)
+        overview_worksheet.write('F2', "Actual Cost (AC)", header)
+        overview_worksheet.write('G2', "Earned Schedule (ES)", header)
+        overview_worksheet.write('H2', "Schedule Variance (SV)", header)
+        overview_worksheet.write('I2', "Schedule Performance Index (SPI)", header)
+        overview_worksheet.write('J2', "Cost Variance (CV)", header)
+        overview_worksheet.write('K2', "Cost Performance Index (CPI)", header)
+        overview_worksheet.write('L2', "Schedule Variance (SV(t))", header)
+        overview_worksheet.write('M2', "Schedule Performance Index (SPI(t))", header)
+        overview_worksheet.write('N2', "p-factor", header)
+        counter = 2
+        for tracking_period in project_object.tracking_periods:
+            overview_worksheet.write(counter, 0, tracking_period.tracking_period_name, green_cell)
+            index = project_object.tracking_periods.index(tracking_period)
+            if index == 0:
+                overview_worksheet.write_datetime(counter, 1, min([atr.activity.baseline_schedule.start for atr in tracking_period.tracking_period_records]), date_green_cell)
+            else:
+                overview_worksheet.write_datetime(counter, 1, project_object.tracking_periods[index-1].tracking_period_statusdate, date_green_cell)
+            overview_worksheet.write_datetime(counter, 2, tracking_period.tracking_period_statusdate, date_green_cell)
+            overview_worksheet.write_number(counter, 3, self.calculate_aggregated_pv(tracking_period), money_green_cell)
+            overview_worksheet.write_number(counter, 4, self.calculate_aggregated_ev(tracking_period), money_green_cell)
+            overview_worksheet.write_number(counter, 5, self.calculate_aggregated_ac(tracking_period), money_green_cell)
+            overview_worksheet.write(counter, 6, "ES", money_green_cell)
+            sv = self.calculate_aggregated_ev(tracking_period) - self.calculate_aggregated_pv(tracking_period)
+            overview_worksheet.write_number(counter, 7, sv, money_green_cell)
+            if not self.calculate_aggregated_pv(tracking_period):
+                spi = 0
+            else:
+                spi = str(round((self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_pv(tracking_period)*100))) + "%"
+            overview_worksheet.write(counter, 8, spi, green_cell)
+            cv = self.calculate_aggregated_ev(tracking_period) - self.calculate_aggregated_ac(tracking_period)
+            overview_worksheet.write_number(counter, 9, cv, money_green_cell)
+            if not self.calculate_aggregated_ac(tracking_period):
+                cpi = 0
+            else:
+                cpi = str(round((self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_ac(tracking_period)*100))) + "%"
+            overview_worksheet.write(counter, 10, cpi, green_cell)
+
+            # TODO: more metrics
+
+            if extended:
+                overview_worksheet.write_number(counter, 23, self.calculate_eac(self.calculate_aggregated_ac(tracking_period),
+                                                                                self.get_bac(tracking_period), self.calculate_aggregated_ev(tracking_period),
+                                                                                1), money_green_cell)
+                if cpi != 0:
+                    cpi = self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_ac(tracking_period)
+                    overview_worksheet.write_number(counter, 24, self.calculate_eac(self.calculate_aggregated_ac(tracking_period),
+                                                                                    self.get_bac(tracking_period), self.calculate_aggregated_ev(tracking_period),
+                                                                                    cpi), money_green_cell)
+                else:
+                    overview_worksheet.write_number(counter, 24, 0, money_green_cell)
+                if spi != 0:
+                    spi = self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_pv(tracking_period)
+                    overview_worksheet.write_number(counter, 25, self.calculate_eac(self.calculate_aggregated_ac(tracking_period),
+                                                                                    self.get_bac(tracking_period), self.calculate_aggregated_ev(tracking_period),
+                                                                                    spi), money_green_cell)
+                else:
+                    overview_worksheet.write_number(counter, 25, 0, money_green_cell)
+
+                if cpi != 0 or spi != 0:
+                    cpi = self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_ac(tracking_period)
+                    spi = self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_pv(tracking_period)
+                    overview_worksheet.write_number(counter, 29, self.calculate_eac(self.calculate_aggregated_ac(tracking_period),
+                                                                                    self.get_bac(tracking_period), self.calculate_aggregated_ev(tracking_period),
+                                                                                    0.8*cpi+0.2*spi), money_green_cell)
+                else:
+                    overview_worksheet.write_number(counter, 29, 0, money_green_cell)
+
+            # TODO: more metrics
+
             counter += 1
 
         return workbook
@@ -977,7 +1191,7 @@ class XLSXParser(FileParser):
         worksheet.write(row, column, to_write, format)
 
     @staticmethod
-    def is_not_lowest_level_activity(activities, activity):
+    def is_not_lowest_level_activity(activity):
         # Decide whether an activity is not of the lowest level or not.
         if activity.baseline_schedule.var_cost is not None:
             return False
