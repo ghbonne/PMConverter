@@ -1,3 +1,5 @@
+import calendar
+
 __author__ = 'PM Group 8'
 
 import xlsxwriter
@@ -447,14 +449,14 @@ class XLSXParser(FileParser):
             header_lines += 1
         return header_lines
 
-    def calculate_aggregated_risk(self, activity, activities):
+    def calculate_aggregated_risk(self, activity, activities, project_object):
         if activity.wbs_id:
             sum_opt = 0
             sum_prob = 0
             sum_pes = 0
             for _activity in self.flatten(self.get_children(activity, activities)):
                 if not _activity.risk_analysis:
-                    _activity.risk_analysis = self.calculate_aggregated_risk(_activity, activities)
+                    _activity.risk_analysis = self.calculate_aggregated_risk(_activity, activities, project_object)
 
                 if _activity.risk_analysis.distribution_type == DistributionType.MANUAL \
                         and _activity.risk_analysis.distribution_units == ManualDistributionUnit.ABSOLUTE:
@@ -462,10 +464,16 @@ class XLSXParser(FileParser):
                     sum_prob += _activity.risk_analysis.probable_duration
                     sum_pes += _activity.risk_analysis.pessimistic_duration
                 else:
-                    print("test")
-                    sum_opt += int( float(_activity.risk_analysis.optimistic_duration/100) * (_activity.baseline_schedule.duration.total_seconds()/3600) )
-                    sum_prob += int( float(_activity.risk_analysis.probable_duration/100) * (_activity.baseline_schedule.duration.total_seconds()/3600) )
-                    sum_pes += int( float(_activity.risk_analysis.pessimistic_duration/100) * (_activity.baseline_schedule.duration.total_seconds()/3600) )
+                    hours = 0;
+                    for i in range(0, _activity.baseline_schedule.duration.days):
+                        if project_object.agenda.is_working_day((_activity.baseline_schedule.start
+                                + datetime.timedelta(days = i)).weekday()):
+                            hours += project_object.agenda.get_working_hours_in_a_day()
+                    hours += _activity.baseline_schedule.duration.seconds/3600
+
+                    sum_opt += int( float(_activity.risk_analysis.optimistic_duration/100) * hours )
+                    sum_prob += int( float(_activity.risk_analysis.probable_duration/100) * hours )
+                    sum_pes += int( float(_activity.risk_analysis.pessimistic_duration/100) * hours )
             return RiskAnalysisDistribution(optimistic_duration=sum_opt, probable_duration=sum_prob,
                                             pessimistic_duration=sum_pes)
         else:
@@ -770,7 +778,7 @@ class XLSXParser(FileParser):
             res_worksheet.write(counter, 5, resource.cost_unit, money_yellow_cell)
             if extended:
                 self.write_resource_assign_cost(res_worksheet, counter, 6, resource, project_object.activities, cyan_cell,
-                                            money_cyan_cell)
+                                            money_cyan_cell, project_object)
             counter += 1
 
         # Write the risk analysis sheet
@@ -814,7 +822,7 @@ class XLSXParser(FileParser):
                     ra_worksheet.write_number(counter, 0, activity.activity_id, cyan_cell)
                     ra_worksheet.write(counter, 1, str(activity.name), cyan_cell)
                     ra_worksheet.write(counter, 2, self.get_duration_str(activity.baseline_schedule.duration), cyan_cell)
-                    ra = self.calculate_aggregated_risk(activity, project_object.activities)
+                    ra = self.calculate_aggregated_risk(activity, project_object.activities, project_object)
                     if ra:
                         description = str(ra.distribution_type.value) + " - " \
                                           + str(ra.distribution_units.value)
@@ -830,7 +838,7 @@ class XLSXParser(FileParser):
                 else:
                     ra_worksheet.write_number(counter, 0, activity.activity_id, cyan_cell)
                     ra_worksheet.write(counter, 1, str(activity.name), cyan_cell)
-                    ra = self.calculate_aggregated_risk(activity, project_object.activities)
+                    ra = self.calculate_aggregated_risk(activity, project_object.activities, project_object)
                     if ra:
                         description = str(ra.distribution_type.value) + " - " \
                                           + str(ra.distribution_units.value)
@@ -1244,7 +1252,7 @@ class XLSXParser(FileParser):
         worksheet.write(row, column, to_write, format)
 
     @staticmethod
-    def write_resource_assign_cost(worksheet, row, column, resource, activities, format, moneyformat):
+    def write_resource_assign_cost(worksheet, row, column, resource, activities, format, moneyformat, project_object):
         # For every resource, we check to which activities it is assigned and what the total cost is
         to_write = ''
         cost = 0
@@ -1256,7 +1264,7 @@ class XLSXParser(FileParser):
                     else:
                         to_write += str(activity.activity_id) + '[' + str(_resource[1]) + ' #' \
                                     + str(resource.availability) + '];'
-                    cost += (activity.baseline_schedule.duration.days*8 +
+                    cost += (activity.baseline_schedule.duration.days*project_object.agenda.get_working_hours_in_a_day() +
                              activity.baseline_schedule.duration.seconds/3600)*(_resource[1]*resource.cost_unit)
         worksheet.write(row, column, to_write, format)
         worksheet.write_number(row, column+1, cost, moneyformat)
