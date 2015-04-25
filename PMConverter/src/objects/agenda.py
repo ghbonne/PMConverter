@@ -42,6 +42,13 @@ class Agenda(object):
             if self.is_working_hour(i):
                 return i
 
+    def get_working_hours_in_a_day(self):
+        counter = 0
+        for i in range(0, 24):
+            if self.is_working_hour(i):
+                counter += 1
+        return counter
+
     def set_non_working_hour(self, hour):
         """
         :param hour: integer value between 0 and 23
@@ -78,6 +85,12 @@ class Agenda(object):
         :param hours: integer; smaller then the max working hours in a day
         :return: calculated end date, based on working days, holidays and working hours
         """
+        if hours > self.get_working_hours_in_a_day():
+            raise Exception("Agenda: Wrong parameters for get_end_date: hours can't be bigger than max working hours in a day")
+        if self.is_holiday(begin_date.strftime('%d%m%Y')):
+            raise Exception("Agenda: Wrong parameters for get_end_date: begin_date can't be a holiday")
+        if not self.is_working_day(begin_date.weekday()):
+            raise Exception("Agenda: Wrong parameters for get_end_date: begin_date can't be a non-working day")
         end_date = copy.deepcopy(begin_date)
 
         if days:
