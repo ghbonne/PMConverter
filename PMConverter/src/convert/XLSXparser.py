@@ -1102,6 +1102,8 @@ class XLSXParser(FileParser):
                 cpi = str(round((self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_ac(tracking_period)*100))) + "%"
             overview_worksheet.write(counter, 10, cpi, green_cell)
 
+            # TODO: more metrics
+
             if extended:
                 overview_worksheet.write_number(counter, 23, self.calculate_eac(self.calculate_aggregated_ac(tracking_period),
                                                                                 self.get_bac(tracking_period), self.calculate_aggregated_ev(tracking_period),
@@ -1129,6 +1131,8 @@ class XLSXParser(FileParser):
                                                                                     0.8*cpi+0.2*spi), money_green_cell)
                 else:
                     overview_worksheet.write_number(counter, 29, 0, money_green_cell)
+
+            # TODO: more metrics
 
             counter += 1
 
