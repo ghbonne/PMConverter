@@ -17,13 +17,15 @@ class ResourceDistribution(Visualization):
         self.description = ""
         self.parameters = {'data_type': [DataType.ABSOLUTE, DataType.RELATIVE]}
 
-    def draw(self, workbook, worksheet):
+    def draw(self, workbook, worksheet, project_object):
         if not self.data_type:
             raise Exception("Please first set var data_type")
 
+        res_size = len(project_object.resources)
+
         data_series2 = [
-            ['Resources', 2, 1, 13, 1],
-            ['Resources', 2, 7, 13, 7]
+            ['Resources', 2, 1, (1+res_size), 1],
+            ['Resources', 2, 7, (1+res_size), 7]
         ]
 
         if self.data_type == DataType.RELATIVE:
@@ -32,6 +34,7 @@ class ResourceDistribution(Visualization):
             relative = False
 
         chart2 = PieChart('Resources', data_series2, relative)
-
-        chart2.draw(workbook, worksheet, 'I1')
+        size = {'height': 150 + res_size*20}
+        options = {'x_offset': 25, 'y_offset': 10}
+        chart2.draw(workbook, worksheet, 'I1', options, size)
         #TODO: set size of chart!

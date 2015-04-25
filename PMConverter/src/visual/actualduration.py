@@ -36,7 +36,7 @@ class ActualDuration(Visualization):
         height = 150  # calculate 20 pixels per element in barchart
 
         i = 0
-        start = 6
+        start = 5
         while i < len(activities):
             if (len(activities[i].wbs_id) == 2  and self.level_of_detail == LevelOfDetail.WORK_PACKAGES) or (len(activities[i].wbs_id) == 3 and self.level_of_detail == LevelOfDetail.ACTIVITIES):
                 names += "'" + sh_name + "'!$B$" + str(start+i) + ","

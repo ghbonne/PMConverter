@@ -29,7 +29,10 @@ class TwoDimChart(Chart):
         # Add a chart title and axis labels.
         chart.set_title({'name': self.title})
         chart.set_x_axis({'name': self.labels[0]})
-        chart.set_y_axis({'name': self.labels[1]})
+        if self.type == "bar":
+            chart.set_y_axis({'name': self.labels[1], 'reverse': True})
+        else:
+            chart.set_y_axis({'name': self.labels[1]})
 
         #set size of chart
         if size:
