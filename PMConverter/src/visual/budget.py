@@ -11,4 +11,4 @@ class CV(Visualization):
     def __init__(self):
         self.title = "CV"
         self.description = ""
-        self.parameters = {"data_type": [DataType.ABSOLUTE, DataType.RELATIVE]}
+        self.parameters = {}

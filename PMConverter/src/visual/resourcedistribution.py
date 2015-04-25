@@ -24,7 +24,7 @@ class ResourceDistribution(Visualization):
 
         res_size = len(project_object.resources)
 
-        data_series2 = [
+        data_series = [
             ['Resources', 2, 1, (1+res_size), 1],
             ['Resources', 2, 7, (1+res_size), 7]
         ]
@@ -34,8 +34,7 @@ class ResourceDistribution(Visualization):
         else:
             relative = False
 
-        chart2 = PieChart('Resources', data_series2, relative)
+        chart2 = PieChart('Resources', data_series, relative)
         size = {'height': 150 + res_size*20}
         options = {'x_offset': 25, 'y_offset': 10}
         chart2.draw(workbook, worksheet, 'I1', options, size)
-        #TODO: set size of chart!
