@@ -10,6 +10,7 @@ import os
 from processor.processor import Processor
 from visual.enums import *
 import xml.etree.ElementTree as ET
+import ast # ast.literal_eval(node_or_string)
 import time
 
 #from processor import Processor
@@ -47,7 +48,7 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
         self.processor = Processor()
 
         #DEBUG
-        self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageStep2))
+        #self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageStep2))
         #self.loadingAnimation.start()
         #self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageConverting))
         #self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageFinished))
@@ -492,14 +493,14 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
         filename = QFileDialog.getSaveFileName(self, "Save current visualisation settings", filter = "PMConverter settingfile (*-PMConverterSettingsFile.xml)")
         if filename:
             # file chosen to export to
-            print("Chosen file = {0}".format(filename))
+            #print("Chosen file = {0}".format(filename))
             filenamePath, fileExtension = os.path.splitext(filename)
             # check if overwriting previous PMConverterSettingsFile => avoid appending custom file ending after custom file ending
             if filenamePath.endswith("-PMConverterSettingsFile"):
                 filenamePath = filenamePath[:-24]
             outputFilename = filenamePath + "-PMConverterSettingsFile.xml"
 
-            print("OutputFilename = {0}".format(outputFilename))
+            #print("OutputFilename = {0}".format(outputFilename))
 
             # write visualisation settings
             self.ExportChosenVisualisationSettings(outputFilename)
@@ -507,7 +508,7 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
         else:
             # no file chosen to export
             # do nothing
-            print("No file chosen to export")
+            #print("No file chosen to export")
             return
 
     def ExportChosenVisualisationSettings(self, outputFilename):
@@ -535,7 +536,7 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
                 elif key == "data_type":
                     tempEl.text = chosenVisualisationTypeObject.data_type.value
                 elif key == "threshold":
-                    tempEl.text = str(chosenVisualisationTypeObject.threshold)
+                    tempEl.set("value", str(chosenVisualisationTypeObject.threshold))
 
                     # also add threshold values
                     subNode = ET.Element("thresholdValues")
@@ -552,6 +553,109 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
         # write xmlRoot to file
         xmlTree = ET.ElementTree(xmlRoot)
         xmlTree.write(outputFilename)
+        return
+
+    @pyqtSlot("bool")
+    def on_btnStep2_ImportSettings_clicked(self, clicked):
+        """
+        This function handles click events on the Import button of Step 2.
+        The currently chosen visualisations with their settings will be imported from a settings xml file.
+        """
+        filename = QFileDialog.getOpenFileName(self, "Load current visualisation settings", filter= "PMConverter settingfile (*-PMConverterSettingsFile.xml)")
+
+        if filename:
+            # file chosen to import from
+            #print("Chosen file = {0}".format(filename))
+            # load visualisation settings
+            self.ImportChosenVisualisationSettings(filename)
+
+        else:
+            # no file chosen to import
+            # do nothing
+            #print("No file chosen to import")
+            return
+
+    def ImportChosenVisualisationSettings(self, inputFilename):
+        "This function imports chosen visualisation settings in the GUI of a file."
+
+        savedTree = None
+
+        try:
+            with open(inputFilename, "r") as inputFile:
+                savedTree = ET.parse(inputFile)
+        except:
+            print("UIView:ImportChosenVisualisationSettings: Could not load from file {0}".format(inputFilename))
+            print("UIView:ImportChosenVisualisationSettings: Unhandled Exception occurred of type: {0}".format(sys.exc_info[0]))
+            print("UIView:ImportChosenVisualisationSettings: Unhandled Exception value = {0}".format(sys.exc_info[1] if sys.exc_info[1] is not None else "None"))
+
+        if savedTree is None:
+            print("UIView:ImportChosenVisualisationSettings: No visualisation settings found to import.")
+            return
+
+        rootNode = savedTree.getroot()
+
+        if rootNode.tag != "PMConverter_Chosen_Visualisation_Settings":
+            print("UIView:ImportChosenVisualisationSettingsl: Unexpected rootnode found with tag = {0}".format(rootNode.tag))
+            return
+
+        # start overwriting current settings with imported settings
+        self.chosenVisualisations.clear()
+        self.listStep2_ChosenVisualisations.blockSignals(True)
+        self.listStep2_ChosenVisualisations.clear()
+
+        visualisationItemNodesList = list(rootNode)
+
+        if len(visualisationItemNodesList) == 0:
+            print("UIView:ImportChosenVisualisationSettings: Imported visualisation settings file does not contain any chosen visualisations.")
+
+        for visualisationItemNode in visualisationItemNodesList:
+            nameNode = visualisationItemNode.find("Name")
+
+            if nameNode is None:
+                # no valid visualisationItemNode
+                continue
+
+            chosenVisualisationTypeName = nameNode.text
+
+            if chosenVisualisationTypeName not in self.possibleVisualisations:
+                # no possible visualisation type
+                continue
+
+            chosenVisualisationTypeObject = self.possibleVisualisations[chosenVisualisationTypeName]
+            # append imported visualisation type name to chosenVisualisations
+            self.chosenVisualisations.append(chosenVisualisationTypeName)
+            self.listStep2_ChosenVisualisations.addItem(chosenVisualisationTypeName)
+
+            # check if to set any settings in the chosenVisualisationTypeObject
+            for key, value in chosenVisualisationTypeObject.parameters.items():
+                # search for key in imported node:
+                propertyNode = visualisationItemNode.find(key)
+                if propertyNode is not None:
+                    if key == "level_of_detail":
+                        chosenVisualisationTypeObject.level_of_detail = LevelOfDetail._value2member_map_[propertyNode.text]
+                    elif key == "x_axis":
+                        chosenVisualisationTypeObject.x_axis = XAxis._value2member_map_[propertyNode.text]
+                    elif key == "data_type":
+                        chosenVisualisationTypeObject.data_type = DataType._value2member_map_[propertyNode.text]
+                    elif key == "threshold":
+                        # also add threshold values
+                        chosenVisualisationTypeObject.threshold = ast.literal_eval(propertyNode.get("value"))
+                        if chosenVisualisationTypeObject.threshold:
+                            # create tuple of start and end threshold
+                            subNode = propertyNode.find("thresholdValues")
+                            chosenVisualisationTypeObject.thresholdValues = ast.literal_eval(subNode.text)
+                        else:
+                            chosenVisualisationTypeObject.thresholdValues = (0,0)
+                else:
+                    print("UIView:ImportChosenVisualisationSettings: Could not find parameter {0} in imported visualisationItem {1}".format(key, chosenVisualisationTypeName))
+        #endFor visualisationItemNodesList
+
+        # re-enable signals from list of chosenVisualisations
+        self.listStep2_ChosenVisualisations.blockSignals(False)
+        # set ddl of visualisationtype selection to start:
+        self.ddlStep2_VisualisationType.setCurrentIndex(0)
+        return
+
 
 
  
