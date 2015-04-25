@@ -80,30 +80,28 @@ class Agenda(object):
         """
         end_date = copy.deepcopy(begin_date)
 
-        # calculate when they stop working
-        end_hour_of_a_day = self.get_last_working_hour() + 1
-        if end_hour_of_a_day == 24:
-            end_date = end_date.replace(hour=0)
-            end_date += timedelta(days=1)
-        else:
-            # set end hour = first day
-            end_date = end_date.replace(hour=end_hour_of_a_day)
-        days -= 1
-
-        # rest of the days
-        while days > 0:
-            weekday = end_date.weekday()
-            if self.is_working_day(weekday):
-                if not self.is_holiday(end_date.strftime('%d%m%Y')):
-                    end_date += timedelta(days=1)
-                    days -= 1
-                else:
-                    end_date += timedelta(days=1)
-            else:
+        if days:
+            # calculate when they stop working
+            end_hour_of_a_day = self.get_last_working_hour() + 1
+            if end_hour_of_a_day == 24:
+                end_date = end_date.replace(hour=0)
                 end_date += timedelta(days=1)
+            else:
+                # set end hour = first day
+                end_date = end_date.replace(hour=end_hour_of_a_day)
+            days -= 1
+
+            # rest of the days
+            while days > 0:
+                end_date += timedelta(days=1)
+                weekday = end_date.weekday()
+                if self.is_working_day(weekday):
+                    if not self.is_holiday(end_date.strftime('%d%m%Y')):
+                        days -= 1
 
         if hours:
-            #first set hours back to begin of the day
+            #set end_date to firstworking hour of next day
+            end_date += timedelta(days=1)
             first_working_hour = self.get_first_working_hour()
             end_date = end_date.replace(hour=first_working_hour)
             while hours > 0:
@@ -125,3 +123,38 @@ class Agenda(object):
                 working_hours_per_day+=1
         working_days=duration_hours/working_hours_per_day
         return timedelta(days=working_days)
+
+    def get_time_between(self, begin_date, end_date):
+        days = 0
+        hours = 0
+        temp_date = copy.deepcopy(begin_date)
+
+        # counting hours
+        begin_hour = begin_date.hour
+        if begin_hour != self.get_first_working_hour():
+            while temp_date.hour <= self.get_last_working_hour():
+                if self.is_working_hour(temp_date.hour):
+                    hours += 1
+                temp_date += timedelta(hours=1)
+            temp_date += timedelta(days=1)
+            temp_date.replace(hour=self.get_first_working_hour())
+
+        # counting days
+        while temp_date.strftime('%d%m%Y') != end_date.strftime('%d%m%Y'):
+            weekday = temp_date.weekday()
+            if self.is_working_day(weekday):
+                if not self.is_holiday(temp_date.strftime('%d%m%Y')):
+                    days+=1
+            temp_date += timedelta(days=1)
+
+        # counting extra hours
+        if end_date.hour == self.get_last_working_hour():
+            days += 1
+        else:
+            while temp_date.hour < end_date.hour:
+                if self.is_working_hour(temp_date.hour):
+                    hours += 1
+                temp_date += timedelta(hours=1)
+
+        return timedelta(days= days, hours= hours)
+
