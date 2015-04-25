@@ -20,6 +20,7 @@ class BaselineSchedule(Visualization):
         size = self.calculate_values(workbook, worksheet, project_object)
 
         chartsheet = workbook.add_worksheet("Gantt chart")
+        self.change_order(workbook)
 
         names = "='" + worksheet.get_name() + "'!$B$3:$B$" + str(size)
         baseline_start = "='" + worksheet.get_name() + "'!$F$3:$F$" + str(size)
@@ -78,3 +79,10 @@ class BaselineSchedule(Visualization):
             else:
                 duration = delta.days
             return duration
+
+    def change_order(self, workbook):
+        worksheets = workbook.worksheets_objs
+        bs_chart_sheet = worksheets[-1]
+        worksheets.insert(1, bs_chart_sheet)
+        worksheets = worksheets[:-1]
+        workbook.worksheets_objs = worksheets
