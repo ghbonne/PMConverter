@@ -16,6 +16,7 @@ class ResourceDistribution(Visualization):
         self.title = "Resource costs"
         self.description = ""
         self.parameters = {'data_type': [DataType.ABSOLUTE, DataType.RELATIVE]}
+        self.data_type = None
 
     def draw(self, workbook, worksheet, project_object):
         if not self.data_type:

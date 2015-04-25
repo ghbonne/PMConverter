@@ -17,15 +17,21 @@ class ActualDuration(Visualization):
         self.description = ""
         self.parameters = {"level_of_detail": [LevelOfDetail.WORK_PACKAGES, LevelOfDetail.ACTIVITIES],
                            "data_type": [DataType.ABSOLUTE, DataType.RELATIVE]}
+        self.level_of_detail = None
+        self.data_type = None
+        self.tp = 0
 
-    def draw(self, workbook, worksheet, project_object, tp):
+    def set_tracking_period(self, tp):
+        self.tp = tp
+
+    def draw(self, workbook, worksheet, project_object):
         if not self.level_of_detail:
             raise Exception("Please first set var level_of_detail")
         if not self.data_type:
             raise Exception("Please first set var data_type")
 
         # first calculate some values before drawing
-        self.calculate_values(workbook, worksheet, project_object, tp)
+        self.calculate_values(workbook, worksheet, project_object, self.tp)
 
         activities = project_object.activities
         sh_name = worksheet.get_name()

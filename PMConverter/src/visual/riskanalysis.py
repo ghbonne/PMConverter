@@ -17,6 +17,7 @@ class RiskAnalysis(Visualization):
         self.title = "Risk analysis"
         self.description = ""
         self.parameters = {"level_of_detail": [LevelOfDetail.WORK_PACKAGES, LevelOfDetail.ACTIVITIES]}
+        self.level_of_detail = None
 
     def draw(self, workbook, worksheet, project_object):
         if not self.level_of_detail:
