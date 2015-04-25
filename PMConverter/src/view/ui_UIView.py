@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'UIView.ui'
 #
-# Created: Sat Apr 25 18:50:27 2015
+# Created: Sun Apr 26 00:13:17 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -224,7 +224,7 @@ class Ui_UIView(object):
         self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
         self.horizontalLayout_11 = QtGui.QHBoxLayout()
         self.horizontalLayout_11.setObjectName(_fromUtf8("horizontalLayout_11"))
-        self.ddlStep2_VisualisationType = QtGui.QComboBox(self.pageStep2)
+        self.ddlStep2_VisualisationType = Custom_QComboBox(self.pageStep2)
         self.ddlStep2_VisualisationType.setObjectName(_fromUtf8("ddlStep2_VisualisationType"))
         self.horizontalLayout_11.addWidget(self.ddlStep2_VisualisationType)
         self.verticalLayout_3.addLayout(self.horizontalLayout_11)
@@ -434,7 +434,7 @@ class Ui_UIView(object):
         self.horizontalLayout_2.addWidget(self.pagesMain)
 
         self.retranslateUi(UIView)
-        self.pagesMain.setCurrentIndex(0)
+        self.pagesMain.setCurrentIndex(2)
         QtCore.QMetaObject.connectSlotsByName(UIView)
         UIView.setTabOrder(self.cmdStep0_Start, self.btnStep1_InputFile)
         UIView.setTabOrder(self.btnStep1_InputFile, self.ddlStep1_InputFormat)
@@ -494,3 +494,4 @@ class Ui_UIView(object):
         self.lblFinished_OutputFilename.setText(_translate("UIView", "<html><head/><body><p>[output filename]</p></body></html>", None))
         self.cmdFinished_End.setText(_translate("UIView", "Exit", None))
 
+from customWidgets.custom_QComboBox import Custom_QComboBox

@@ -28,7 +28,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="StartPage">
       <layout class="QVBoxLayout" name="verticalLayout">
@@ -498,7 +498,7 @@
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_11">
              <item>
-              <widget class="QComboBox" name="ddlStep2_VisualisationType"/>
+              <widget class="Custom_QComboBox" name="ddlStep2_VisualisationType"/>
              </item>
             </layout>
            </item>
@@ -1014,6 +1014,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>Custom_QComboBox</class>
+   <extends>QComboBox</extends>
+   <header>customWidgets.custom_QComboBox</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>cmdStep0_Start</tabstop>
   <tabstop>btnStep1_InputFile</tabstop>

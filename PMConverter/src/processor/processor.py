@@ -21,11 +21,11 @@ from visual.budget import CV
 class Processor(object):
 
     def __init__(self):
-        self.visualizations = [BaselineSchedule(), "--",
-           ResourceDistribution(), "--",
-           RiskAnalysis(), "--",
-           ActualDuration(), ActualCost(), "--",
-           CostValueMetrics(), Performance(), SpiTvsPfactor(), SvT(), CV(), CPI(), SpiT()]
+        self.visualizations = ["Baseline schedule's visualisations", BaselineSchedule(),
+                               "Resources' visualisations", ResourceDistribution(),
+                               "Risk analysis' visualisations", RiskAnalysis(),
+                               "Tracking periods' visualisations", ActualDuration(), ActualCost(),
+                               "Tracking overview's visualisations", CostValueMetrics(), Performance(), SpiTvsPfactor(), SvT(), CV(), CPI(), SpiT()]
         self.file_parsers = []
 
     def convert(self, parser_from, parser_to, file_path_from, file_path_to):

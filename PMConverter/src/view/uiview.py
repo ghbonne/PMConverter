@@ -13,6 +13,7 @@ import xml.etree.ElementTree as ET
 import ast # ast.literal_eval(node_or_string)
 import time
 
+
 #from processor import Processor
 
 class UIView(QDialog, ui_UIView.Ui_UIView):
@@ -47,6 +48,7 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
         self.inputFilename = ""
         self.processor = Processor()
 
+        self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.StartPage))
         #DEBUG
         #self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageStep2))
         #self.loadingAnimation.start()
@@ -61,21 +63,24 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
         ddlVisualisationsModel = QStandardItemModel()
         self.possibleVisualisations = {}
         self.chosenVisualisations = []
+        self.ddlStep2_VisualisationType.setModel(ddlVisualisationsModel)
 
         for item in self.processor.visualizations:
             if type(item) == str:
-                # TODO: insert header here
+                # insert header here
+                self.ddlStep2_VisualisationType.addParentItem(item)
                 pass
             else:
-                newModelItem = QStandardItem()
-                newModelItem.setText(item.title)
-                ddlVisualisationsModel.appendRow(newModelItem)
+                # insert selectable item here:
+                self.ddlStep2_VisualisationType.addChildItem(item.title)
+
                 self.possibleVisualisations[item.title] = item
         
-        self.ddlStep2_VisualisationType.setModel(ddlVisualisationsModel)
+        
         #self.ddlStep2_VisualisationType.setView(ddlVisualisationView)
 
         # update parameter fields for currently preselected visualisation type
+        self.ddlStep2_VisualisationType.setCurrentIndex(1)  # set current index to 1 because 0 is a header item
         self.on_ddlStep2_VisualisationType_currentIndexChanged(0)
 
         # enable blocked signals again:
@@ -653,7 +658,7 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
         # re-enable signals from list of chosenVisualisations
         self.listStep2_ChosenVisualisations.blockSignals(False)
         # set ddl of visualisationtype selection to start:
-        self.ddlStep2_VisualisationType.setCurrentIndex(0)
+        self.ddlStep2_VisualisationType.setCurrentIndex(1)
         return
 
 
