@@ -11,7 +11,7 @@ class GanttChart(Chart):
         self.max_date = max_date
 
 
-    def draw(self, workbook, chartsheet, size={}):
+    def draw(self, workbook, worksheet, size={}):
         """
         add a linechart visualisation to the Excel-file
         :param workbook: xlsxworkbook
@@ -53,4 +53,4 @@ class GanttChart(Chart):
         if size:
             chart.set_size(size)
 
-        chartsheet.insert_chart('A1', chart)
+        worksheet.insert_chart('A1', chart)

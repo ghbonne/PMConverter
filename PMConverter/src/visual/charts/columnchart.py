@@ -37,10 +37,10 @@ class ColumnChart(TwoDimChart):
             raise TypeError("Subtype has to be of type ENUM SubType")
         super().__init__("column", subtype)
 
-    def draw(self, workbook):
+    def draw(self, workbook, worksheet, position, options=None, size=None):
         """
         add a linechart visualisation to the Excel-file
         :param workbook: xlsxworkbook
         :return:
         """
-        super().draw(workbook)
+        super().draw(workbook, worksheet, position, options, size)
