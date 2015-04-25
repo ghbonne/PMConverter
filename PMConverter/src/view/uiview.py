@@ -9,6 +9,8 @@ import ntpath
 import os
 from processor.processor import Processor
 from visual.enums import *
+import xml.etree.ElementTree as ET
+import time
 
 #from processor import Processor
 
@@ -29,6 +31,7 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
         self.ddlStep2_VisualisationType.blockSignals(True)  # avoid signalling when initing GUI
         self.listStep2_ChosenVisualisations.setDragDropMode(QAbstractItemView.InternalMove)  # enable dragging and dropping of list items
         self.lblStep2_ParamsSaved.setVisible(False)  # Message label to show when parameters are saved
+        self.connect(self.cmdFinished_End, SIGNAL("clicked(bool)"), self.done)  # finish PMConvert program
 
         #self.loadingAnimation = QMovie("Loading.gif", QByteArray(), self)
         #self.loadingAnimation = QMovie("F:/Gilles/Universiteit/5e Master 2/Projectmanagement/Project/PMConverter/PMConverter/src/view/Loading.gif")
@@ -44,9 +47,10 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
         self.processor = Processor()
 
         #DEBUG
-        #self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageStep2))
+        self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageStep2))
         #self.loadingAnimation.start()
         #self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageConverting))
+        #self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageFinished))
 
         # custom GUI inits
         self.inputFiletypes = {"Excel": ".xlsx", "ProTrack": ".p2x"}
@@ -88,13 +92,17 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
     @pyqtSlot("bool")
     def on_btnStep1_InputFile_clicked(self, clicked):
         "This function handles clicked events on the input file button of Step 1"
-        fileWindow = QFileDialog(parent = self, caption = "Choose an input file...")
-        fileWindow.setFileMode(QFileDialog.ExistingFile)
-        fileWindow.setNameFilter("ProTrack files (*.p2x);;Excel files (*.xlsx)")
-        fileWindow.setViewMode(QFileDialog.List)
+        #fileWindow = QFileDialog(parent = self, caption = "Choose an input file...")
+        #fileWindow.setFileMode(QFileDialog.ExistingFile)
+        #fileWindow.setNameFilter("ProTrack files (*.p2x);;Excel files (*.xlsx)")
+        #fileWindow.setViewMode(QFileDialog.List)
 
-        if(fileWindow.exec_()):
-            self.inputFilename = fileWindow.selectedFiles()[0]
+        #if(fileWindow.exec_()):
+            #self.inputFilename = fileWindow.selectedFiles()[0]
+        filename = QFileDialog.getOpenFileName(self, "Choose an input file...", filter = "ProTrack files (*.p2x);;Excel files (*.xlsx)")
+
+        if filename:
+            self.inputFilename = filename
             filenamePath, fileExtension = os.path.splitext(self.inputFilename)
             filename = ntpath.basename(filenamePath)
             self.lineEditStep1_InputFilename.setText(filename)
@@ -475,8 +483,75 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
         self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageConverting))
         self.loadingAnimation.start()
         
+    @pyqtSlot("bool")
+    def on_btnStep2_ExportSettings_clicked(self, clicked):
+        """
+        This function handles click events on the Export button of Step 2.
+        The currently chosen visualisations with their settings will be exported to a settings xml file.
+        """
+        filename = QFileDialog.getSaveFileName(self, "Save current visualisation settings", filter = "PMConverter settingfile (*-PMConverterSettingsFile.xml)")
+        if filename:
+            # file chosen to export to
+            print("Chosen file = {0}".format(filename))
+            filenamePath, fileExtension = os.path.splitext(filename)
+            # check if overwriting previous PMConverterSettingsFile => avoid appending custom file ending after custom file ending
+            if filenamePath.endswith("-PMConverterSettingsFile"):
+                filenamePath = filenamePath[:-24]
+            outputFilename = filenamePath + "-PMConverterSettingsFile.xml"
 
+            print("OutputFilename = {0}".format(outputFilename))
 
+            # write visualisation settings
+            self.ExportChosenVisualisationSettings(outputFilename)
+
+        else:
+            # no file chosen to export
+            # do nothing
+            print("No file chosen to export")
+            return
+
+    def ExportChosenVisualisationSettings(self, outputFilename):
+        "This function exports the currently chosen visualisation settings in the GUI to a file."
+
+        xmlRoot = ET.Element("PMConverter_Chosen_Visualisation_Settings", {"TimeOfSaving": "{0}".format(time.strftime("%d-%m-%Y_%H-%M-%S")), "PMConverterVersion": "1"})
+
+        for chosenVisualisationTypeName in self.chosenVisualisations:
+            # create a new visualisation item node for each chosen visualisation
+            visualisationItemNode = ET.Element("VisualisationItem")
+
+            chosenVisualisationTypeObject = self.possibleVisualisations[chosenVisualisationTypeName]
+
+            tempEl = ET.Element("Name")
+            tempEl.text = chosenVisualisationTypeName
+            visualisationItemNode.append(tempEl)
+
+            for key, value in chosenVisualisationTypeObject.parameters.items():
+                tempEl = ET.Element(key)
+
+                if key == "level_of_detail":
+                    tempEl.text = chosenVisualisationTypeObject.level_of_detail.value
+                elif key == "x_axis":
+                    tempEl.text = chosenVisualisationTypeObject.x_axis.value
+                elif key == "data_type":
+                    tempEl.text = chosenVisualisationTypeObject.data_type.value
+                elif key == "threshold":
+                    tempEl.text = str(chosenVisualisationTypeObject.threshold)
+
+                    # also add threshold values
+                    subNode = ET.Element("thresholdValues")
+                    subNode.text = str(chosenVisualisationTypeObject.thresholdValues)
+                    tempEl.append(subNode)
+
+                visualisationItemNode.append(tempEl)
+            #endFor setting possible parameters in object
+
+            # append visualisation item node to root
+            xmlRoot.append(visualisationItemNode)
+        #endFor chosenVisualisations
+
+        # write xmlRoot to file
+        xmlTree = ET.ElementTree(xmlRoot)
+        xmlTree.write(outputFilename)
 
 
  
