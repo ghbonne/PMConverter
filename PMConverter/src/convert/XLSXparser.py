@@ -503,16 +503,15 @@ class XLSXParser(FileParser):
             return 0
 
     def calculate_eac(self, ac, bac, ev, pf):
-        print(ac, bac, ev, pf)
         if pf == 0:
             return 0
         return ac + (bac - ev)/pf
 
     def get_pv(self, tracking_period):
-        pv = None
         for atr in tracking_period.tracking_period_records:
             if len(atr.activity.wbs_id) == 1:
                 return atr.planned_value
+        return None
 
     def get_pvs(self, tracking_periods):
         pvs = []
@@ -525,7 +524,7 @@ class XLSXParser(FileParser):
         pvs = self.get_pvs(tracking_periods)
         for i in range(0, len(pvs)-1):
             if pvs[i] <= ev < pvs[i+1]:
-                return
+                x = pvs[i+1] - ev
 
     def flatten(self, lst):
         if lst:
@@ -1059,7 +1058,12 @@ class XLSXParser(FileParser):
         overview_worksheet.set_column(0, 13, 15)
         overview_worksheet.set_row(1, 30)
         overview_worksheet.merge_range('A1:C1', 'General', header)
-        overview_worksheet.merge_range('D1:N1', 'EVM Performance Measures', header)
+        overview_worksheet.merge_range('D1:G1', 'EVM Performance Measures', header)
+        if extended:
+            overview_worksheet.merge_range('H1:N1', 'EVM Forecasting', header)
+        else:
+            overview_worksheet.merge_range('H1:AE1', 'EVM Forecasting', header)
+
         overview_worksheet.write('A2', "Name", header)
         overview_worksheet.write('B2', "Start Tracking Period", header)
         overview_worksheet.write('C2', "Status date", header)
@@ -1074,6 +1078,25 @@ class XLSXParser(FileParser):
         overview_worksheet.write('L2', "Schedule Variance (SV(t))", header)
         overview_worksheet.write('M2', "Schedule Performance Index (SPI(t))", header)
         overview_worksheet.write('N2', "p-factor", header)
+        if extended:
+            overview_worksheet.write('O2', "EAC(t)-PV (PF=1)", header)
+            overview_worksheet.write('P2', "EAC(t)-PV (PF=SPI)", header)
+            overview_worksheet.write('Q2', "EAC(t)-PV (PF=SCI)", header)
+            overview_worksheet.write('R2', "EAC(t)-ED (PF=1)", header)
+            overview_worksheet.write('S2', "EAC(t)-ED (PF=SPI)", header)
+            overview_worksheet.write('T2', "EAC(t)-ED (PF=SPI)", header)
+            overview_worksheet.write('U2', "EAC(t)-ES (PF=1)", header)
+            overview_worksheet.write('V2', "EAC(t)-ES (PF=SPI(t))", header)
+            overview_worksheet.write('W2', "EAC(t)-ES (PF=SCI(t))", header)
+            overview_worksheet.write('X2', "EAC (PF=1)", header)
+            overview_worksheet.write('Y2', "EAC (PF=CPI)", header)
+            overview_worksheet.write('Z2', "EAC (PF=SPI)", header)
+            overview_worksheet.write('AA2', "EAC (PF=SPI(t))", header)
+            overview_worksheet.write('AB2', "EAC (PF=SCI)", header)
+            overview_worksheet.write('AC2', "EAC (PF=SCI(t))", header)
+            overview_worksheet.write('AD2', "EAC (PF=0.8*CPI+0.2*SPI)", header)
+            overview_worksheet.write('AE2', "EAC (PF=0.8*CPI+0.2*SPI(t))", header)
+
         counter = 2
         for tracking_period in project_object.tracking_periods:
             overview_worksheet.write(counter, 0, tracking_period.tracking_period_name, green_cell)
