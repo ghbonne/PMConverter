@@ -72,7 +72,6 @@ for worksheet in workbook.worksheets():
         v4.data_type = DataType.RELATIVE
         v4.draw(workbook, worksheet, po, tp-1)
 
-
 workbook.close()
 os.system("start excel.exe output/test2.xlsx")
 

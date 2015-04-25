@@ -13,6 +13,7 @@ from objects.resource import Resource
 from objects.riskanalysisdistribution import RiskAnalysisDistribution
 from objects.trackingperiod import TrackingPeriod
 from convert.fileparser import FileParser
+from objects.agenda import Agenda
 
 
 class XLSXParser(FileParser):
@@ -29,6 +30,7 @@ class XLSXParser(FileParser):
 
         workbook = openpyxl.load_workbook(file_path_input)
         project_control_sheets = []
+        agenda_sheet = None
         for name in workbook.get_sheet_names():
             if "Baseline Schedule" in name:
                 activities_sheet = workbook.get_sheet_by_name(name)
@@ -38,8 +40,10 @@ class XLSXParser(FileParser):
                 risk_analysis_sheet = workbook.get_sheet_by_name(name)
             elif "TP" in name:
                 project_control_sheets.append(workbook.get_sheet_by_name(name))
+            elif "Agenda" in name:
+                agenda_sheet = workbook.get_sheet_by_name(name)
 
-        if activities_sheet.cell(row=2, column=14).value:  # We know if is an extended version if the baseline schedule contains N columns
+        if activities_sheet.cell(row=2, column=14).value:  # We know if is an extended version if the baseline schedule contains 14 columns
             # We are processing an extended version
             # First we process the resources sheet, we store them in a dict, with index the resource name, to access them
             # easily later when we are processing the activities.
@@ -50,16 +54,34 @@ class XLSXParser(FileParser):
             # Again, a new dict is created, to process all tracking periods more easily
             activities_dict = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict, True)
             tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, True)
-            return ProjectObject(activities=list(activities_dict.values()), resources=list(resources_dict.values()),
-                                 tracking_periods=tracking_periods)
         else:
             # We are processing the basic version
             resources_dict = self.process_resources(resource_sheet)
             risk_analysis_dict = self.process_risk_analysis(risk_analysis_sheet, False)
             activities_dict = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict, False)
             tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, False)
-            return ProjectObject(activities=list(activities_dict.values()), resources=list(resources_dict.values()),
-                                 tracking_periods=tracking_periods)
+
+        if agenda_sheet:
+            agenda = self.process_agenda(agenda_sheet)
+        else:
+            agenda = Agenda()
+        return ProjectObject(activities=list(activities_dict.values()), resources=list(resources_dict.values()),
+                             tracking_periods=tracking_periods, agenda=agenda)
+
+    def process_agenda(self, agenda_sheet):
+        working_days = [0]*7
+        working_hours = [0]*24
+        holidays = []
+        for i in range(0, 24):
+            if agenda_sheet.cell(row=i+2, column=2).value == "Yes":
+                working_hours[i] = 1
+        for i in range(0, 7):
+            if agenda_sheet.cell(row=i+2, column=5).value == "Yes":
+                working_days[i] = 1
+        i = 2
+        while agenda_sheet.cell(row=i, column=7).value:
+            holidays.append(agenda_sheet.cell(row=i, column=7).value)
+        return Agenda(working_hours=working_hours, working_days=working_days, holidays=holidays)
 
     def process_project_controls(self, project_control_sheets, activities_dict, extended=True):
         tracking_periods = []
@@ -429,6 +451,7 @@ class XLSXParser(FileParser):
         yellow_cell = workbook.add_format({'bg_color': 'yellow', 'text_wrap': True, 'border': 1, 'font_size': 8})
         cyan_cell = workbook.add_format({'bg_color': '#D9EAF7', 'text_wrap': True, 'border': 1, 'font_size': 8})
         green_cell = workbook.add_format({'bg_color': '#9BBB59', 'text_wrap': True, 'border': 1, 'font_size': 8})
+        red_cell = workbook.add_format({'bg_color': 'red', 'text_wrap': True, 'border': 1, 'font_size': 8})
         gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1, 'font_size': 8})
         date_cyan_cell = workbook.add_format({'bg_color': '#D9EAF7', 'text_wrap': True, 'border': 1,
                                               'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
@@ -871,6 +894,34 @@ class XLSXParser(FileParser):
                         percentage_completed = str(atr.percentage_completed) + "%"
                         tracking_period_worksheet.write(counter, 5, percentage_completed, green_cell)
                     counter += 1
+
+        # Write the agenda
+        agenda_worksheet = workbook.add_worksheet("Agenda")
+        agenda_worksheet.set_column(0, 0, 8)
+        agenda_worksheet.set_column(3, 3, 8)
+        agenda_worksheet.set_column(6, 6, 12)
+        agenda_worksheet.merge_range('A1:B1', 'Working Hours', header)
+        agenda_worksheet.merge_range('D1:E1', 'Working Days', header)
+        agenda_worksheet.write('G1', 'Holidays', header)
+        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        for i in range(0, 24):
+            hour_string = str(i) + ":00 - " + str((i+1)%24) + ":00"
+            agenda_worksheet.write(i+1, 0, hour_string, yellow_cell)
+            if project_object.agenda.working_hours[i]:
+                agenda_worksheet.write(i+1, 1, "Yes", green_cell)
+            else:
+                agenda_worksheet.write(i+1, 1, "No", red_cell)
+        for i in range(0, 7):
+            agenda_worksheet.write(i+1, 3, days[i], yellow_cell)
+            if project_object.agenda.working_days[i]:
+                agenda_worksheet.write(i+1, 4, "Yes", green_cell)
+            else:
+                agenda_worksheet.write(i+1, 4, "No", red_cell)
+        counter = 1
+        for holiday in project_object.agenda.holidays:
+            agenda_worksheet.write(1, 6, holiday, yellow_cell)
+            counter += 1
+
         return workbook
 
     @staticmethod
