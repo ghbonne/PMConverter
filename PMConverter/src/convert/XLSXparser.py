@@ -455,12 +455,14 @@ class XLSXParser(FileParser):
             for _activity in self.flatten(self.get_children(activity, activities)):
                 if not _activity.risk_analysis:
                     _activity.risk_analysis = self.calculate_aggregated_risk(_activity, activities)
+
                 if _activity.risk_analysis.distribution_type == DistributionType.MANUAL \
                         and _activity.risk_analysis.distribution_units == ManualDistributionUnit.ABSOLUTE:
                     sum_opt += _activity.risk_analysis.optimistic_duration
                     sum_prob += _activity.risk_analysis.probable_duration
                     sum_pes += _activity.risk_analysis.pessimistic_duration
                 else:
+                    print("test")
                     sum_opt += int( float(_activity.risk_analysis.optimistic_duration/100) * (_activity.baseline_schedule.duration.total_seconds()/3600) )
                     sum_prob += int( float(_activity.risk_analysis.probable_duration/100) * (_activity.baseline_schedule.duration.total_seconds()/3600) )
                     sum_pes += int( float(_activity.risk_analysis.pessimistic_duration/100) * (_activity.baseline_schedule.duration.total_seconds()/3600) )
