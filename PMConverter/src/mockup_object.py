@@ -13,6 +13,7 @@ from visual.riskanalysis import RiskAnalysis
 from visual.enums import DataType, LevelOfDetail
 from visual.actualduration import ActualDuration
 from visual.actualcost import ActualCost
+from visual.baselineshedule import BaselineSchedule
 __author__ = 'gilles'
 
 xlsx_parser = XLSXParser()
@@ -71,6 +72,9 @@ for worksheet in workbook.worksheets():
         v4.level_of_detail = LevelOfDetail.ACTIVITIES
         v4.data_type = DataType.RELATIVE
         v4.draw(workbook, worksheet, po, tp-1)
+    if worksheet.get_name() == "Baseline Schedule":
+        v5 = BaselineSchedule()
+        v5.draw(workbook, worksheet, po)
 
 workbook.close()
 os.system("start excel.exe output/test2.xlsx")
