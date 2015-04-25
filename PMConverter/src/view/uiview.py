@@ -30,12 +30,23 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
         self.listStep2_ChosenVisualisations.setDragDropMode(QAbstractItemView.InternalMove)  # enable dragging and dropping of list items
         self.lblStep2_ParamsSaved.setVisible(False)  # Message label to show when parameters are saved
 
+        #self.loadingAnimation = QMovie("Loading.gif", QByteArray(), self)
+        #self.loadingAnimation = QMovie("F:/Gilles/Universiteit/5e Master 2/Projectmanagement/Project/PMConverter/PMConverter/src/view/Loading.gif")
+        self.loadingAnimation = QMovie("view/Loading.gif")
+        if not self.loadingAnimation.isValid():
+            print("Supported formats by QMovie on this system = {0}".format(QMovie.supportedFormats()))
+            print("UIView: Could not load loading animation")
+        self.loadingAnimation.setScaledSize(QSize(50, 50))
+        self.lblConverting_WaitingSpinner.setMovie(self.loadingAnimation)
+
          # custom Application inits
         self.inputFilename = ""
         self.processor = Processor()
 
         #DEBUG
         #self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageStep2))
+        #self.loadingAnimation.start()
+        #self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageConverting))
 
         # custom GUI inits
         self.inputFiletypes = {"Excel": ".xlsx", "ProTrack": ".p2x"}
@@ -129,7 +140,8 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
             self.btnStep2_ImportSettings.setDefault(True)
         else:
             self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageConverting))
-            #TODO: start conversion!
+            self.loadingAnimation.start()
+            #TODO: start conversion to ProTrack!
 
     @pyqtSlot("int")
     def on_ddlStep2_VisualisationType_currentIndexChanged(self, index):
@@ -454,6 +466,16 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
             QTimer.singleShot(2000, self.remove_SavedChanges_Message)
 
         # else: return
+
+    @pyqtSlot("bool")
+    def on_cmdStep2_Convert_clicked(self, clicked):
+        "This function handles click events of the Convert button of Step 2"
+        #TODO start conversion here to excel
+
+        self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageConverting))
+        self.loadingAnimation.start()
+        
+
 
 
 

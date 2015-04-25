@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'UIView.ui'
 #
-# Created: Sat Apr 25 16:09:06 2015
+# Created: Sat Apr 25 18:50:27 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -357,7 +357,9 @@ class Ui_UIView(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.lblConverting_WaitingSpinner.sizePolicy().hasHeightForWidth())
         self.lblConverting_WaitingSpinner.setSizePolicy(sizePolicy)
-        self.lblConverting_WaitingSpinner.setMinimumSize(QtCore.QSize(128, 128))
+        self.lblConverting_WaitingSpinner.setMinimumSize(QtCore.QSize(100, 100))
+        self.lblConverting_WaitingSpinner.setMaximumSize(QtCore.QSize(100, 100))
+        self.lblConverting_WaitingSpinner.setAlignment(QtCore.Qt.AlignCenter)
         self.lblConverting_WaitingSpinner.setObjectName(_fromUtf8("lblConverting_WaitingSpinner"))
         self.horizontalLayout_20.addWidget(self.lblConverting_WaitingSpinner)
         spacerItem19 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
