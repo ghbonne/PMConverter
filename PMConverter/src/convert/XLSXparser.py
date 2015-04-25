@@ -11,7 +11,7 @@ from objects.activitytracking import ActivityTrackingRecord
 from objects.baselineschedule import BaselineScheduleRecord
 from objects.projectobject import ProjectObject
 from objects.resource import Resource
-from objects.riskanalysisdistribution import RiskAnalysisDistribution
+from objects.riskanalysisdistribution import RiskAnalysisDistribution, DistributionType, ManualDistributionUnit
 from objects.trackingperiod import TrackingPeriod
 from convert.fileparser import FileParser
 from objects.agenda import Agenda
@@ -455,9 +455,15 @@ class XLSXParser(FileParser):
             for _activity in self.flatten(self.get_children(activity, activities)):
                 if not _activity.risk_analysis:
                     _activity.risk_analysis = self.calculate_aggregated_risk(_activity, activities)
-                sum_opt += _activity.risk_analysis.optimistic_duration
-                sum_prob += _activity.risk_analysis.probable_duration
-                sum_pes += _activity.risk_analysis.pessimistic_duration
+                if _activity.risk_analysis.distribution_type == DistributionType.MANUAL \
+                        and _activity.risk_analysis.distribution_units == ManualDistributionUnit.ABSOLUTE:
+                    sum_opt += _activity.risk_analysis.optimistic_duration
+                    sum_prob += _activity.risk_analysis.probable_duration
+                    sum_pes += _activity.risk_analysis.pessimistic_duration
+                else:
+                    sum_opt += int( float(_activity.risk_analysis.optimistic_duration/100) * (_activity.baseline_schedule.duration.total_seconds()/3600) )
+                    sum_prob += int( float(_activity.risk_analysis.probable_duration/100) * (_activity.baseline_schedule.duration.total_seconds()/3600) )
+                    sum_pes += int( float(_activity.risk_analysis.pessimistic_duration/100) * (_activity.baseline_schedule.duration.total_seconds()/3600) )
             return RiskAnalysisDistribution(optimistic_duration=sum_opt, probable_duration=sum_prob,
                                             pessimistic_duration=sum_pes)
         else:
