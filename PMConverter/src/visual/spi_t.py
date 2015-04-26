@@ -1,14 +1,15 @@
 __author__ = 'Eveline'
 from visual.visualization import Visualization
-from visual.enums import XAxis
+from visual.enums import XAxis, ExcelVersion
 from visual.charts.linechart import LineChart
 
 
 class SpiT(Visualization):
     """
+    Implements drawings for SPI(t) chart (type = Line chart)
 
-    :var threshold
-    :var x-axis: type XAxis
+    :var x_axis: XAxis, x-axis of the chart can be expressed in status dates or in tracking periods
+    :var threshold: tuple (x,y), a linear threshold defined by a line through the values x and y
     """
 
     def __init__(self):
@@ -18,8 +19,9 @@ class SpiT(Visualization):
                            "x-axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
         self.threshold = None
+        self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
 
-    def draw(self, workbook, worksheet, project_object):
+    def draw(self, workbook, worksheet, project_object, excel_version):
         if not self.x_axis:
             raise Exception("Please first set var x_axis")
 

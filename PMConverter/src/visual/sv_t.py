@@ -1,12 +1,14 @@
 __author__ = 'Eveline'
 from visual.visualization import Visualization
-from visual.enums import XAxis
+from visual.enums import XAxis, ExcelVersion
 from visual.charts.linechart import LineChart
 
 
 class SvT(Visualization):
     """
-    :var x-axis
+    Implements drawings for cost-value metrics chart (AC, EV, PV) (type = Line chart)
+
+    :var x_axis: XAxis, x-axis of the chart can be expressed in status dates or in tracking periods
     """
 
     def __init__(self):
@@ -14,8 +16,9 @@ class SvT(Visualization):
         self.description = ""
         self.parameters = {"x-axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
+        self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
 
-    def draw(self, workbook, worksheet, project_object):
+    def draw(self, workbook, worksheet, project_object, excel_version):
         if not self.x_axis:
             raise Exception("Please first set var x_axis")
 

@@ -1,12 +1,14 @@
 __author__ = 'Eveline'
 from visual.visualization import Visualization
-from visual.enums import XAxis
+from visual.enums import XAxis, ExcelVersion
 from visual.charts.linechart import LineChart
 
 
 class CV(Visualization):
     """
-    :var data_type
+    Implements drawings for CV chart (type = Line chart)
+
+    :var x_axis: XAxis, x-axis of the chart can be expressed in status dates or in tracking periods
     """
 
     def __init__(self):
@@ -14,8 +16,9 @@ class CV(Visualization):
         self.description = ""
         self.parameters = {"x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
+        self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
 
-    def draw(self, workbook, worksheet, project_object): #todo probleem met percenten
+    def draw(self, workbook, worksheet, project_object, excel_version): #todo probleem met percenten
         if not self.x_axis:
             raise Exception("Please first set var x_axis")
 

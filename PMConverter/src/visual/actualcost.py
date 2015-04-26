@@ -1,13 +1,15 @@
 __author__ = 'Eveline'
 from visual.visualization import Visualization
-from visual.enums import DataType, LevelOfDetail
+from visual.enums import DataType, LevelOfDetail, ExcelVersion
 from visual.charts.barchart import BarChart
 
 
 class ActualCost(Visualization):
     """
-    :var level_of_detail
-    :var data_type
+    Implements drawings for actual cost (type = Bar chart)
+
+    :var level_of_detail: LevelOfDetail, graph can be shown for workpackages or activities
+    :var data_type: DataType, values expressed absolute (€) or relative (%)
     """
 
     def __init__(self):
@@ -18,11 +20,9 @@ class ActualCost(Visualization):
         self.level_of_detail = None
         self.data_type = None
         self.tp = 0
+        self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
 
-    def set_tracking_period(self, tp):
-        self.tp = tp
-
-    def draw(self, workbook, worksheet, project_object):
+    def draw(self, workbook, worksheet, project_object, excel_version):
         if not self.level_of_detail:
             raise Exception("Please first set var level_of_detail")
         if not self.data_type:
@@ -90,8 +90,17 @@ class ActualCost(Visualization):
         position = "K" + str(start + i + 1)
         chart.draw(workbook, worksheet, position, None, options)
 
-
+    """
+    Private methods
+    """
     def calculate_values(self, workbook, worksheet, project_object, tp):
+        """
+
+        :param workbook: Workbook
+        :param worksheet: Worksheet
+        :param project_object: ProjectObject
+        :param tp: int, value of tracking period
+        """
         header = workbook.add_format({'bold': True, 'bg_color': '#316AC5', 'font_color': 'white', 'text_wrap': True,
                                       'border': 1, 'font_size': 8})
         calculation = workbook.add_format({'bg_color': '#FFF2CC', 'text_wrap': True, 'border': 1, 'font_size': 8})
