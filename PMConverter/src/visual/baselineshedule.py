@@ -7,6 +7,12 @@ from visual.enums import ExcelVersion
 class BaselineSchedule(Visualization):
     """
     Implements drawings for baseline schedule (type = gannt chart)
+
+    Common:
+    :var title: str, title of the graph
+    :var description, str description of the graph
+    :var parameters: dict, the present keys indicate which parameters should be available for the user
+    :var supported: list of ExcelVersion, containing the version that are supported
     """
 
     def __init__(self):

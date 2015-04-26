@@ -8,6 +8,13 @@ class ActualCost(Visualization):
     """
     Implements drawings for actual cost (type = Bar chart)
 
+    Common:
+    :var title: str, title of the graph
+    :var description, str description of the graph
+    :var parameters: dict, the present keys indicate which parameters should be available for the user
+    :var supported: list of ExcelVersion, containing the version that are supported
+
+    Settings:
     :var level_of_detail: LevelOfDetail, graph can be shown for workpackages or activities
     :var data_type: DataType, values expressed absolute (€) or relative (%)
     """
