@@ -477,7 +477,7 @@ class XLSXParser(FileParser):
                                 if not latest_end or latest_end < actual_end:
                                     latest_end = actual_end
                 if earliest_start and latest_end:
-                    ad = latest_end - earliest_start
+                    ad = agenda.get_time_between(earliest_start, latest_end)
                     item.actual_duration = ad
 
     def calculate_aggregated_ac(self, tracking_period):
