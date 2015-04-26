@@ -809,7 +809,6 @@ class XLSXParser(FileParser):
                     ra_worksheet.write(counter, 3, "", cyan_cell)
                     ra_worksheet.write(counter, 4, "", cyan_cell)
                     ra_worksheet.write(counter, 5, "", cyan_cell)
-                    ra_worksheet.write(counter, 6, "", cyan_cell)
             else:
                 if extended:
                     ra_worksheet.write_number(counter, 0, activity.activity_id, gray_cell)
@@ -979,7 +978,8 @@ class XLSXParser(FileParser):
                 tracking_period_worksheet.write('E1', project_object.tracking_periods[i].tracking_period_name,
                                                          yellow_cell)
                 counter = 4
-                self.calculate_aggregated_ac(project_object.tracking_periods[i])
+                self.calculate_aggregated_ac_per_wp(project_object.tracking_periods[i])
+                self.calculate_aggregated_ad_per_wp(project_object.tracking_periods[i], project_object.agenda)
                 for atr in project_object.tracking_periods[i].tracking_period_records:  # atr = ActivityTrackingRecord
                     if self.is_not_lowest_level_activity(atr.activity):
                         tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, cyan_cell)
