@@ -134,7 +134,7 @@ class Agenda(object):
         for working_hour in self.working_hours:
             if working_hour == True:
                 working_hours_per_day+=1
-        working_days=duration_hours/working_hours_per_day
+        working_days=duration_hours/working_hours_per_day  # NOTE: integer division
         return timedelta(days=working_days)
 
     def get_time_between(self, begin_date, end_date):

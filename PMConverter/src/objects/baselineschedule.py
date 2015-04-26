@@ -31,6 +31,7 @@ class BaselineScheduleRecord(object):
                 raise TypeError('fixed_cost should be a float')
             if not isinstance(hourly_cost, float):
                 raise TypeError('hourly_cost should be a float')
+            # NOTE: typecheck of var_cost is omitted. This is to allow var_cost to be None => indicating that this is not an activity of the lowest level
             if not isinstance(total_cost, float):
                 raise TypeError('total_cost should be a float')
         self.start = start

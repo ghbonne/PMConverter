@@ -21,6 +21,8 @@ class XLSXParser(FileParser):
     """
     Class to convert ProjectObjects to .xlsx files and vice versa. Shout out to John McNamara for his xlsxwriter library
     and the guys from openpyxl.
+
+    :var generated_PVcurve: list of tuples, (PV cumsum value, datetime of this PV cumsum value)
     """
 
     def __init__(self):
@@ -537,11 +539,44 @@ class XLSXParser(FileParser):
         return pvs
 
     def calculate_es(self, tracking_period, tracking_periods):
+        #TODO: reimplement
         ev = self.calculate_aggregated_ev(tracking_period)
         pvs = self.get_pvs(tracking_periods)
         for i in range(0, len(pvs)-1):
             if pvs[i] <= ev < pvs[i+1]:
                 x = pvs[i+1] - ev
+
+    def calculate_PVcurve(self, project_object):
+        "This function generates the PV curve of the baseline schedule of the given project."
+
+        # retrieve only lowest level activities and sort them on their baseline start date and end date
+        lowestLevelActivities = [activity for activity in project_object.activities if not XLSXParser.is_not_lowest_level_activity(activity)]
+        lowestLevelActivitiesSorted = sorted(lowestLevelActivities, key=attrgetter('baseline_schedule.start', 'baseline_schedule.end'))
+
+        projectBaselineStartDate = min([activity.baseline_schedule.start for activity in activities])
+        projectBaselineEndDate = max([activity.baseline_schedule.start for activity in activities])
+
+        # initial starting point
+        self.generated_PVcurve = [(0, projectBaselineStartDate)]
+
+        # search end of first working hour of this project
+        currentDatetime = projectBaselineStartDate + datetime.timedelta(days = 0)  # make a deepcopy
+
+
+        # DEBUG:
+        traversedHours = 0
+        
+        # traverse the complete project baseline duration
+        while currentDatetime < projectBaselineEndDate:
+
+
+
+            # advance to next working hour
+            currentDatetime = project_object.agenda.get_end_date(currentDatetime, 0, hours=1)
+            # DEBUG: record how many hours processed, should match with project baseline duration
+            traversedHours += 1
+
+        return
 
     def from_schedule_object(self, project_object, file_path_output, extended=True):
         """
@@ -567,17 +602,17 @@ class XLSXParser(FileParser):
         date_gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1,
                                               'num_format': 'dd/mm/yyyy H:MM', 'font_size': 8})
         money_cyan_cell = workbook.add_format({'bg_color': '#D9EAF7', 'text_wrap': True, 'border': 1,
-                                              'num_format': '#,##0.00 €', 'font_size': 8})
+                                              'num_format': '#,##0.00' + u"\u20AC", 'font_size': 8})
         money_green_cell = workbook.add_format({'bg_color': '#C4D79B', 'text_wrap': True, 'border': 1,
-                                              'num_format': '#,##0.00 €', 'font_size': 8})
+                                              'num_format': '#,##0.00' + u"\u20AC", 'font_size': 8})
         money_lime_cell = workbook.add_format({'bg_color': '#9BBB59', 'text_wrap': True, 'border': 1,
-                                              'num_format': '#,##0.00 €', 'font_size': 8})
+                                              'num_format': '#,##0.00' + u"\u20AC", 'font_size': 8})
         money_navy_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1,
-                                              'num_format': '#,##0.00 €', 'font_size': 8})
+                                              'num_format': '#,##0.00' + u"\u20AC", 'font_size': 8})
         money_yellow_cell = workbook.add_format({'bg_color': 'yellow', 'text_wrap': True, 'border': 1,
-                                              'num_format': '#,##0.00 €', 'font_size': 8})
+                                              'num_format': '#,##0.00' + u"\u20AC", 'font_size': 8})
         money_gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1,
-                                              'num_format': '#,##0.00 €', 'font_size': 8})
+                                              'num_format': '#,##0.00' + u"\u20AC", 'font_size': 8})
 
         # Worksheets
         bsch_worksheet = workbook.add_worksheet("Baseline Schedule")
@@ -1075,6 +1110,9 @@ class XLSXParser(FileParser):
             overview_worksheet.write('AC2', "EAC (PF=SCI(t))", header)
             overview_worksheet.write('AD2', "EAC (PF=0.8*CPI+0.2*SPI)", header)
             overview_worksheet.write('AE2', "EAC (PF=0.8*CPI+0.2*SPI(t))", header)
+
+        # generate PV curve:
+        self.generated_PVcurve(project_object)
 
         counter = 2
         for tracking_period in project_object.tracking_periods:
