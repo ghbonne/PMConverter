@@ -1,6 +1,7 @@
 __author__ = 'PM Group 8'
 import os
 import copy
+import re
 from convert.XLSXparser import XLSXParser
 from convert.XMLparser import XMLParser
 from visual.visualization import Visualization
@@ -57,7 +58,9 @@ class Processor(object):
                         for visualisation in visualisations["Risk analysis' visualisations"]:
                             visualisation.draw(workbook, worksheet, project_object)
                     if "TP" in worksheet.get_name():
+                        tp = int(re.search(r'\d+', worksheet.get_name()).group())
                         for visualisation in visualisations["Tracking periods' visualisations"]:
+                            visualisation.tp = tp
                             visualisation.draw(workbook, worksheet, project_object)
                     if worksheet.get_name() == "Tracking Overview":
                         for visualisation in visualisations["Tracking overview's visualisations"]:
