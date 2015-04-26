@@ -9,6 +9,13 @@ class Performance(Visualization):
     """
     Implements drawings for performance chart (CPI,SPI) (type = Line chart)
 
+    Common:
+    :var title: str, title of the graph
+    :var description, str description of the graph
+    :var parameters: dict, the present keys indicate which parameters should be available for the user
+    :var supported: list of ExcelVersion, containing the version that are supported
+
+    Settings:
     :var x_axis: XAxis, x-axis of the chart can be expressed in status dates or in tracking periods
     """
 

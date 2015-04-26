@@ -10,6 +10,13 @@ class RiskAnalysis(Visualization):
     """
     Implements drawings for risk analysis (type = Bar chart)
 
+    Common:
+    :var title: str, title of the graph
+    :var description, str description of the graph
+    :var parameters: dict, the present keys indicate which parameters should be available for the user
+    :var supported: list of ExcelVersion, containing the version that are supported
+
+    Settings:
     :var data_type: DataType, values expressed absolute (in hours) or relative (%)
     """
 

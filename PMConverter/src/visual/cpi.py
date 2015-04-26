@@ -8,8 +8,16 @@ class CPI(Visualization):
     """
     Implements drawings for cost-value metrics chart (AC, EV, PV) (type = Line chart)
 
+    Common:
+    :var title: str, title of the graph
+    :var description, str description of the graph
+    :var parameters: dict, the present keys indicate which parameters should be available for the user
+    :var supported: list of ExcelVersion, containing the version that are supported
+
+    Settings:
     :var x_axis: XAxis, x-axis of the chart can be expressed in status dates or in tracking periods
-    :var threshold: tuple (x,y), a linear threshold defined by a line through the values x and y
+    :var threshold: bool
+    :var thresholdValues: tuple of floats, [0] indicating the starting threshold and [1] indicating the ending threshold
     """
 
     def __init__(self):
@@ -19,6 +27,7 @@ class CPI(Visualization):
                            "x-axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
         self.threshold = None
+        self.thresholdValues = None
         self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
 
     def draw(self, workbook, worksheet, project_object, excel_version):
@@ -38,14 +47,14 @@ class CPI(Visualization):
         elif self.x_axis == XAxis.DATE:
             names = ['Tracking Overview', 2, 2, (1+tp_size), 2]
 
-        if self.threshold and self.threshold != (0, 0):
+        if self.threshold:
             self.calculate_threshold(workbook, worksheet, tp_size)
             data_series = [
                 ["CPI",
                  names,
                  ['Tracking Overview', 2, 36, (1+tp_size), 36]
                  ],
-                ["threshold " + str(self.threshold),
+                ["threshold " + str(self.thresholdValues),
                   names,
                   ['Tracking Overview', 2, 37, (1+tp_size), 37],
                 ]
@@ -75,16 +84,16 @@ class CPI(Visualization):
         worksheet.write('AL2', 'CPI threshold', header)
 
         start = 2
-        if self.threshold[0] == self.threshold[1]:
+        if self.thresholdValues[0] == self.thresholdValues[1]:
             for i in range(0, tp_size):
-                worksheet.write(start + i, 37, self.threshold[0], calculation)
+                worksheet.write(start + i, 37, self.thresholdValues[0], calculation)
         else:
-            if self.threshold[0] > self.threshold[1]:
-                value = (self.threshold[0] - self.threshold[1])/(tp_size - 1)
+            if self.thresholdValues[0] > self.thresholdValues[1]:
+                value = (self.thresholdValues[0] - self.thresholdValues[1])/(tp_size - 1)
             else:
-                value = (self.threshold[1] - self.threshold[0])/(tp_size - 1)
+                value = (self.thresholdValues[1] - self.thresholdValues[0])/(tp_size - 1)
             for i in range(0, tp_size):
-                worksheet.write(start + i, 37, self.threshold[0] + (i * value), calculation)
+                worksheet.write(start + i, 37, self.thresholdValues[0] + (i * value), calculation)
 
     def calculate_values(self, workbook, worksheet, project_object):
         """
@@ -104,3 +113,4 @@ class CPI(Visualization):
         for tp in project_object.tracking_periods:
             worksheet.write_number(counter, 36, tp.cpi/100, calculation)
             counter += 1
+
