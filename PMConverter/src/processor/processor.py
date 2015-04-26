@@ -28,7 +28,7 @@ class Processor(object):
                                "Tracking overview's visualisations", CostValueMetrics(), Performance(), SpiTvsPfactor(), SvT(), CV(), CPI(), SpiT()]
         self.file_parsers = []
 
-    def convert(self, parser_from, parser_to, file_path_from, visualisations=[], extended=0):
+    def convert(self, parser_from, parser_to, file_path_from, visualisations={}, extended=False):
         # Parse to project object
         project_object = None
         if parser_from == "protrack":
@@ -46,16 +46,21 @@ class Processor(object):
             workbook = xlsx_parser.from_schedule_object(project_object, file_path_to)#todo: how do the parser know if it is basic or extended version?
             if visualisations:
                 for worksheet in workbook.worksheets():
-                    if worksheet.get_name() == "Resources":
-                        pass
-                    if worksheet.get_name() == "Risk Analysis":
-                        pass
-                    if "TP" in worksheet.get_name():
-                        pass
                     if worksheet.get_name() == "Baseline Schedule":
-                        pass
+                        for visualisation in visualisations["Baseline schedule's visualisations"]:
+                            visualisation.draw(workbook, worksheet, project_object)
+                    if worksheet.get_name() == "Resources":
+                        for visualisation in visualisations["Resources' visualisations"]:
+                            visualisation.draw(workbook, worksheet, project_object)
+                    if worksheet.get_name() == "Risk Analysis":
+                        for visualisation in visualisations["Risk analysis' visualisations"]:
+                            visualisation.draw(workbook, worksheet, project_object)
+                    if "TP" in worksheet.get_name():
+                        for visualisation in visualisations["Tracking periods' visualisations"]:
+                            visualisation.draw(workbook, worksheet, project_object)
                     if worksheet.get_name() == "Tracking Overview":
-                        pass
+                        for visualisation in visualisations["Tracking overview's visualisations"]:
+                            visualisation.draw(workbook, worksheet, project_object)
                 try:
                     workbook.close()
                 except Exception:
