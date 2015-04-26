@@ -1,6 +1,7 @@
-__author__ = 'PM Group 8'
+__author__ = 'Eveline'
 
 
 class Visualization(object):
-    def visualize(self, title, labels, data_series, workbook):
+
+    def draw(self, workbook, worksheet, project_object,  excel_version):
         raise NotImplementedError("This method is not implemented!")

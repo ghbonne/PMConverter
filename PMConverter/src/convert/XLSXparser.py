@@ -17,6 +17,7 @@ from objects.riskanalysisdistribution import RiskAnalysisDistribution, Distribut
 from objects.trackingperiod import TrackingPeriod
 from convert.fileparser import FileParser
 from objects.agenda import Agenda
+from visual.enums import ExcelVersion
 
 
 class XLSXParser(FileParser):
@@ -52,11 +53,11 @@ class XLSXParser(FileParser):
             # easily later when we are processing the activities.
             resources_dict = self.process_resources(resource_sheet)
             # Then we process the risk analysis sheet, again everything is stored in a dict, now index is activity_id.
-            risk_analysis_dict = self.process_risk_analysis(risk_analysis_sheet, True)
+            risk_analysis_dict = self.process_risk_analysis(risk_analysis_sheet, ExcelVersion.EXTENDED)
             # Finally, the sheet with activities is processed, using the dicts we created above.
             # Again, a new dict is created, to process all tracking periods more easily
-            activities_dict = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict, True)
-            tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, True)
+            activities_dict = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict, ExcelVersion.EXTENDED)
+            tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, ExcelVersion.EXTENDED)
             if agenda_sheet:
                 agenda = self.process_agenda(agenda_sheet)
             else:
@@ -68,9 +69,9 @@ class XLSXParser(FileParser):
         else:
             # We are processing the basic version
             resources_dict = self.process_resources(resource_sheet)
-            risk_analysis_dict = self.process_risk_analysis(risk_analysis_sheet, False)
-            activities_dict = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict, False)
-            tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, False)
+            risk_analysis_dict = self.process_risk_analysis(risk_analysis_sheet, ExcelVersion.BASIC)
+            activities_dict = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict, ExcelVersion.BASIC)
+            tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, ExcelVersion.BASIC)
             if agenda_sheet:
                 agenda = self.process_agenda(agenda_sheet)
             else:
@@ -95,9 +96,9 @@ class XLSXParser(FileParser):
             holidays.append(agenda_sheet.cell(row=i, column=7).value)
         return Agenda(working_hours=working_hours, working_days=working_days, holidays=holidays)
 
-    def process_project_controls(self, project_control_sheets, activities_dict, extended=True):
+    def process_project_controls(self, project_control_sheets, activities_dict, excel_version):
         tracking_periods = []
-        if extended:
+        if excel_version == ExcelVersion.EXTENDED:
             for project_control_sheet in project_control_sheets:
                 if type(project_control_sheet.cell(row=1, column=3).value) is float:
                     tp_date = datetime.datetime.utcfromtimestamp(((project_control_sheet.cell(row=1, column=3)
@@ -251,9 +252,9 @@ class XLSXParser(FileParser):
                                                 availability=res_ava, cost_use=res_cost_use, cost_unit=res_cost_unit)
         return resources_dict
 
-    def process_risk_analysis(self, risk_analysis_sheet, extended=True):
+    def process_risk_analysis(self, risk_analysis_sheet, excel_version):
         risk_analysis_dict = {}
-        if extended:
+        if excel_version == ExcelVersion.EXTENDED:
             col = 4
         else:
             col = 3
@@ -272,9 +273,9 @@ class XLSXParser(FileParser):
                                                                        pessimistic_duration=risk_ana_pess_duration)
         return risk_analysis_dict
 
-    def process_baseline_schedule(self, activities_sheet, resources_dict, risk_analysis_dict, extended=True):
+    def process_baseline_schedule(self, activities_sheet, resources_dict, risk_analysis_dict, excel_version):
         activities_dict = {}
-        if extended:
+        if excel_version == ExcelVersion.EXTENDED:
             for curr_row in range(self.get_nr_of_header_lines(activities_sheet), activities_sheet.get_highest_row()+1):
                 activity_id = int(activities_sheet.cell(row=curr_row, column=1).value)
                 activity_name = activities_sheet.cell(row=curr_row, column=2).value
@@ -449,35 +450,38 @@ class XLSXParser(FileParser):
             header_lines += 1
         return header_lines
 
-    def calculate_aggregated_risk(self, activity, activities, project_object):
-        if activity.wbs_id:
-            sum_opt = 0
-            sum_prob = 0
-            sum_pes = 0
-            for _activity in self.flatten(self.get_children(activity, activities)):
-                if not _activity.risk_analysis:
-                    _activity.risk_analysis = self.calculate_aggregated_risk(_activity, activities, project_object)
+    def calculate_aggregated_ac_per_wp(self, tracking_period):
+        for item in tracking_period.tracking_period_records:
+            if len(item.activity.wbs_id) == 2: #workpackage
+                parent = item.activity
+                sum_ac = 0
+                for atr in tracking_period.tracking_period_records:
+                    if len(atr.activity.wbs_id) == 3 and (atr.activity.wbs_id[0], atr.activity.wbs_id[1]) == parent.wbs_id:
+                        sum_ac += atr.actual_cost
+                item.actual_cost = round(sum_ac,2)
 
-                if _activity.risk_analysis.distribution_type == DistributionType.MANUAL \
-                        and _activity.risk_analysis.distribution_units == ManualDistributionUnit.ABSOLUTE:
-                    sum_opt += _activity.risk_analysis.optimistic_duration
-                    sum_prob += _activity.risk_analysis.probable_duration
-                    sum_pes += _activity.risk_analysis.pessimistic_duration
-                else:
-                    hours = 0;
-                    for i in range(0, _activity.baseline_schedule.duration.days):
-                        if project_object.agenda.is_working_day((_activity.baseline_schedule.start
-                                + datetime.timedelta(days = i)).weekday()):
-                            hours += project_object.agenda.get_working_hours_in_a_day()
-                    hours += _activity.baseline_schedule.duration.seconds/3600
-
-                    sum_opt += int( float(_activity.risk_analysis.optimistic_duration/100) * hours )
-                    sum_prob += int( float(_activity.risk_analysis.probable_duration/100) * hours )
-                    sum_pes += int( float(_activity.risk_analysis.pessimistic_duration/100) * hours )
-            return RiskAnalysisDistribution(optimistic_duration=sum_opt, probable_duration=sum_prob,
-                                            pessimistic_duration=sum_pes)
-        else:
-            return None
+    def calculate_aggregated_ad_per_wp(self, tracking_period, agenda):
+        for item in tracking_period.tracking_period_records:
+            if len(item.activity.wbs_id) == 2: #workpackage
+                parent = item.activity
+                latest_end = None
+                earliest_start = None
+                completed = True
+                for atr in tracking_period.tracking_period_records:
+                    if len(atr.activity.wbs_id) == 3 and (atr.activity.wbs_id[0], atr.activity.wbs_id[1]) == parent.wbs_id:
+                        if atr.actual_start:
+                            if not earliest_start or earliest_start > atr.actual_start:
+                                earliest_start = atr.actual_start
+                            if atr.percentage_completed < 100:
+                                completed = False
+                                latest_end = tracking_period.tracking_period_statusdate
+                            if completed:
+                                actual_end = agenda.get_end_date(atr.actual_start, atr.actual_duration.days, atr.actual_duration.seconds/3600)
+                                if not latest_end or latest_end < actual_end:
+                                    latest_end = actual_end
+                if earliest_start and latest_end:
+                    ad = agenda.get_time_between(earliest_start, latest_end)
+                    item.actual_duration = ad
 
     def calculate_aggregated_ac(self, tracking_period):
         sum_ac = 0
@@ -542,32 +546,7 @@ class XLSXParser(FileParser):
             if pvs[i] <= ev < pvs[i+1]:
                 x = pvs[i+1] - ev
 
-    def flatten(self, lst):
-        if lst:
-            car, *cdr = lst
-            if isinstance(car, (list, tuple)):
-                if cdr:
-                    return self.flatten(car) + self.flatten(cdr)
-                return self.flatten(car)
-            if cdr:
-                return [car] + self.flatten(cdr)
-            return [car]
-
-    def get_children(self, activity, activities):
-        # Get children one level below activity
-        children = []
-        for _activity in activities:
-            if activity != _activity and len(activity.wbs_id) == len(_activity.wbs_id)-1:
-                equal = True
-                for i in range(0, len(activity.wbs_id)):
-                    if activity.wbs_id[i] != _activity.wbs_id[i]:
-                        equal = False
-                        break
-                if equal:
-                    children.append(_activity)
-        return children
-
-    def from_schedule_object(self, project_object, file_path_output, extended=True):
+    def from_schedule_object(self, project_object, file_path_output, excel_version):
         """
         This is just a lot of writing to excel code, it is ugly..
 
@@ -583,13 +562,13 @@ class XLSXParser(FileParser):
         red_cell = workbook.add_format({'bg_color': 'red', 'text_wrap': True, 'border': 1, 'font_size': 8})
         gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1, 'font_size': 8})
         date_cyan_cell = workbook.add_format({'bg_color': '#D9EAF7', 'text_wrap': True, 'border': 1,
-                                              'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
+                                              'num_format': 'dd/mm/yyyy H:MM', 'font_size': 8})
         date_green_cell = workbook.add_format({'bg_color': '#C4D79B', 'text_wrap': True, 'border': 1,
-                                              'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
+                                              'num_format': 'dd/mm/yyyy H:MM', 'font_size': 8})
         date_lime_cell = workbook.add_format({'bg_color': '#9BBB59', 'text_wrap': True, 'border': 1,
-                                              'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
+                                              'num_format': 'dd/mm/yyyy H:MM', 'font_size': 8})
         date_gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1,
-                                              'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
+                                              'num_format': 'dd/mm/yyyy H:MM', 'font_size': 8})
         money_cyan_cell = workbook.add_format({'bg_color': '#D9EAF7', 'text_wrap': True, 'border': 1,
                                               'num_format': '#,##0.00 €', 'font_size': 8})
         money_green_cell = workbook.add_format({'bg_color': '#C4D79B', 'text_wrap': True, 'border': 1,
@@ -611,7 +590,7 @@ class XLSXParser(FileParser):
         # Write the Baseline Schedule Worksheet
 
         # Set the width of the columns
-        if extended:
+        if excel_version == ExcelVersion.EXTENDED:
             bsch_worksheet.set_column(0, 0, 3)
             bsch_worksheet.set_column(1, 1, 25)
             bsch_worksheet.set_column(2, 2, 5)
@@ -633,7 +612,7 @@ class XLSXParser(FileParser):
         bsch_worksheet.set_row(1, 30)
 
         # Write header cells (using the header format, and by merging some cells)
-        if extended:
+        if excel_version == ExcelVersion.EXTENDED:
             bsch_worksheet.merge_range('A1:C1', "General", header)
             bsch_worksheet.merge_range('D1:E1', "Relations", header)
             bsch_worksheet.merge_range('F1:H1', "Baseline", header)
@@ -678,7 +657,7 @@ class XLSXParser(FileParser):
         for activity in project_object.activities:
             if not self.is_not_lowest_level_activity(activity):
                 # Write activity of lowest level
-                if extended:
+                if excel_version == ExcelVersion.EXTENDED:
                     bsch_worksheet.write_number(counter, 0, activity.activity_id, green_cell)
                     bsch_worksheet.write(counter, 1, str(activity.name), green_cell)
                     self.write_wbs(bsch_worksheet, counter, 2, activity.wbs_id, gray_cell) ####
@@ -713,7 +692,7 @@ class XLSXParser(FileParser):
                         bsch_worksheet.write_number(counter, 10, 0, money_green_cell)
             else:
                 # Write aggregated activity
-                if extended:
+                if excel_version == ExcelVersion.EXTENDED:
                     bsch_worksheet.write_number(counter, 0, activity.activity_id, yellow_cell)
                     bsch_worksheet.write(counter, 1, str(activity.name), yellow_cell)
                     self.write_wbs(bsch_worksheet, counter, 2, activity.wbs_id, cyan_cell)
@@ -753,7 +732,7 @@ class XLSXParser(FileParser):
         # Write header cells (using the header format, and by merging some cells)
         res_worksheet.merge_range('A1:D1', "General", header)
         res_worksheet.merge_range('E1:F1', "Resource Cost", header)
-        if extended:
+        if excel_version == ExcelVersion.EXTENDED:
             res_worksheet.merge_range('G1:H1', "Resource Demand", header)
 
         res_worksheet.write('A2', "ID", header)
@@ -762,7 +741,7 @@ class XLSXParser(FileParser):
         res_worksheet.write('D2', "Availability", header)
         res_worksheet.write('E2', "Cost/Use", header)
         res_worksheet.write('F2', "Cost/Unit", header)
-        if extended:
+        if excel_version == ExcelVersion.EXTENDED:
             res_worksheet.write('G2', "Assigned To", header)
             res_worksheet.write('H2', "Total Cost", header)
 
@@ -776,7 +755,7 @@ class XLSXParser(FileParser):
             res_worksheet.write(counter, 3, useless_availability_string, yellow_cell)
             res_worksheet.write(counter, 4, resource.cost_use, money_yellow_cell)
             res_worksheet.write(counter, 5, resource.cost_unit, money_yellow_cell)
-            if extended:
+            if excel_version == ExcelVersion.EXTENDED:
                 self.write_resource_assign_cost(res_worksheet, counter, 6, resource, project_object.activities, cyan_cell,
                                             money_cyan_cell, project_object)
             counter += 1
@@ -790,7 +769,7 @@ class XLSXParser(FileParser):
         ra_worksheet.set_column(4, 6, 12)
 
         # Write the headers
-        if extended:
+        if excel_version == ExcelVersion.EXTENDED:
             ra_worksheet.merge_range('A1:B1', "General", header)
             ra_worksheet.write('C1', "Baseline", header)
             ra_worksheet.merge_range('D1:G1', "Activity Duration Distribution Profiles", header)
@@ -818,41 +797,23 @@ class XLSXParser(FileParser):
         counter = 2
         for activity in project_object.activities:
             if self.is_not_lowest_level_activity(activity):
-                if extended:
+                if excel_version == ExcelVersion.EXTENDED:
                     ra_worksheet.write_number(counter, 0, activity.activity_id, cyan_cell)
                     ra_worksheet.write(counter, 1, str(activity.name), cyan_cell)
                     ra_worksheet.write(counter, 2, self.get_duration_str(activity.baseline_schedule.duration), cyan_cell)
-                    ra = self.calculate_aggregated_risk(activity, project_object.activities, project_object)
-                    if ra:
-                        description = str(ra.distribution_type.value) + " - " \
-                                          + str(ra.distribution_units.value)
-                        ra_worksheet.write(counter, 3, description, cyan_cell)
-                        ra_worksheet.write(counter, 4, ra.optimistic_duration, cyan_cell)
-                        ra_worksheet.write(counter, 5, ra.probable_duration, cyan_cell)
-                        ra_worksheet.write(counter, 6, ra.pessimistic_duration, cyan_cell)
-                    else:
-                        ra_worksheet.write(counter, 3, "", cyan_cell)
-                        ra_worksheet.write(counter, 4, "", cyan_cell)
-                        ra_worksheet.write(counter, 5, "", cyan_cell)
-                        ra_worksheet.write(counter, 6, "", cyan_cell)
+                    ra_worksheet.write(counter, 3, "", cyan_cell)
+                    ra_worksheet.write(counter, 4, "", cyan_cell)
+                    ra_worksheet.write(counter, 5, "", cyan_cell)
+                    ra_worksheet.write(counter, 6, "", cyan_cell)
                 else:
                     ra_worksheet.write_number(counter, 0, activity.activity_id, cyan_cell)
                     ra_worksheet.write(counter, 1, str(activity.name), cyan_cell)
-                    ra = self.calculate_aggregated_risk(activity, project_object.activities, project_object)
-                    if ra:
-                        description = str(ra.distribution_type.value) + " - " \
-                                          + str(ra.distribution_units.value)
-                        ra_worksheet.write(counter, 2, description, cyan_cell)
-                        ra_worksheet.write(counter, 3, ra.optimistic_duration, cyan_cell)
-                        ra_worksheet.write(counter, 4, ra.probable_duration, cyan_cell)
-                        ra_worksheet.write(counter, 5, ra.pessimistic_duration, cyan_cell)
-                    else:
-                        ra_worksheet.write(counter, 2, "", cyan_cell)
-                        ra_worksheet.write(counter, 3, "", cyan_cell)
-                        ra_worksheet.write(counter, 4, "", cyan_cell)
-                        ra_worksheet.write(counter, 5, "", cyan_cell)
+                    ra_worksheet.write(counter, 2, "", cyan_cell)
+                    ra_worksheet.write(counter, 3, "", cyan_cell)
+                    ra_worksheet.write(counter, 4, "", cyan_cell)
+                    ra_worksheet.write(counter, 5, "", cyan_cell)
             else:
-                if extended:
+                if excel_version == ExcelVersion.EXTENDED:
                     ra_worksheet.write_number(counter, 0, activity.activity_id, gray_cell)
                     ra_worksheet.write(counter, 1, str(activity.name), gray_cell)
                     ra_worksheet.write(counter, 2, self.get_duration_str(activity.baseline_schedule.duration), gray_cell)
@@ -881,7 +842,7 @@ class XLSXParser(FileParser):
                 tracking_period_worksheet = workbook.add_worksheet("TP" + str(i+1))
 
             # Set column widths and create headers
-            if extended:
+            if excel_version == ExcelVersion.EXTENDED:
                 tracking_period_worksheet.set_column(0, 0, 3)
                 tracking_period_worksheet.set_column(1, 1, 18)
                 tracking_period_worksheet.set_column(2, 3, 12)
@@ -943,13 +904,15 @@ class XLSXParser(FileParser):
                 tracking_period_worksheet.write('E4', 'Actual Cost', header)
                 tracking_period_worksheet.write('F4', 'Percentage Completed', header)
 
-            if extended:
+            if excel_version == ExcelVersion.EXTENDED:
                 # Write the data
                 tracking_period_worksheet.write_datetime('C1', project_object.tracking_periods[i].tracking_period_statusdate
                                                          , date_green_cell)
                 tracking_period_worksheet.write('F1', project_object.tracking_periods[i].tracking_period_name,
                                                          yellow_cell)
                 counter = 4
+                self.calculate_aggregated_ac_per_wp(project_object.tracking_periods[i])
+                self.calculate_aggregated_ad_per_wp(project_object.tracking_periods[i], project_object.agenda)
                 for atr in project_object.tracking_periods[i].tracking_period_records:  # atr = ActivityTrackingRecord
                     if self.is_not_lowest_level_activity(atr.activity):
                         tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, cyan_cell)
@@ -973,6 +936,7 @@ class XLSXParser(FileParser):
                         tracking_period_worksheet.write(counter, 15, self.get_duration_str(atr.remaining_duration), cyan_cell)
                         tracking_period_worksheet.write_number(counter, 16, atr.deviation_pac, money_cyan_cell)
                         tracking_period_worksheet.write_number(counter, 17, atr.deviation_prc, money_cyan_cell)
+
                         tracking_period_worksheet.write_number(counter, 18, atr.actual_cost, money_cyan_cell)
                         tracking_period_worksheet.write_number(counter, 19, atr.remaining_cost, money_cyan_cell)
                         percentage_completed = str(atr.percentage_completed) + "%"
@@ -1017,6 +981,8 @@ class XLSXParser(FileParser):
                 tracking_period_worksheet.write('E1', project_object.tracking_periods[i].tracking_period_name,
                                                          yellow_cell)
                 counter = 4
+                self.calculate_aggregated_ac_per_wp(project_object.tracking_periods[i])
+                self.calculate_aggregated_ad_per_wp(project_object.tracking_periods[i], project_object.agenda)
                 for atr in project_object.tracking_periods[i].tracking_period_records:  # atr = ActivityTrackingRecord
                     if self.is_not_lowest_level_activity(atr.activity):
                         tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, cyan_cell)
@@ -1075,7 +1041,7 @@ class XLSXParser(FileParser):
         overview_worksheet.set_row(1, 30)
         overview_worksheet.merge_range('A1:C1', 'General', header)
         overview_worksheet.merge_range('D1:G1', 'EVM Performance Measures', header)
-        if extended:
+        if excel_version == ExcelVersion.EXTENDED:
             overview_worksheet.merge_range('H1:N1', 'EVM Forecasting', header)
         else:
             overview_worksheet.merge_range('H1:AE1', 'EVM Forecasting', header)
@@ -1094,7 +1060,7 @@ class XLSXParser(FileParser):
         overview_worksheet.write('L2', "Schedule Variance (SV(t))", header)
         overview_worksheet.write('M2', "Schedule Performance Index (SPI(t))", header)
         overview_worksheet.write('N2', "p-factor", header)
-        if extended:
+        if excel_version == ExcelVersion.EXTENDED:
             overview_worksheet.write('O2', "EAC(t)-PV (PF=1)", header)
             overview_worksheet.write('P2', "EAC(t)-PV (PF=SPI)", header)
             overview_worksheet.write('Q2', "EAC(t)-PV (PF=SCI)", header)
@@ -1143,7 +1109,7 @@ class XLSXParser(FileParser):
 
             # TODO: more metrics
 
-            if extended:
+            if excel_version == ExcelVersion.EXTENDED:
                 overview_worksheet.write_number(counter, 23, self.calculate_eac(self.calculate_aggregated_ac(tracking_period),
                                                                                 self.get_bac(tracking_period), self.calculate_aggregated_ev(tracking_period),
                                                                                 1), money_green_cell)
