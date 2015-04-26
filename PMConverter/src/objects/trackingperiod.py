@@ -11,6 +11,11 @@ class TrackingPeriod(object):
     :var tracking_period_name: string
     :var tracking_period_statusdate: datetime
     :var tracking_period_records: List of ActivityTrackingRecords, which are nonzero or contain changes w.r.t. previous tracking period
+    :var spi
+    :var cpi
+    :var spi_t
+    :var p_factor
+    :var sv_t
     """
 
     def __init__(self, tracking_period_name="", tracking_period_statusdate=datetime.now(),
@@ -27,5 +32,10 @@ class TrackingPeriod(object):
         self.tracking_period_name = tracking_period_name
         self.tracking_period_statusdate = tracking_period_statusdate
         self.tracking_period_records = tracking_period_records
+        self.spi = 0
+        self.cpi = 0
+        self.spi_t = 0
+        self.p_factor = 0
+        self.sv_t = 0
 
 
