@@ -447,6 +447,39 @@ class XLSXParser(FileParser):
             header_lines += 1
         return header_lines
 
+    def calculate_aggregated_ac_per_wp(self, tracking_period):
+        for item in tracking_period.tracking_period_records:
+            if len(item.activity.wbs_id) == 2: #workpackage
+                parent = item.activity
+                sum_ac = 0
+                for atr in tracking_period.tracking_period_records:
+                    if len(atr.activity.wbs_id) == 3 and (atr.activity.wbs_id[0], atr.activity.wbs_id[1]) == parent.wbs_id:
+                        sum_ac += atr.actual_cost
+                item.actual_cost = round(sum_ac,2)
+
+    def calculate_aggregated_ad_per_wp(self, tracking_period, agenda):
+        for item in tracking_period.tracking_period_records:
+            if len(item.activity.wbs_id) == 2: #workpackage
+                parent = item.activity
+                latest_end = None
+                earliest_start = None
+                completed = True
+                for atr in tracking_period.tracking_period_records:
+                    if len(atr.activity.wbs_id) == 3 and (atr.activity.wbs_id[0], atr.activity.wbs_id[1]) == parent.wbs_id:
+                        if atr.actual_start:
+                            if not earliest_start or earliest_start > atr.actual_start:
+                                earliest_start = atr.actual_start
+                            if atr.percentage_completed < 100:
+                                completed = False
+                                latest_end = tracking_period.tracking_period_statusdate
+                            if completed:
+                                actual_end = agenda.get_end_date(atr.actual_start, atr.actual_duration.days, atr.actual_duration.seconds/3600)
+                                if not latest_end or latest_end < actual_end:
+                                    latest_end = actual_end
+                if earliest_start and latest_end:
+                    ad = latest_end - earliest_start
+                    item.actual_duration = ad
+
     def calculate_aggregated_ac(self, tracking_period):
         sum_ac = 0
         for atr in tracking_period.tracking_period_records:
@@ -876,6 +909,8 @@ class XLSXParser(FileParser):
                 tracking_period_worksheet.write('F1', project_object.tracking_periods[i].tracking_period_name,
                                                          yellow_cell)
                 counter = 4
+                self.calculate_aggregated_ac_per_wp(project_object.tracking_periods[i])
+                self.calculate_aggregated_ad_per_wp(project_object.tracking_periods[i], project_object.agenda)
                 for atr in project_object.tracking_periods[i].tracking_period_records:  # atr = ActivityTrackingRecord
                     if self.is_not_lowest_level_activity(atr.activity):
                         tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, cyan_cell)
@@ -899,6 +934,7 @@ class XLSXParser(FileParser):
                         tracking_period_worksheet.write(counter, 15, self.get_duration_str(atr.remaining_duration), cyan_cell)
                         tracking_period_worksheet.write_number(counter, 16, atr.deviation_pac, money_cyan_cell)
                         tracking_period_worksheet.write_number(counter, 17, atr.deviation_prc, money_cyan_cell)
+
                         tracking_period_worksheet.write_number(counter, 18, atr.actual_cost, money_cyan_cell)
                         tracking_period_worksheet.write_number(counter, 19, atr.remaining_cost, money_cyan_cell)
                         percentage_completed = str(atr.percentage_completed) + "%"
@@ -943,6 +979,7 @@ class XLSXParser(FileParser):
                 tracking_period_worksheet.write('E1', project_object.tracking_periods[i].tracking_period_name,
                                                          yellow_cell)
                 counter = 4
+                self.calculate_aggregated_ac(project_object.tracking_periods[i])
                 for atr in project_object.tracking_periods[i].tracking_period_records:  # atr = ActivityTrackingRecord
                     if self.is_not_lowest_level_activity(atr.activity):
                         tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, cyan_cell)
