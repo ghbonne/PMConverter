@@ -69,6 +69,7 @@ for worksheet in workbook.worksheets():
     if worksheet.get_name() == "Risk Analysis":
         v2 = RiskAnalysis()
         v2.level_of_detail = LevelOfDetail.ACTIVITIES
+        v2.data_type = DataType.ABSOLUTE
         v2.draw(workbook, worksheet, po)
     if "TP" in worksheet.get_name():
         tp = int(re.search(r'\d+', worksheet.get_name()).group())
@@ -103,9 +104,11 @@ for worksheet in workbook.worksheets():
         # v10.draw(workbook,worksheet, po)
         v11 = CPI()
         v11.x_axis = XAxis.TRACKING_PERIOD
+        v11.threshold = (0.2, 0.5)
         v11.draw(workbook,worksheet, po)
         v12 = SpiT()
         v12.x_axis = XAxis.TRACKING_PERIOD
+        v12.threshold = (0.1, 0.7)
         v12.draw(workbook,worksheet, po)
 
 
