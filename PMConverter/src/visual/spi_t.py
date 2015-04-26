@@ -72,6 +72,9 @@ class SpiT(Visualization):
         size = {'width': 750, 'height': 500}
         chart.draw(workbook, chartsheet, 'A1', None, size)
 
+    """
+    Private methods
+    """
     def calculate_threshold(self, workbook, worksheet, tp_size):
         header = workbook.add_format({'bold': True, 'bg_color': '#316AC5', 'font_color': 'white', 'text_wrap': True,
                                       'border': 1, 'font_size': 8})
