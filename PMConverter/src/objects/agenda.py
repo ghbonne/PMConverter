@@ -42,6 +42,13 @@ class Agenda(object):
             if self.is_working_hour(i):
                 return i
 
+    def get_number_of_working_days(self):
+        counter = 0
+        for i in range(0, 7):
+            if self.working_days[i]:
+                counter += 1
+        return counter
+
     def get_working_hours_in_a_day(self):
         counter = 0
         for i in range(0, 24):
