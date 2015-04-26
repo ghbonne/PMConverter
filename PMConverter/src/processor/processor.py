@@ -1,9 +1,9 @@
 __author__ = 'PM Group 8'
 import os
+import copy
 from convert.XLSXparser import XLSXParser
 from convert.XMLparser import XMLParser
-from visual.charts.linechart import LineChart
-from visual.charts.piechart import PieChart
+from visual.visualization import Visualization
 from visual.baselineshedule import BaselineSchedule
 from visual.actualcost import ActualCost
 from visual.resourcedistribution import ResourceDistribution
@@ -16,6 +16,7 @@ from visual.spi_t import SpiT
 from visual.spi_t_p_factor import SpiTvsPfactor
 from visual.performance import Performance
 from visual.budget import CV
+from visual.enums import ExcelVersion
 
 
 class Processor(object):
@@ -71,3 +72,39 @@ class Processor(object):
     def create_all_file_parsers(self):
         self.file_parsers.append(XLSXParser())
         self.file_parsers.append(XMLParser())
+
+    def get_supported_visualisations(self, excel_version):
+        supported_visualisations = []
+        # build new list
+        for item in self.visualizations:
+            if isinstance(item, Visualization):
+                if excel_version in item.support:
+                    supported_visualisations.append(item)
+            else:
+                supported_visualisations.append(item)
+        # check for empty headers
+        supported_copy = copy.deepcopy(supported_visualisations)
+        previous_str = isinstance(supported_copy[0], str)
+        previous_item = None
+        for i in range(1, len(supported_copy)):  #skip first element
+            item = supported_copy[i]
+            if isinstance(item, str):
+                if previous_str:
+                    supported_visualisations.remove(previous_item)
+                previous_str = 1
+                previous_item = item
+            else:
+                previous_str = 0
+                previous_item = None
+        return supported_visualisations
+
+
+
+
+
+
+
+
+
+
+
