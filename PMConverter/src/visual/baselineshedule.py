@@ -74,7 +74,7 @@ class BaselineSchedule(Visualization):
         if delta:
             if delta.seconds != 0:
                 days = delta.days
-                hours = delta.seconds / (3600 * 24)
+                hours = delta.seconds / (3600 * 24) # hours expressed in days
                 duration = days + hours
             else:
                 duration = delta.days
