@@ -30,7 +30,7 @@ class Processor(object):
                                "Tracking overview's visualisations", CostValueMetrics(), Performance(), SpiTvsPfactor(), SvT(), CV(), CPI(), SpiT()]
         self.file_parsers = []
 
-    def convert(self, parser_from, parser_to, file_path_from, visualisations={}, extended=False):
+    def convert(self, parser_from, parser_to, file_path_from, visualisations={}, excel_version=ExcelVersion.EXTENDED):
         # Parse to project object
         project_object = None
         if parser_from == "protrack":
@@ -50,21 +50,21 @@ class Processor(object):
                 for worksheet in workbook.worksheets():
                     if worksheet.get_name() == "Baseline Schedule":
                         for visualisation in visualisations["Baseline schedule's visualisations"]:
-                            visualisation.draw(workbook, worksheet, project_object)
+                            visualisation.draw(workbook, worksheet, project_object, excel_version)
                     if worksheet.get_name() == "Resources":
                         for visualisation in visualisations["Resources' visualisations"]:
-                            visualisation.draw(workbook, worksheet, project_object)
+                            visualisation.draw(workbook, worksheet, project_object, excel_version)
                     if worksheet.get_name() == "Risk Analysis":
                         for visualisation in visualisations["Risk analysis' visualisations"]:
-                            visualisation.draw(workbook, worksheet, project_object)
+                            visualisation.draw(workbook, worksheet, project_object, excel_version)
                     if "TP" in worksheet.get_name():
                         tp = int(re.search(r'\d+', worksheet.get_name()).group())
                         for visualisation in visualisations["Tracking periods' visualisations"]:
                             visualisation.tp = tp
-                            visualisation.draw(workbook, worksheet, project_object)
+                            visualisation.draw(workbook, worksheet, project_object, excel_version)
                     if worksheet.get_name() == "Tracking Overview":
                         for visualisation in visualisations["Tracking overview's visualisations"]:
-                            visualisation.draw(workbook, worksheet, project_object)
+                            visualisation.draw(workbook, worksheet, project_object, excel_version)
                 try:
                     workbook.close()
                 except Exception:
