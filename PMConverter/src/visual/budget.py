@@ -48,7 +48,7 @@ class CV(Visualization):
         ]
 
         labels = ["", ""]
-        chart = LineChart(self.title, labels, data_series)
+        chart = LineChart("Cost Variance (CV)", labels, data_series)
 
         size = {'width': 750, 'height': 500}
         chart.draw(workbook, chartsheet, 'A1', None, size)

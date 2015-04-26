@@ -29,7 +29,7 @@ class RiskAnalysis(Visualization):
 
     def draw(self, workbook, worksheet, project_object, excel_version):
         if not self.data_type:
-            raise Exception("Please first set var level_of_detail")
+            raise Exception("Please first set var data_type")
 
         self.calculate_values(workbook, worksheet, project_object)
 
@@ -44,12 +44,11 @@ class RiskAnalysis(Visualization):
         start = 3
         while i < len(activities):
             if len(activities[i].wbs_id) == 3:  # activity level
-                if self.level_of_detail == LevelOfDetail.ACTIVITIES:
-                    names += "'Risk Analysis'!$B$" + str(start+i) + ","
-                    optimistic += "'Risk Analysis'!$W$" + str(start+i) + ","
-                    most_probable += "'Risk Analysis'!$X$" + str(start+i) + ","
-                    pessimistic += "'Risk Analysis'!$Y$" + str(start+i) + ","
-                    height += 20
+                names += "'Risk Analysis'!$B$" + str(start+i) + ","
+                optimistic += "'Risk Analysis'!$W$" + str(start+i) + ","
+                most_probable += "'Risk Analysis'!$X$" + str(start+i) + ","
+                pessimistic += "'Risk Analysis'!$Y$" + str(start+i) + ","
+                height += 20
                 i += 1
             else:  # not supported
                 i += 1
@@ -75,7 +74,7 @@ class RiskAnalysis(Visualization):
              ]
         ]
 
-        chart = BarChart(self.title, ["Hours", self.level_of_detail.value], data_series)
+        chart = BarChart(self.title, ["Hours", "Activities"], data_series)
 
         options = {'height': height, 'width': 800}
         chart.draw(workbook, worksheet, 'I1', None, options)

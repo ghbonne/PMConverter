@@ -111,6 +111,7 @@ class CPI(Visualization):
         counter = 2
 
         for tp in project_object.tracking_periods:
-            worksheet.write_number(counter, 36, tp.cpi/100, calculation)
+            value = tp.cpi/100
+            worksheet.write_number(counter, 36, value, calculation)
             counter += 1
 
