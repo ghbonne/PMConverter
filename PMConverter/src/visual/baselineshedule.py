@@ -26,7 +26,7 @@ class BaselineSchedule(Visualization):
         if excel_version == ExcelVersion.EXTENDED:
             baseline_start = "='" + worksheet.get_name() + "'!$F$3:$F$" + str(size)
         else:
-            baseline_start = "='" + worksheet.get_name() + "'!$E$3:$F$" + str(size)
+            baseline_start = "='" + worksheet.get_name() + "'!$E$3:$E$" + str(size)
         baseline_duration = "='" + worksheet.get_name() + "'!$Q$3:$Q$" + str(size)
 
         data_series = [
