@@ -559,13 +559,13 @@ class XLSXParser(FileParser):
         red_cell = workbook.add_format({'bg_color': 'red', 'text_wrap': True, 'border': 1, 'font_size': 8})
         gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1, 'font_size': 8})
         date_cyan_cell = workbook.add_format({'bg_color': '#D9EAF7', 'text_wrap': True, 'border': 1,
-                                              'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
+                                              'num_format': 'dd/mm/yyyy H:MM', 'font_size': 8})
         date_green_cell = workbook.add_format({'bg_color': '#C4D79B', 'text_wrap': True, 'border': 1,
-                                              'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
+                                              'num_format': 'dd/mm/yyyy H:MM', 'font_size': 8})
         date_lime_cell = workbook.add_format({'bg_color': '#9BBB59', 'text_wrap': True, 'border': 1,
-                                              'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
+                                              'num_format': 'dd/mm/yyyy H:MM', 'font_size': 8})
         date_gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1,
-                                              'num_format': 'mm/dd/yyyy H:MM', 'font_size': 8})
+                                              'num_format': 'dd/mm/yyyy H:MM', 'font_size': 8})
         money_cyan_cell = workbook.add_format({'bg_color': '#D9EAF7', 'text_wrap': True, 'border': 1,
                                               'num_format': '#,##0.00 €', 'font_size': 8})
         money_green_cell = workbook.add_format({'bg_color': '#C4D79B', 'text_wrap': True, 'border': 1,
