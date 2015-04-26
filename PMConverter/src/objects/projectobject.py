@@ -15,7 +15,7 @@ class ProjectObject(object):
     :var activities: list of Activity
     :var tracking_periods: list of TrackingPeriod
     :var resources: list of Resource
-    :var calendar: calendar
+    :var agenda: Agenda
     """
 
     def __init__(self, name="", activities=[], tracking_periods=[], resources=[], agenda=Agenda(), type_check = True):

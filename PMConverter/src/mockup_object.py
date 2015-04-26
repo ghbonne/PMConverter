@@ -1,11 +1,26 @@
 import datetime
 import os
+import re
 from convert.XLSXparser import XLSXParser
 from objects.activity import Activity
 from objects.baselineschedule import BaselineScheduleRecord
 from objects.projectobject import ProjectObject
 from objects.resource import Resource
 from objects.riskanalysisdistribution import RiskAnalysisDistribution
+from visual.charts.piechart import PieChart
+from visual.resourcedistribution import ResourceDistribution
+from visual.riskanalysis import RiskAnalysis
+from visual.enums import DataType, LevelOfDetail, XAxis
+from visual.actualduration import ActualDuration
+from visual.actualcost import ActualCost
+from visual.baselineshedule import BaselineSchedule
+from visual.cost_value_metrics import CostValueMetrics
+from visual.performance import Performance
+from visual.spi_t_p_factor import SpiTvsPfactor
+from visual.sv_t import SvT
+from visual.budget import CV
+from visual.cpi import CPI
+from visual.spi_t import SpiT
 
 __author__ = 'gilles'
 
@@ -39,10 +54,65 @@ xlsx_parser.from_schedule_object(project_object, os.path.join(os.path.dirname(__
 # Some tests for reading from a XLSX File
 # TODO: refactor to test class
 
+print("Parsing the extended input sheet")
 po = xlsx_parser.to_schedule_object(os.path.join(os.path.dirname(__file__),
                                             "../administration/2_Project data input sheet_extended.xlsx"))
 
 # Write the file we just processed to a file
-xlsx_parser.from_schedule_object(po, "test2.xlsx")
+workbook = xlsx_parser.from_schedule_object(po, "output/test2.xlsx")
+
+for worksheet in workbook.worksheets():
+    if worksheet.get_name() == "Resources":
+        v1 = ResourceDistribution()
+        v1.data_type = DataType.RELATIVE
+        v1.draw(workbook, worksheet,po)
+    if worksheet.get_name() == "Risk Analysis":
+        v2 = RiskAnalysis()
+        v2.level_of_detail = LevelOfDetail.ACTIVITIES
+        v2.data_type = DataType.ABSOLUTE
+        v2.draw(workbook, worksheet, po)
+    if "TP" in worksheet.get_name():
+        tp = int(re.search(r'\d+', worksheet.get_name()).group())
+        v3 = ActualDuration()
+        v3.level_of_detail = LevelOfDetail.ACTIVITIES
+        v3.data_type = DataType.RELATIVE
+        v3.set_tracking_period(tp-1)
+        v3.draw(workbook, worksheet, po)
+        v4 = ActualCost()
+        v4.level_of_detail = LevelOfDetail.ACTIVITIES
+        v4.data_type = DataType.RELATIVE
+        v4.set_tracking_period(tp-1)
+        v4.draw(workbook, worksheet, po)
+    if worksheet.get_name() == "Baseline Schedule":
+        v5 = BaselineSchedule()
+        v5.draw(workbook, worksheet, po)
+    if worksheet.get_name() == "Tracking Overview":
+        v6 = CostValueMetrics()
+        v6.x_axis = XAxis.TRACKING_PERIOD
+        v6.draw(workbook,worksheet, po)
+        v7 = Performance()
+        v7.x_axis = XAxis.TRACKING_PERIOD
+        v7.draw(workbook,worksheet, po)
+        v8 = SpiTvsPfactor()
+        v8.x_axis = XAxis.TRACKING_PERIOD
+        v8.draw(workbook,worksheet, po)
+        v9 = SvT()
+        v9.x_axis = XAxis.TRACKING_PERIOD
+        v9.draw(workbook,worksheet, po)
+        # v10 = CV()
+        # v10.x_axis = XAxis.TRACKING_PERIOD
+        # v10.draw(workbook,worksheet, po)
+        v11 = CPI()
+        v11.x_axis = XAxis.TRACKING_PERIOD
+        v11.threshold = (0.2, 0.5)
+        v11.draw(workbook,worksheet, po)
+        v12 = SpiT()
+        v12.x_axis = XAxis.TRACKING_PERIOD
+        v12.threshold = (0.1, 0.7)
+        v12.draw(workbook,worksheet, po)
+
+
+workbook.close()
+os.system("start excel.exe output/test2.xlsx")
 
 

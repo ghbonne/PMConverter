@@ -15,3 +15,8 @@ class DataType(Enum):
 class LevelOfDetail(Enum):
     WORK_PACKAGES = "work packages (super level)"
     ACTIVITIES = "activities (detailed level)"
+
+
+class ExcelVersion(Enum):
+    EXTENDED = "extended"
+    BASIC = "basic"

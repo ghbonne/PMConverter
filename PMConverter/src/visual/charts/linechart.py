@@ -28,11 +28,11 @@ class LineChart(TwoDimChart):
         self.data_series = data_series
         super().__init__("line")
 
-    def draw(self, workbook):
+    def draw(self, workbook, worksheet, position, options=None, size=None):
         """
         add a linechart visualisation to the Excel-file
         :param workbook: xlsxworkbook
         :return:
         """
-        super().draw(workbook)
+        super().draw(workbook, worksheet, position, options, size)
 

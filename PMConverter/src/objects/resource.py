@@ -27,10 +27,11 @@ class Resource(object):
                 raise TypeError('resource_id should be an integer')
             if not isinstance(name, str):
                 raise TypeError('name should be an string')
-            if resource_type == 'Renewable':
-                resource_type = ResourceType.RENEWABLE
-            if resource_type == 'Consumable':
-                resource_type = ResourceType.CONSUMABLE
+            if type(resource_type) is str:
+                if resource_type.lower() == 'RENEWABLE'.lower():
+                    resource_type = ResourceType.RENEWABLE
+                elif resource_type.lower() == 'CONSUMABLE'.lower():
+                    resource_type = ResourceType.CONSUMABLE
             if not isinstance(resource_type, ResourceType):
                 raise TypeError('resource_type should be an element of ResourceType enum')
             if not isinstance(availability, int):

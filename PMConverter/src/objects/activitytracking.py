@@ -1,5 +1,4 @@
 __author__ = 'PM Group 8'
-from datetime import datetime, timedelta
 
 
 class ActivityTrackingRecord(object):
@@ -51,18 +50,18 @@ class ActivityTrackingRecord(object):
         self.actual_start = actual_start
         self.actual_duration = actual_duration
         self.planned_actual_cost = planned_actual_cost
-        if planned_remaining_cost == -1:
-            self.planned_remaining_cost = self.activity.baseline_schedule.total_cost
-        else:
-            self.planned_remaining_cost = planned_remaining_cost
+        #if planned_remaining_cost == -1:
+        #    self.planned_remaining_cost = self.activity.baseline_schedule.total_cost
+        #else:
+        self.planned_remaining_cost = planned_remaining_cost
         self.remaining_duration = remaining_duration
         self.deviation_pac = deviation_pac
         self.deviation_prc = deviation_prc
         self.actual_cost = actual_cost
-        if remaining_cost == -1:
-            self.remaining_cost = self.activity.baseline_schedule.total_cost
-        else:
-            self.remaining_cost = remaining_cost
+        #if remaining_cost == -1:
+         #   self.remaining_cost = self.activity.baseline_schedule.total_cost
+        #else:
+        self.remaining_cost = remaining_cost
         self.percentage_completed = percentage_completed
         self.tracking_status = tracking_status
         self.earned_value = earned_value

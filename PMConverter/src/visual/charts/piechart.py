@@ -18,7 +18,7 @@ class PieChart(Chart):
         self.data_series = data_series
         self.relative = relative
 
-    def draw(self, workbook, worksheet, location):
+    def draw(self, workbook, worksheet, location, options=None, size=None):
         """
         add a piechart to the excel workbook
         :param workbook: xlsxworkbook
@@ -45,5 +45,9 @@ class PieChart(Chart):
         # Set chart style
         chart.set_style(10)
 
+        #set size of chart
+        if size:
+            chart.set_size(size)
+
         # Insert chart
-        worksheet.insert_chart('I1', chart)
+        worksheet.insert_chart(location, chart, options)
