@@ -171,3 +171,22 @@ class Agenda(object):
 
         return timedelta(days= days, hours= hours)
 
+    def get_previous_working_hour(self, date):
+        hour = date.hour
+        result = copy.deepcopy(date)
+        if hour <= self.get_first_working_hour():
+            result -= timedelta(days=1)
+            result = result.replace(hour=self.get_last_working_hour()+1)
+            while (not self.is_working_day(result.weekday())) or self.is_holiday(result.strftime('%d%m%Y')):
+                result -= timedelta(days=1)
+        else:
+            hour -= 1
+            while not self.is_working_hour(hour) and hour >= 0:
+                hour -= 1
+            hour += 1 #because we want the end of the hour
+            result = result.replace(hour=hour)
+        return result
+
+
+
+
