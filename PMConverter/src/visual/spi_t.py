@@ -25,6 +25,8 @@ class SpiT(Visualization):
         if not self.x_axis:
             raise Exception("Please first set var x_axis")
 
+        self.calculate_values(workbook, worksheet, project_object)
+
         chartsheet = workbook.add_worksheet(self.title)
 
         # number tracking periods
@@ -41,18 +43,18 @@ class SpiT(Visualization):
             data_series = [
                 ["SPI(t)",
                  names,
-                 ['Tracking Overview', 2, 12, (1+tp_size), 12]
+                 ['Tracking Overview', 2, 38, (1+tp_size), 38]
                  ],
                 ["threshold " + str(self.threshold),
                   names,
-                  ['Tracking Overview', 2, 33, (1+tp_size), 33],
+                  ['Tracking Overview', 2, 39, (1+tp_size), 39],
                 ]
             ]
         else:
             data_series = [
                 ["SPI(t)",
                  names,
-                 ['Tracking Overview', 2, 12, (1+tp_size), 12]
+                 ['Tracking Overview', 2, 38, (1+tp_size), 38]
                  ],
             ]
 
@@ -63,21 +65,43 @@ class SpiT(Visualization):
         size = {'width': 750, 'height': 500}
         chart.draw(workbook, chartsheet, 'A1', None, size)
 
+    """
+    Private methods
+    """
     def calculate_threshold(self, workbook, worksheet, tp_size):
         header = workbook.add_format({'bold': True, 'bg_color': '#316AC5', 'font_color': 'white', 'text_wrap': True,
                                       'border': 1, 'font_size': 8})
         calculation = workbook.add_format({'bg_color': '#FFF2CC', 'text_wrap': True, 'border': 1, 'font_size': 8})
 
-        worksheet.write('AH2', 'SPI(t) threshold', header)
+        worksheet.write('AN2', 'SPI(t) threshold', header)
 
         start = 2
         if self.threshold[0] == self.threshold[1]:
             for i in range(0, tp_size):
-                worksheet.write(start + i, 33, self.threshold[0], calculation)
+                worksheet.write(start + i, 39, self.threshold[0], calculation)
         else:
             if self.threshold[0] > self.threshold[1]:
                 value = (self.threshold[0] - self.threshold[1])/(tp_size - 1)
             else:
                 value = (self.threshold[1] - self.threshold[0])/(tp_size - 1)
             for i in range(0, tp_size):
-                worksheet.write(start + i, 33, self.threshold[0] + (i * value), calculation)
+                worksheet.write(start + i, 39, self.threshold[0] + (i * value), calculation)
+
+    def calculate_values(self, workbook, worksheet, project_object):
+        """
+
+        :param workbook: Workbook
+        :param worksheet: Worksheet
+        :param project_object: ProjectObject
+        """
+        header = workbook.add_format({'bold': True, 'bg_color': '#316AC5', 'font_color': 'white', 'text_wrap': True,
+                                      'border': 1, 'font_size': 8})
+        calculation = workbook.add_format({'bg_color': '#FFF2CC', 'text_wrap': True, 'border': 1, 'font_size': 8})
+
+        worksheet.write('AM2', 'SPI(t)', header)
+
+        counter = 2
+
+        for tp in project_object.tracking_periods:
+            worksheet.write_number(counter, 38, tp.spi_t/100, calculation)
+            counter += 1
