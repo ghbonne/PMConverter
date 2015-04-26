@@ -16,8 +16,7 @@ class RiskAnalysis(Visualization):
     def __init__(self):
         self.title = "Risk analysis"
         self.description = ""
-        self.parameters = {"level_of_detail": [LevelOfDetail.WORK_PACKAGES, LevelOfDetail.ACTIVITIES],
-                           "data_type": [DataType.ABSOLUTE, DataType.RELATIVE]}
+        self.parameters = {"data_type": [DataType.ABSOLUTE, DataType.RELATIVE]}
         self.level_of_detail = None
         self.data_type = None
 
@@ -37,15 +36,7 @@ class RiskAnalysis(Visualization):
         i = 0
         start = 3
         while i < len(activities):
-            if len(activities[i].wbs_id) == 2:  # work package
-                if self.level_of_detail == LevelOfDetail.WORK_PACKAGES:
-                    names += "'Risk Analysis'!$B$" + str(start+i) + ","
-                    optimistic += "'Risk Analysis'!$W$" + str(start+i) + ","
-                    most_probable += "'Risk Analysis'!$X$" + str(start+i) + ","
-                    pessimistic += "'Risk Analysis'!$Y$" + str(start+i) + ","
-                    height += 20
-                i += 1
-            elif len(activities[i].wbs_id) == 3:  # activity level
+            if len(activities[i].wbs_id) == 3:  # activity level
                 if self.level_of_detail == LevelOfDetail.ACTIVITIES:
                     names += "'Risk Analysis'!$B$" + str(start+i) + ","
                     optimistic += "'Risk Analysis'!$W$" + str(start+i) + ","
@@ -53,7 +44,7 @@ class RiskAnalysis(Visualization):
                     pessimistic += "'Risk Analysis'!$Y$" + str(start+i) + ","
                     height += 20
                 i += 1
-            else:  # 1 = project level, >3 not supported yet
+            else:  # not supported
                 i += 1
 
         # remove last ';' and add ')'
