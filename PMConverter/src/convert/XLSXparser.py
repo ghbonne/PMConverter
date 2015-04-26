@@ -447,22 +447,6 @@ class XLSXParser(FileParser):
             header_lines += 1
         return header_lines
 
-    def calculate_aggregated_risk(self, activity, activities):
-        if activity.wbs_id:
-            sum_opt = 0
-            sum_prob = 0
-            sum_pes = 0
-            for _activity in self.flatten(self.get_children(activity, activities)):
-                if not _activity.risk_analysis:
-                    _activity.risk_analysis = self.calculate_aggregated_risk(_activity, activities)
-                sum_opt += _activity.risk_analysis.optimistic_duration
-                sum_prob += _activity.risk_analysis.probable_duration
-                sum_pes += _activity.risk_analysis.pessimistic_duration
-            return RiskAnalysisDistribution(optimistic_duration=sum_opt, probable_duration=sum_prob,
-                                            pessimistic_duration=sum_pes)
-        else:
-            return None
-
     def calculate_aggregated_ac(self, tracking_period):
         sum_ac = 0
         for atr in tracking_period.tracking_period_records:
@@ -525,31 +509,6 @@ class XLSXParser(FileParser):
         for i in range(0, len(pvs)-1):
             if pvs[i] <= ev < pvs[i+1]:
                 x = pvs[i+1] - ev
-
-    def flatten(self, lst):
-        if lst:
-            car, *cdr = lst
-            if isinstance(car, (list, tuple)):
-                if cdr:
-                    return self.flatten(car) + self.flatten(cdr)
-                return self.flatten(car)
-            if cdr:
-                return [car] + self.flatten(cdr)
-            return [car]
-
-    def get_children(self, activity, activities):
-        # Get children one level below activity
-        children = []
-        for _activity in activities:
-            if activity != _activity and len(activity.wbs_id) == len(_activity.wbs_id)-1:
-                equal = True
-                for i in range(0, len(activity.wbs_id)):
-                    if activity.wbs_id[i] != _activity.wbs_id[i]:
-                        equal = False
-                        break
-                if equal:
-                    children.append(_activity)
-        return children
 
     def from_schedule_object(self, project_object, file_path_output, extended=True):
         """
@@ -806,35 +765,18 @@ class XLSXParser(FileParser):
                     ra_worksheet.write_number(counter, 0, activity.activity_id, cyan_cell)
                     ra_worksheet.write(counter, 1, str(activity.name), cyan_cell)
                     ra_worksheet.write(counter, 2, self.get_duration_str(activity.baseline_schedule.duration), cyan_cell)
-                    ra = self.calculate_aggregated_risk(activity, project_object.activities)
-                    if ra:
-                        description = str(ra.distribution_type.value) + " - " \
-                                          + str(ra.distribution_units.value)
-                        ra_worksheet.write(counter, 3, description, cyan_cell)
-                        ra_worksheet.write(counter, 4, ra.optimistic_duration, cyan_cell)
-                        ra_worksheet.write(counter, 5, ra.probable_duration, cyan_cell)
-                        ra_worksheet.write(counter, 6, ra.pessimistic_duration, cyan_cell)
-                    else:
-                        ra_worksheet.write(counter, 3, "", cyan_cell)
-                        ra_worksheet.write(counter, 4, "", cyan_cell)
-                        ra_worksheet.write(counter, 5, "", cyan_cell)
-                        ra_worksheet.write(counter, 6, "", cyan_cell)
+                    ra_worksheet.write(counter, 3, "", cyan_cell)
+                    ra_worksheet.write(counter, 4, "", cyan_cell)
+                    ra_worksheet.write(counter, 5, "", cyan_cell)
+                    ra_worksheet.write(counter, 6, "", cyan_cell)
                 else:
                     ra_worksheet.write_number(counter, 0, activity.activity_id, cyan_cell)
                     ra_worksheet.write(counter, 1, str(activity.name), cyan_cell)
-                    ra = self.calculate_aggregated_risk(activity, project_object.activities)
-                    if ra:
-                        description = str(ra.distribution_type.value) + " - " \
-                                          + str(ra.distribution_units.value)
-                        ra_worksheet.write(counter, 2, description, cyan_cell)
-                        ra_worksheet.write(counter, 3, ra.optimistic_duration, cyan_cell)
-                        ra_worksheet.write(counter, 4, ra.probable_duration, cyan_cell)
-                        ra_worksheet.write(counter, 5, ra.pessimistic_duration, cyan_cell)
-                    else:
-                        ra_worksheet.write(counter, 2, "", cyan_cell)
-                        ra_worksheet.write(counter, 3, "", cyan_cell)
-                        ra_worksheet.write(counter, 4, "", cyan_cell)
-                        ra_worksheet.write(counter, 5, "", cyan_cell)
+                    ra_worksheet.write(counter, 2, "", cyan_cell)
+                    ra_worksheet.write(counter, 3, "", cyan_cell)
+                    ra_worksheet.write(counter, 4, "", cyan_cell)
+                    ra_worksheet.write(counter, 5, "", cyan_cell)
+                    ra_worksheet.write(counter, 6, "", cyan_cell)
             else:
                 if extended:
                     ra_worksheet.write_number(counter, 0, activity.activity_id, gray_cell)
