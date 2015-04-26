@@ -27,6 +27,7 @@ class SpiT(Visualization):
                            "x-axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
         self.threshold = None
+        self.thresholdValues = None
         self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
 
     def draw(self, workbook, worksheet, project_object, excel_version):
@@ -44,14 +45,14 @@ class SpiT(Visualization):
         elif self.x_axis == XAxis.DATE:
             names = ['Tracking Overview', 2, 2, (1+tp_size), 2]
 
-        if self.threshold and self.threshold != (0, 0):
+        if self.threshold:
             self.calculate_threshold(workbook, worksheet, tp_size)
             data_series = [
                 ["SPI(t)",
                  names,
                  ['Tracking Overview', 2, 12, (1+tp_size), 12]
                  ],
-                ["threshold " + str(self.threshold),
+                ["threshold " + str(self.thresholdValues),
                   names,
                   ['Tracking Overview', 2, 33, (1+tp_size), 33],
                 ]
@@ -79,13 +80,13 @@ class SpiT(Visualization):
         worksheet.write('AH2', 'SPI(t) threshold', header)
 
         start = 2
-        if self.threshold[0] == self.threshold[1]:
+        if self.thresholdValues[0] == self.thresholdValues[1]:
             for i in range(0, tp_size):
-                worksheet.write(start + i, 33, self.threshold[0], calculation)
+                worksheet.write(start + i, 33, self.thresholdValues[0], calculation)
         else:
-            if self.threshold[0] > self.threshold[1]:
-                value = (self.threshold[0] - self.threshold[1])/(tp_size - 1)
+            if self.thresholdValues[0] > self.thresholdValues[1]:
+                value = (self.thresholdValues[0] - self.thresholdValues[1])/(tp_size - 1)
             else:
-                value = (self.threshold[1] - self.threshold[0])/(tp_size - 1)
+                value = (self.thresholdValues[1] - self.thresholdValues[0])/(tp_size - 1)
             for i in range(0, tp_size):
-                worksheet.write(start + i, 33, self.threshold[0] + (i * value), calculation)
+                worksheet.write(start + i, 33, self.thresholdValues[0] + (i * value), calculation)
