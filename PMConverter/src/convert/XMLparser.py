@@ -365,13 +365,12 @@ class XMLParser(FileParser):
                     if activity != None and activity_l!=None:
                         if int(activity.find('UniqueID').text) == activity_l.activity_id:
                             distr_number=int(activity.find('Distribution').text)
-
                             activity_l.risk_analysis=distribution_list[distr_number]
 
 
         ## Activity Tracking
         for tracking_list in root.findall('TrackingList'):
-            
+
             ## How many Trackng periods?
             count=0
             for tracking_period_info in tracking_list.findall('TrackingPeriod'):
