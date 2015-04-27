@@ -227,7 +227,14 @@ class Agenda(object):
         return next_date
                 
         
-
+    def get_workingDuration_timedelta(self, duration_hours = 0):
+        """
+        :param duration_hours: integer; Working hours needed to complete activity
+        :return: timedelta; working days + remaing working hours
+        """
+        working_hours_per_day = self.get_working_hours_in_a_day()
+        working_days = int(duration_hours / working_hours_per_day)
+        return timedelta(days = working_days, hours = duration_hours - working_days * working_hours_per_day)
 
 
     def get_duration_working_days(self, duration_hours=0):

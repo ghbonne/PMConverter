@@ -188,7 +188,7 @@ class XMLParser(FileParser):
                 #Baseline duration (hours)
                 BaselineDuration_hours = int(activity.find('BaseLineDuration').text)
                 #agenda=Agenda()
-                BaselineDuration=project_agenda.get_duration_working_days(duration_hours=BaselineDuration_hours)
+                BaselineDuration=project_agenda.get_workingDuration_timedelta(duration_hours=BaselineDuration_hours)
                 #BaseLineStart
                 BaseLineStart=self.getdate(activity.find('BaseLineStart').text, dateformat)
                 #FixedBaselineCost
@@ -387,10 +387,10 @@ class XMLParser(FileParser):
                     # Read Data
                     actualStart=self.getdate(tracking_activity.find('ActualStart').text, dateformat)
                     actualDuration_hours=int(tracking_activity.find('ActualDuration').text)
-                    actualDuration=project_agenda.get_duration_working_days(duration_hours=actualDuration_hours)
+                    actualDuration=project_agenda.get_workingDuration_timedelta(duration_hours=actualDuration_hours)
                     actualCostDev=float(tracking_activity.find('ActualCostDev').text)
-                    remainingDuration_days=int(tracking_activity.find('RemainingDuration').text)
-                    remainingDuration=project_agenda.get_duration_working_days(duration_hours=remainingDuration_days)
+                    remainingDuration_hours=int(tracking_activity.find('RemainingDuration').text)
+                    remainingDuration=project_agenda.get_workingDuration_timedelta(duration_hours=remainingDuration_hours)
                     remainingCostDev=float(tracking_activity.find('RemainingCostDev').text)
                     percentageComplete=float(tracking_activity.find('PercentageComplete').text)*100
                     #Assign Data
@@ -411,22 +411,64 @@ class XMLParser(FileParser):
                         trackingStatus='Started'
                     activityTrackingRecord.tracking_status=trackingStatus
 
-                    # Should have been already read from previous data fields
-                    activityTrackingRecord.actual_cost=\
-                        activity_list_wo_groups[activity_nr].baseline_schedule.total_cost*percentageComplete/100
-                    activityTrackingRecord.earned_value=\
-                        math.ceil(percentageComplete/100)*(activity_list_wo_groups[activity_nr].baseline_schedule.fixed_cost+\
-                                                           (activity_list_wo_groups[activity_nr].resource_cost+\
-                                                 activity_list_wo_groups[activity_nr].baseline_schedule.var_cost*\
-                                                 activity_list_wo_groups[activity_nr].baseline_schedule.duration.days)
-                                                 *percentageComplete/100)
+                    # deriving remaining data fields:
 
-                    activityTrackingRecord.planned_actual_cost=activityTrackingRecord.actual_cost
-                    activityTrackingRecord.planned_remaining_cost=\
-                        activity_list_wo_groups[activity_nr].baseline_schedule.total_cost * (100-percentageComplete)/100
-                    activityTrackingRecord.remaining_cost=activityTrackingRecord.planned_remaining_cost
-                    activityTrackingRecord.planned_value=\
-                        activity_list_wo_groups[activity_nr].baseline_schedule.total_cost
+                    # Calculate PAC and PRC:
+
+                    if actualDuration_hours > 0:
+                        # activity started or already finished: PAC depends on real actual duration!
+                        activityTrackingRecord.planned_actual_cost = activityTrackingRecord.activity.baseline_schedule.fixed_cost + actualDuration_hours * activityTrackingRecord.activity.baseline_schedule.hourly_cost
+                        # no fixed starting costs anymore for PRC:
+                        activityTrackingRecord.planned_remaining_cost = remainingDuration_hours * activityTrackingRecord.activity.baseline_schedule.hourly_cost
+                        # add costs of used resources:
+                        for resourceTuple in activityTrackingRecord.activity.resources:
+                            resource = resourceTuple[0]
+                            if resource.resource_type == ResourceType.CONSUMABLE:
+                                # activities should be sorted according to starting date: not done here => don't implement
+                                ## only add once the cost for its use!
+                                #if resource.resource_id not in consumableResourceIdsAlreadyUsed:
+                                #    # add cost for its use:
+                                #    currentPVcumsumValue += resource.cost_use
+                                #    if len(consumableResourceIdsAlreadyUsed) > 0:
+                                #        consumableResourceIdsAlreadyUsed.append(resource.resource_id)
+                                #    else:
+                                #        consumableResourceIdsAlreadyUsed = [resource.resource_id]
+                                pass
+                            else:
+                                #resource type is renewable:
+                                #add cost_use: 
+                                activityTrackingRecord.planned_actual_cost += resourceTuple[1] * resource.cost_use
+
+                            #variable cost of actualDuration_hours per demanded resource unit
+                            activityTrackingRecord.planned_actual_cost += resourceTuple[1] * (resource.cost_unit * actualDuration_hours)
+
+                            # no fixed starting costs anymore for PRC:
+                            activityTrackingRecord.planned_remaining_cost += resourceTuple[1] * remainingDuration_hours * resource.cost_unit
+                        #endFor adding resource costs
+
+                    else:
+                        # activity not yet started:
+                        activityTrackingRecord.planned_actual_cost = 0
+                        activityTrackingRecord.planned_remaining_cost = activityTrackingRecord.activity.baseline_schedule.total_cost
+
+                    activityTrackingRecord.actual_cost = activityTrackingRecord.planned_actual_cost + activityTrackingRecord.deviation_pac
+                    activityTrackingRecord.remaining_cost = activityTrackingRecord.planned_remaining_cost + activityTrackingRecord.deviation_prc
+
+                    # Calculate EV:
+                    if remainingDuration_hours == 0:
+                        # activity finished
+                        activityTrackingRecord.earned_value = activityTrackingRecord.activity.baseline_schedule.total_cost
+                    elif actualDuration_hours == 0:
+                        # activity not yet started:
+                        activityTrackingRecord.earned_value = 0
+                    else:
+                        # activity running:
+                        activityTrackingRecord.earned_value = activityTrackingRecord.activity.baseline_schedule.fixed_cost \
+                            + (actualDuration_hours / (actualDuration_hours + remainingDuration_hours)) * (activityTrackingRecord.activity.baseline_schedule.var_cost + activityTrackingRecord.activity.resource_cost)
+
+                    # Calculate PV:
+                    activityTrackingRecord.planned_value = 0  # this field is calculated below, where we know the status date
+
 
                     if len(activityTrackingRecord_list)>0:
                         activityTrackingRecord_list.append(activityTrackingRecord)
@@ -448,23 +490,49 @@ class XMLParser(FileParser):
             statusdate_datetime=self.getdate(statusdate,dateformat)
             TP_list[count]=TrackingPeriod(name,statusdate_datetime, ATR_matrix[count])
 
-            for activityTrackingRecord in ATR_matrix[count]:
-                activityTrackingRecord.tracking_period=TP_list[count]
-                enddate=project_agenda.get_end_date(begin_date=activityTrackingRecord.actual_start, days=activityTrackingRecord.actual_duration.days)
-                #enddate=self.getdate(enddate,dateformat)
-                #print(enddate, activityTrackingRecord.activity.activity_id)
+            # get valid working datetime:
+            statusdate_workingDatetime = project_agenda.get_next_date(statusdate_datetime, 0,0)
 
-                if statusdate_datetime < enddate and enddate.year < 2030 :
-                    t2=project_agenda.get_time_between(activityTrackingRecord.actual_start, enddate).days + \
-                       project_agenda.get_time_between(activityTrackingRecord.actual_start, enddate).seconds/8/3600
-                    t1=project_agenda.get_time_between(activityTrackingRecord.actual_start, statusdate_datetime).days \
-                       +project_agenda.get_time_between(activityTrackingRecord.actual_start, statusdate_datetime).seconds/8/3600
-                    percentage=t1/t2
-                    ActivityTrackingRecord.planned_value= math.ceil(percentage/100)*\
-                                                          (activityTrackingRecord.activity.baseline_schedule.fixed_cost+\
-                                                           (activityTrackingRecord.activity.resource_cost+\
-                                                 activityTrackingRecord.activity.baseline_schedule.var_cost*\
-                                                 activityTrackingRecord.activity.baseline_schedule.duration.days)*percentage/100)
+            for activityTrackingRecord in ATR_matrix[count]:
+                activityTrackingRecord.tracking_period = TP_list[count]
+
+                # calculate the planned value of this activity at this statusdate:
+                if statusdate_workingDatetime >= activityTrackingRecord.activity.baseline_schedule.end:
+                    # activity should be finished according to baselinschedule
+                    activityTrackingRecord.planned_value = activityTrackingRecord.activity.baseline_schedule.total_cost
+                elif statusdate_workingDatetime < activityTrackingRecord.activity.baseline_schedule.start:
+                    # activity is not yet started according to baselineschedule
+                    activityTrackingRecord.planned_value = 0
+                else:
+                    # activity is running
+                    activityRunningDuration = project_agenda.get_time_between(activityTrackingRecord.activity.baseline_schedule.start, statusdate_workingDatetime)
+                    activityRunningDuration_workingHours = activityRunningDuration.days * project_agenda.get_working_hours_in_a_day() + activityRunningDuration.seconds / 3600
+
+                    activityTrackingRecord.planned_value = activityTrackingRecord.activity.baseline_schedule.fixed_cost + activityRunningDuration_workingHours * activityTrackingRecord.activity.baseline_schedule.hourly_cost
+                    
+                    # add costs of resources until now:
+                    for resourceTuple in activityTrackingRecord.activity.resources:
+                        resource = resourceTuple[0]
+                        if resource.resource_type == ResourceType.CONSUMABLE:
+                            # activities should be sorted according to starting date: not done here => don't implement
+                            ## only add once the cost for its use!
+                            #if resource.resource_id not in consumableResourceIdsAlreadyUsed:
+                            #    # add cost for its use:
+                            #    currentPVcumsumValue += resource.cost_use
+                            #    if len(consumableResourceIdsAlreadyUsed) > 0:
+                            #        consumableResourceIdsAlreadyUsed.append(resource.resource_id)
+                            #    else:
+                            #        consumableResourceIdsAlreadyUsed = [resource.resource_id]
+                            pass
+                        else:
+                            # resource type is renewable:
+                            # add cost_use per demanded resource unit
+                            activityTrackingRecord.planned_value += resourceTuple[1] * resource.cost_use
+                        # add variable cost of resource:
+                        activityTrackingRecord.planned_value += resourceTuple[1] * activityRunningDuration_workingHours * resource.cost_unit
+                    #endFor adding resource use costs
+                #endIf calculating PV
+
             count+=1
 
 
@@ -526,7 +594,7 @@ class XMLParser(FileParser):
                 ag[0].baseline_schedule.end=max_end
                 ag[0].baseline_schedule.total_cost = total_cost
                 ag[0].baseline_schedule.fixed_cost = fixed_cost
-                ag[0].baseline_schedule.duration= (max_end -min_start)
+                ag[0].baseline_schedule.duration= project_agenda.get_time_between(min_start, max_end)
             #else:
                 # no real activity group (single activity)
 
@@ -548,7 +616,7 @@ class XMLParser(FileParser):
         activity_list_wbs[0].baseline_schedule.end=max_end
         activity_list_wbs[0].baseline_schedule.total_cost = total_cost
         activity_list_wbs[0].baseline_schedule.fixed_cost = fixed_cost
-        activity_list_wbs[0].baseline_schedule.duration= (max_end -min_start)
+        activity_list_wbs[0].baseline_schedule.duration= project_agenda.get_time_between(min_start, max_end)
 
 
         ## Make project object

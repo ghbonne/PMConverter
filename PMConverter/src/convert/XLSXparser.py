@@ -114,9 +114,8 @@ class XLSXParser(FileParser):
                     activity_id = int(project_control_sheet.cell(row=curr_row, column=1).value)
                     actual_start = None  # Set a default value in case there is nothing in that cell
                     if project_control_sheet.cell(row=curr_row, column=12).value:
-                        if type(project_control_sheet.cell(row=curr_row, column=12).value) is not datetime:
-                            actual_start = datetime.datetime.utcfromtimestamp(((project_control_sheet.cell(row=curr_row, column=12)
-                                                                                .value - 25569)*86400))  # ugly hack to convert
+                        if type(project_control_sheet.cell(row=curr_row, column=12).value) is not datetime.datetime:
+                            actual_start = datetime.datetime.utcfromtimestamp(((project_control_sheet.cell(row=curr_row, column=12).value - 25569)*86400))  # ugly hack to convert
                         else:
                             actual_start = project_control_sheet.cell(row=curr_row, column=12).value
                     actual_duration = None
@@ -1050,7 +1049,8 @@ class XLSXParser(FileParser):
                 if excel_version == ExcelVersion.EXTENDED:
                     ra_worksheet.write_number(counter, 0, activity.activity_id, cyan_cell)
                     ra_worksheet.write(counter, 1, str(activity.name), cyan_cell)
-                    ra_worksheet.write(counter, 2, self.get_duration_str(activity.baseline_schedule.duration), cyan_cell)
+                    ra_worksheet.write(counter, 2, self.get_duration_hours_str(activity.baseline_schedule.duration, project_object.agenda.get_working_hours_in_a_day()), cyan_cell)
+                    #ra_worksheet.write(counter, 2, self.get_duration_str(activity.baseline_schedule.duration), cyan_cell)
                     ra_worksheet.write(counter, 3, "", cyan_cell)
                     ra_worksheet.write(counter, 4, "", cyan_cell)
                     ra_worksheet.write(counter, 5, "", cyan_cell)
@@ -1066,7 +1066,8 @@ class XLSXParser(FileParser):
                 if excel_version == ExcelVersion.EXTENDED:
                     ra_worksheet.write_number(counter, 0, activity.activity_id, gray_cell)
                     ra_worksheet.write(counter, 1, str(activity.name), gray_cell)
-                    ra_worksheet.write(counter, 2, self.get_duration_str(activity.baseline_schedule.duration), gray_cell)
+                    ra_worksheet.write(counter, 2, self.get_duration_hours_str(activity.baseline_schedule.duration, project_object.agenda.get_working_hours_in_a_day()), gray_cell)
+                    #ra_worksheet.write(counter, 2, self.get_duration_str(activity.baseline_schedule.duration), gray_cell)
                     description = str(activity.risk_analysis.distribution_type.value) + " - " \
                                       + str(activity.risk_analysis.distribution_units.value)
                     ra_worksheet.write(counter, 3, description, yellow_cell)
@@ -1488,6 +1489,14 @@ class XLSXParser(FileParser):
                     duration = "-" + str(delta.days) + "d"
             return duration
         return "0"
+
+    @staticmethod
+    def get_duration_hours_str(delta, workingHoursInDay):
+        if delta:
+            totalWorkingHours = delta.days * workingHoursInDay + int(delta.seconds / 3600)
+            return "{0}h".format(totalWorkingHours)
+        else:
+            return "0"
 
     @staticmethod
     def write_wbs(worksheet, row, column, wbs, format):
