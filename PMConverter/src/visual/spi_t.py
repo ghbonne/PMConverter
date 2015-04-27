@@ -112,5 +112,5 @@ class SpiT(Visualization):
         counter = 2
 
         for tp in project_object.tracking_periods:
-            worksheet.write_number(counter, 38, tp.spi_t/100, calculation)
+            worksheet.write_number(counter, 38, tp.spi_t, calculation)
             counter += 1

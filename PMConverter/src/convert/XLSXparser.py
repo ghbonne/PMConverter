@@ -586,7 +586,7 @@ class XLSXParser(FileParser):
         timesWithSamePV = [x[1] for x in PVcurve if abs(x[0] - lowerPV) < 1e-5] 
         # currentTime can be the start of a workingInterval or the end of a working interval
         if currentTime in timesWithSamePV or project_object.agenda.get_previous_working_hour(currentTime) in timesWithSamePV:
-            return currentTime
+            return project_object.agenda.get_previous_working_hour(currentTime)
 
         return t
 
@@ -698,6 +698,96 @@ class XLSXParser(FileParser):
             return 0
 
         return (durationWorkingTimeES.days * project_object.agenda.get_working_hours_in_a_day() + (durationWorkingTimeES.seconds / 3600)) / (durationWorkingTimeAT.days * project_object.agenda.get_working_hours_in_a_day() + (durationWorkingTimeAT.seconds / 3600.0))
+
+    def calculate_p_factor(self, project_object, tracking_period, ES):
+        "This function calculates the p-factor for the given tracking_period and ES datetime"
+        # using algorithm:
+        # p-factor = sum(i?N)[ min(PV(i,ES), EV(i,AT))] / sum(i?N)[ PV(i,ES)]
+        # with 
+        # N: The set of all activities of the project network
+        # PV(i,ES): The planned value of activity i at time ES 
+        # EV(i,AT): The earned value of activity i at time AT
+
+        # DEBUG:
+        print("XLSXParser:calculate_p_factor: given tracking_period_records length = {0}".format(len(tracking_period.tracking_period_records)))
+
+        # sort the tracking_period_records according to its activity baseline schedule start and end date => can figure out which activity uses first a consumable resource
+
+        # retrieve only lowest level activities and sort them on their baseline start date and end date
+        lowestLevelActivitiesTrackingRecords = [atr for atr in tracking_period.tracking_period_records if not XLSXParser.is_not_lowest_level_activity(atr.activity)]
+        lowestLevelActivitiesTrackingRecordsSorted = sorted(lowestLevelActivitiesTrackingRecords, key=attrgetter('activity.baseline_schedule.start', 'activity.baseline_schedule.end'))
+
+        numerator = 0
+        denominator = 0
+        consumableResourceIdsAlreadyUsed = []  # to only inquire once the cost/use of a consumable resource
+        ESdatetime = project_object.agenda.get_next_date(ES, 0,0)
+
+        for atr in lowestLevelActivitiesTrackingRecordsSorted:
+            # determine The planned value of activity i at time ES:
+            PV_i_ES = 0
+            if ESdatetime <= atr.activity.baseline_schedule.start:
+                # activity is not yet started according to plan => no planned value
+                pass
+            elif ESdatetime >= atr.activity.baseline_schedule.end:
+                # activity is already finished according to plan => PVi = total_cost
+                PV_i_ES = atr.activity.baseline_schedule.total_cost
+                # check if to add resosurce type to consumableResourceIdsAlreadyUsed:
+                for resourceTuple in atr.activity.resources:
+                    resource = resourceTuple[0]
+                    if resource.resource_type == ResourceType.CONSUMABLE:
+                        # only add once the cost for its use!
+                        if resource.resource_id not in consumableResourceIdsAlreadyUsed:
+                            if len(consumableResourceIdsAlreadyUsed) > 0:
+                                consumableResourceIdsAlreadyUsed.append(resource.resource_id)
+                            else:
+                                consumableResourceIdsAlreadyUsed = [resource.resource_id]
+                #endFor adding resource use costs
+            else:
+                # activity is still running => calculate intermediate PV value:
+                PV_i_ES = atr.activity.baseline_schedule.fixed_cost
+
+                # add starting use cost of used resources by this activity:
+                for resourceTuple in atr.activity.resources:
+                    resource = resourceTuple[0]
+                    if resource.resource_type == ResourceType.CONSUMABLE:
+                        # only add once the cost for its use!
+                        if resource.resource_id not in consumableResourceIdsAlreadyUsed:
+                            # add cost for its use:
+                            PV_i_ES += resource.cost_use
+                            if len(consumableResourceIdsAlreadyUsed) > 0:
+                                consumableResourceIdsAlreadyUsed.append(resource.resource_id)
+                            else:
+                                consumableResourceIdsAlreadyUsed = [resource.resource_id]
+                    else:
+                        # resource type is renewable:
+                        # add cost_use per demanded resource unit
+                        PV_i_ES += resourceTuple[1] * resource.cost_use
+                #endFor adding resource use costs
+
+                # add variable costs of this activity according to duration that this activity is running:
+                # determine running duration:
+                actStartDatetime = project_object.agenda.get_next_date(atr.activity.baseline_schedule.start, 0,0)
+                
+                runningTimedelta = project_object.agenda.get_time_between(actStartDatetime, ESdatetime)
+                runningWorkingHours = runningTimedelta.days * project_object.agenda.get_working_hours_in_a_day() + int(runningTimedelta.seconds / 3600)
+
+                # activity variable cost:
+                PV_i_ES += atr.activity.baseline_schedule.hourly_cost * runningWorkingHours
+                # activity its resources variable costs:
+                for resourceTuple in atr.activity.resources:
+                    PV_i_ES += resourceTuple[0].cost_unit * resourceTuple[1] * runningWorkingHours # cost/(hour * unit) * demanded units * running hours
+
+            #endIF calculating PV_i_ES
+            numerator += min(PV_i_ES, atr.earned_value)
+            denominator += PV_i_ES
+        #endFor all activity tracking records
+
+        if denominator < 1e-10:
+            return 0.0
+        else:
+            return numerator / denominator
+
+
 
     def from_schedule_object(self, project_object, file_path_output, excel_version):        
         """
@@ -1257,19 +1347,19 @@ class XLSXParser(FileParser):
             if not self.calculate_aggregated_pv(tracking_period):
                 spi = 0
             else:
-                spi = str(round((self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_pv(tracking_period)*100))) + "%"
+                spi = self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_pv(tracking_period)
             # save spi value also in tracking_period for visualisations:
             tracking_period.spi = spi
-            overview_worksheet.write(counter, 8, spi, green_cell)
+            overview_worksheet.write(counter, 8, str(round(spi * 100)) + "%", green_cell)
             cv = self.calculate_aggregated_ev(tracking_period) - self.calculate_aggregated_ac(tracking_period)
             overview_worksheet.write_number(counter, 9, cv, money_green_cell)
             if not self.calculate_aggregated_ac(tracking_period):
                 cpi = 0
             else:
-                cpi = str(round((self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_ac(tracking_period)*100))) + "%"
+                cpi = self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_ac(tracking_period)
             # save cpi value also in tracking_period for visualisations:
             tracking_period.cpi = cpi
-            overview_worksheet.write(counter, 10, cpi, green_cell)
+            overview_worksheet.write(counter, 10, str(round(cpi * 100)) +"%", green_cell)
 
             # calculate SV(t)
             sv_t, sv_t_str = self.calculate_SVt(project_object, ES, tracking_period.tracking_period_statusdate)
@@ -1283,14 +1373,13 @@ class XLSXParser(FileParser):
             tracking_period.spi_t = spi_t
             overview_worksheet.write(counter, 12, str(round(spi_t * 100)) + "%", green_cell)
 
-            # TODO: more metrics
-
             # calculate p-factor
-            #TODO
+            p_factor = self.calculate_p_factor(project_object, tracking_period, ES)
+            overview_worksheet.write(counter, 13, str(round(p_factor * 100)) + "%", green_cell)
+            # save p_factor value also in tracking_period for visualisations:
+            tracking_period.p_factor = p_factor
 
-            #DEBUG:
-            tracking_period.p_factor = 1.0
-
+            # TODO: more metrics
 
             if excel_version == ExcelVersion.EXTENDED:
                 overview_worksheet.write_number(counter, 23, self.calculate_eac(self.calculate_aggregated_ac(tracking_period),
