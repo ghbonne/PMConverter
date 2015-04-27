@@ -1478,12 +1478,18 @@ class XLSXParser(FileParser):
         worksheet.write(row, column, to_write, format)
 
     @staticmethod
-    def is_not_lowest_level_activity(activity):
+    def is_not_lowest_level_activity(activity, activities):
         # Decide whether an activity is not of the lowest level or not.
-        if activity.baseline_schedule.var_cost is not None:
-            return False
+        if activity.wbs_id is None:
+            if activity.baseline_schedule.var_cost is not None:
+                return False
+            else:
+                return True
         else:
-            return True
+            for _activity in activities:
+                if _activity is not activity and activity.wbs_id <= _activity.wbs_id:
+                        return True
+            return False
 
     @staticmethod
     def write_resources(worksheet, row, column, resources, format):
