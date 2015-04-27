@@ -1390,22 +1390,14 @@ class XLSXParser(FileParser):
                 overview_worksheet.write_number(counter, 24, self.calculate_eac(AC,BAC, EV, cpi), money_green_cell)
                 
                 # write EAC(PF = spi)
-                if spi != 0:
-                    spi = self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_pv(tracking_period)
-                    overview_worksheet.write_number(counter, 25, self.calculate_eac(self.calculate_aggregated_ac(tracking_period),
-                                                                                    self.get_bac(tracking_period), self.calculate_aggregated_ev(tracking_period),
-                                                                                    spi), money_green_cell)
-                else:
-                    overview_worksheet.write_number(counter, 25, 0, money_green_cell)
+                overview_worksheet.write_number(counter, 25, self.calculate_eac(AC, BAC, EV, spi), money_green_cell)
 
-                if cpi != 0 or spi != 0:
-                    cpi = self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_ac(tracking_period)
-                    spi = self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_pv(tracking_period)
-                    overview_worksheet.write_number(counter, 29, self.calculate_eac(self.calculate_aggregated_ac(tracking_period),
-                                                                                    self.get_bac(tracking_period), self.calculate_aggregated_ev(tracking_period),
-                                                                                    0.8*cpi+0.2*spi), money_green_cell)
-                else:
-                    overview_worksheet.write_number(counter, 29, 0, money_green_cell)
+                # write EAC(PF = spi_t)
+                overview_worksheet.write_number(counter, 26, self.calculate_eac(AC, BAC, EV, spi_t), money_green_cell)
+
+                # write EAC(PF = 0.8*CPI+0.2*SPI)
+                overview_worksheet.write_number(counter, 29, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi), money_green_cell)
+
 
             # TODO: more metrics
 
