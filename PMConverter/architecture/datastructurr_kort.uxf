@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="13.0">
+  <zoom_level>8</zoom_level>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>0</x>
+      <y>272</y>
+      <w>208</w>
+      <h>96</h>
+    </coordinates>
+    <panel_attributes>*ProjectObject*
+--
+-name: String
+-activities: List(Activity)
+-tracking_periods: List(TrackingPeriod)
+-resources: List(Resource)
+-agenda: Agenda
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>392</x>
+      <y>264</y>
+      <w>288</w>
+      <h>128</h>
+    </coordinates>
+    <panel_attributes>*TrackingPeriod*
+--
+-tracking_period_name: String
+-tracking_period_statusdate: Datetime
+-tracking_period_records: List(ActivityTrackingRecords)
+-spi: int
+-cpi: int
+-spi_t: int
+-p_factor: int
+-sv_t: int
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>392</x>
+      <y>80</y>
+      <w>248</w>
+      <h>160</h>
+    </coordinates>
+    <panel_attributes>*Activity*
+--
+-id: int
+-name: String
+-wbs_id: tuple
+-predecessors: List(tuple)
+-successors: List(tuple)
+-resources: List(tuple)
+-resource_cost: float
+-baseline_schedule: BaseLineScheduleRecord
+-risk_analysis: RiskAnalysisDistribution
+-activity_tracking: List(ActivityTrackingRecord)
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>392</x>
+      <y>408</y>
+      <w>168</w>
+      <h>104</h>
+    </coordinates>
+    <panel_attributes>*Resource*
+--
+-resource_id: int
+-name: String
+-resource_type: ResourceType
+-availability: int
+-cost_use: float
+-cost_unit: float
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>392</x>
+      <y>520</y>
+      <w>168</w>
+      <h>72</h>
+    </coordinates>
+    <panel_attributes>*Agenda*
+--
+-working_hours: List(bool)  
+-working_days: List(bool)              
+-holidays: List(String)
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>800</x>
+      <y>0</y>
+      <w>176</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>*BaselineScheduleRecord*
+--
+-start: datetime
+-end: datetime
+-duration: timedelta
+-fixed_cost: float
+-hourly_cost: float
+-var_cost: float
+-total_cost : float</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>800</x>
+      <y>128</y>
+      <w>200</w>
+      <h>88</h>
+    </coordinates>
+    <panel_attributes>*RiskAnalysisDistribution*
+--
+-distribution_type: DistributionType
+-distribution_units: DistributionUnit
+-optimistic_duration: int
+-probable_duration: int
+-pessimistic_duration: int</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>800</x>
+      <y>224</y>
+      <w>200</w>
+      <h>216</h>
+    </coordinates>
+    <panel_attributes>*ActivityTrackingRecord*
+--
+-tracking_period: TrackingPeriod
+-activity: Activity
+-actual_start: datetime
+-actual_duration: timedelta
+-planned_actual_cost: float
+-planned_remaining_cost: float
+-remaining_duration: int
+-deviation_pac: float
+-deviation_prc: float
+-actual_cost: float
+-remaining_cost: float
+-percentage_completed: int 
+-tracking_status: String
+-earned_value: float
+-planned_value: float</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>200</x>
+      <y>160</y>
+      <w>208</w>
+      <h>144</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-
+m1=1
+m2=1..n</panel_attributes>
+    <additional_attributes>10.0;160.0;240.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>200</x>
+      <y>296</y>
+      <w>208</w>
+      <h>40</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-
+m1=1
+m2=1..n</panel_attributes>
+    <additional_attributes>10.0;20.0;240.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>200</x>
+      <y>320</y>
+      <w>208</w>
+      <h>112</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-
+m1=1
+m2=1..n</panel_attributes>
+    <additional_attributes>10.0;10.0;240.0;120.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>200</x>
+      <y>344</y>
+      <w>208</w>
+      <h>200</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-
+m1=1
+m2=1</panel_attributes>
+    <additional_attributes>10.0;10.0;240.0;230.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>632</x>
+      <y>0</y>
+      <w>184</w>
+      <h>112</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-
+m1=1
+m2=1..n</panel_attributes>
+    <additional_attributes>10.0;120.0;210.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>632</x>
+      <y>128</y>
+      <w>184</w>
+      <h>32</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-
+m1=1
+m2=1</panel_attributes>
+    <additional_attributes>10.0;10.0;210.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>632</x>
+      <y>184</y>
+      <w>184</w>
+      <h>64</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-
+m1=1
+m2=1..n</panel_attributes>
+    <additional_attributes>10.0;10.0;210.0;60.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>672</x>
+      <y>288</y>
+      <w>144</w>
+      <h>64</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-
+m1=1
+m2=1..n</panel_attributes>
+    <additional_attributes>10.0;60.0;160.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>632</x>
+      <y>216</y>
+      <w>184</w>
+      <h>64</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-
+m1=1
+m2=1</panel_attributes>
+    <additional_attributes>210.0;60.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>672</x>
+      <y>312</y>
+      <w>144</w>
+      <h>64</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-
+m1=1
+m2=1</panel_attributes>
+    <additional_attributes>160.0;10.0;10.0;60.0</additional_attributes>
+  </element>
+</diagram>
