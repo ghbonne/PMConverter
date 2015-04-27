@@ -1,0 +1,6 @@
+*.pyproj
+*.sln
+*.suo
+.idea/*
+output/*
+__pycache__/
