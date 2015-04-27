@@ -35,6 +35,11 @@ for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
         print("Parsing from file to project object")
         try:
             po = xml_parser.to_schedule_object(input_path)
+
+            print("Generating excel output")
+            # Write the projectobject we just processed to a file
+            workbook = xlsx_parser.from_schedule_object(po, output_path, excel_version)
+
         except:
             print("FAILED")
             print("Unhandled Exception occurred of type: {0}".format(sys.exc_info()[0]))
@@ -43,14 +48,11 @@ for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
             frame = tb.tb_frame
             linenr = tb.tb_lineno
             filename = frame.f_code.co_filename
-            print("EXCEPTION in {0} on line {1}".format(filename, linenr))
+            print("EXCEPTION in {0} on line {1}\n".format(filename, linenr))
             traceback.print_exc()
             continue
 
-        print("Generating excel output")
-        # Write the projectobject we just processed to a file
-        workbook = xlsx_parser.from_schedule_object(po, output_path, excel_version)
-
+        print("visualisations")
         #addvisualissations
         for worksheet in workbook.worksheets():
             if worksheet.get_name() == "Resources":
