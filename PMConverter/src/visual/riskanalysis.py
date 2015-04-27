@@ -43,15 +43,12 @@ class RiskAnalysis(Visualization):
         i = 0
         start = 3
         while i < len(activities):
-            if len(activities[i].wbs_id) == 3:  # activity level
-                names += "'Risk Analysis'!$B$" + str(start+i) + ","
-                optimistic += "'Risk Analysis'!$W$" + str(start+i) + ","
-                most_probable += "'Risk Analysis'!$X$" + str(start+i) + ","
-                pessimistic += "'Risk Analysis'!$Y$" + str(start+i) + ","
-                height += 20
-                i += 1
-            else:  # not supported
-                i += 1
+            names += "'Risk Analysis'!$B$" + str(start+i) + ","
+            optimistic += "'Risk Analysis'!$W$" + str(start+i) + ","
+            most_probable += "'Risk Analysis'!$X$" + str(start+i) + ","
+            pessimistic += "'Risk Analysis'!$Y$" + str(start+i) + ","
+            height += 20
+            i += 1
 
         # remove last ';' and add ')'
         names = names[:-1] + ")"
