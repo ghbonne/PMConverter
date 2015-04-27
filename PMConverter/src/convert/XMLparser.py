@@ -438,11 +438,27 @@ class XMLParser(FileParser):
         count=0
         for tracking_period_info in tracking_list.findall('TrackingPeriod'):
             name=tracking_period_info.find('Name').text
-            enddate=tracking_period_info.find('EndDate').text
-            enddate_datetime=self.getdate(enddate,dateformat)
-            TP_list[count]=TrackingPeriod(name,enddate_datetime, ATR_matrix[count])
+            statusdate=tracking_period_info.find('EndDate').text
+            statusdate_datetime=self.getdate(statusdate,dateformat)
+            TP_list[count]=TrackingPeriod(name,statusdate_datetime, ATR_matrix[count])
+
             for activityTrackingRecord in ATR_matrix[count]:
                 activityTrackingRecord.tracking_period=TP_list[count]
+                enddate=project_agenda.get_end_date(begin_date=activityTrackingRecord.actual_start, days=activityTrackingRecord.actual_duration.days)
+                #enddate=self.getdate(enddate,dateformat)
+                #print(enddate, activityTrackingRecord.activity.activity_id)
+
+                if statusdate_datetime < enddate and enddate.year < 2030 :
+                    t2=project_agenda.get_time_between(activityTrackingRecord.actual_start, enddate).days + \
+                       project_agenda.get_time_between(activityTrackingRecord.actual_start, enddate).seconds/8/3600
+                    t1=project_agenda.get_time_between(activityTrackingRecord.actual_start, statusdate_datetime).days \
+                       +project_agenda.get_time_between(activityTrackingRecord.actual_start, statusdate_datetime).seconds/8/3600
+                    percentage=t1/t2
+                    ActivityTrackingRecord.planned_value= math.ceil(percentage/100)*\
+                                                          (activityTrackingRecord.activity.baseline_schedule.fixed_cost+\
+                                                           (activityTrackingRecord.activity.resource_cost+\
+                                                 activityTrackingRecord.activity.baseline_schedule.var_cost*\
+                                                 activityTrackingRecord.activity.baseline_schedule.duration.days)*percentage/100)
             count+=1
 
 
