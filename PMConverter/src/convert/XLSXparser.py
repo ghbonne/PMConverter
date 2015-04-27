@@ -549,13 +549,14 @@ class XLSXParser(FileParser):
     #        if pvs[i] <= ev < pvs[i+1]:
     #            x = pvs[i+1] - ev
 
-    def calculate_es(self, project_object, PVcurve, current_EV):
+    def calculate_es(self, project_object, PVcurve, current_EV, currentTime):
         """
         This function calculates the ES datetime based on given PVcurve, current EV value and current time
 
         :param project_object: ProjectObject, the project object corresponding to the PVcurve
         :param PVcurve: list of tuples, (PV cumsum value, datetime of this PV cumsum value) as calculated by calculate_PVcurve
         :param current_EV: float, Earned value for which to search the ES
+        :param currentTime: datetime, statusdate
         """
         # algorithm:
         # Find t such that EV ? PV(t) and EV < PV(t+1)
@@ -580,8 +581,12 @@ class XLSXParser(FileParser):
         if not pointFound:
             t = max([activity.baseline_schedule.end for activity in project_object.activities])  # projectBaselineEndDate
 
-        ##DEBUG:
-        #timesWithSamePV = [x[1] for x in PVcurve if abs(x[0] - lowerPV) < 1e-5]
+        # NOTE: wanted behaviour?
+        # Correct ES to statusDate if PVcumsum has the same value there:
+        timesWithSamePV = [x[1] for x in PVcurve if abs(x[0] - lowerPV) < 1e-5] 
+        # currentTime can be the start of a workingInterval or the end of a working interval
+        if currentTime in timesWithSamePV or project_object.agenda.get_previous_working_hour(currentTime) in timesWithSamePV:
+            return currentTime
 
         return t
 
@@ -662,9 +667,37 @@ class XLSXParser(FileParser):
             currentDatetime = project_object.agenda.get_next_date(currentDatetime, 0, 0) + datetime.timedelta(hours = 1)
             # DEBUG: record how many hours processed, should match with project baseline duration
             traversedHours += 1
-
             
         return generated_PVcurve
+
+    def calculate_SVt(self, project_object, ES, currentTime):
+        """This function calculates the SV(t) in hours, based on the given ES and currentTime.
+        returns: (SV(t) in workinghours, string representation of SV(t))
+        """
+        # determine the time between ES and currentTime:
+        currentTimeValidDatetime = project_object.agenda.get_next_date(currentTime, 0,0)
+        ESvalidDate = project_object.agenda.get_next_date(ES, 0,0)
+
+        if ES >= currentTime:
+            timeBetween = project_object.agenda.get_time_between(currentTimeValidDatetime, ESvalidDate)
+            return (timeBetween.days * project_object.agenda.get_working_hours_in_a_day() + int(timeBetween.seconds / 3600), XLSXParser.get_duration_str(timeBetween, False))
+        else:
+            timeBetween = project_object.agenda.get_time_between(ESvalidDate, currentTimeValidDatetime)
+            return (- timeBetween.days * project_object.agenda.get_working_hours_in_a_day() - int(timeBetween.seconds / 3600), XLSXParser.get_duration_str(timeBetween, True))
+
+    def calculate_SPIt(self, project_object, ES, currentTime):
+        "This fuction calculates the SPI(t) value = ES / AT"
+        ESvalidDate = project_object.agenda.get_next_date(ES, 0,0)
+        currentTimeValidDatetime = project_object.agenda.get_next_date(currentTime, 0,0)
+
+        projectBaselineStartDate = min([activity.baseline_schedule.start for activity in project_object.activities])
+        durationWorkingTimeES = project_object.agenda.get_time_between(projectBaselineStartDate , ESvalidDate)
+        durationWorkingTimeAT = project_object.agenda.get_time_between(projectBaselineStartDate , currentTimeValidDatetime)
+
+        if durationWorkingTimeAT.total_seconds() <= 0:
+            return 0
+
+        return (durationWorkingTimeES.days * project_object.agenda.get_working_hours_in_a_day() + (durationWorkingTimeES.seconds / 3600)) / (durationWorkingTimeAT.days * project_object.agenda.get_working_hours_in_a_day() + (durationWorkingTimeAT.seconds / 3600.0))
 
     def from_schedule_object(self, project_object, file_path_output, excel_version):        
         """
@@ -1213,10 +1246,12 @@ class XLSXParser(FileParser):
             overview_worksheet.write_datetime(counter, 2, tracking_period.tracking_period_statusdate, date_green_cell)
             overview_worksheet.write_number(counter, 3, self.calculate_aggregated_pv(tracking_period), money_green_cell)
             # calculate EV
-            current_EV = self.calculate_aggregated_ev(tracking_period)
-            overview_worksheet.write_number(counter, 4, current_EV, money_green_cell)
+            EV = self.calculate_aggregated_ev(tracking_period)
+            overview_worksheet.write_number(counter, 4, EV, money_green_cell)
             overview_worksheet.write_number(counter, 5, self.calculate_aggregated_ac(tracking_period), money_green_cell)
-            overview_worksheet.write_datetime(counter, 6, self.calculate_es(project_object, generatedPVcurve, current_EV), date_green_cell)
+            # calculate ES
+            ES = self.calculate_es(project_object, generatedPVcurve, EV, tracking_period.tracking_period_statusdate)
+            overview_worksheet.write_datetime(counter, 6, ES, date_green_cell)
             sv = self.calculate_aggregated_ev(tracking_period) - self.calculate_aggregated_pv(tracking_period)
             overview_worksheet.write_number(counter, 7, sv, money_green_cell)
             if not self.calculate_aggregated_pv(tracking_period):
@@ -1236,7 +1271,26 @@ class XLSXParser(FileParser):
             tracking_period.cpi = cpi
             overview_worksheet.write(counter, 10, cpi, green_cell)
 
+            # calculate SV(t)
+            sv_t, sv_t_str = self.calculate_SVt(project_object, ES, tracking_period.tracking_period_statusdate)
+            # save SV(t) value also in tracking_period for visualisations:
+            tracking_period.sv_t = sv_t
+            overview_worksheet.write(counter, 11, sv_t_str, green_cell)
+
+            # calculate SPI(t)
+            spi_t = self.calculate_SPIt(project_object, ES, tracking_period.tracking_period_statusdate)
+            # save spi_t value also in tracking_period for visualisations:
+            tracking_period.spi_t = spi_t
+            overview_worksheet.write(counter, 12, str(round(spi_t * 100)) + "%", green_cell)
+
             # TODO: more metrics
+
+            # calculate p-factor
+            #TODO
+
+            #DEBUG:
+            tracking_period.p_factor = 1.0
+
 
             if excel_version == ExcelVersion.EXTENDED:
                 overview_worksheet.write_number(counter, 23, self.calculate_eac(self.calculate_aggregated_ac(tracking_period),
@@ -1273,14 +1327,24 @@ class XLSXParser(FileParser):
         return workbook
 
     @staticmethod
-    def get_duration_str(delta):
+    def get_duration_str(delta, negativeValue=False):
         if delta:
             # Writing a duration requires some converting..
-            if delta.seconds != 0:
-                duration = str(delta.days) + "d " \
-                           + str(int(delta.seconds / 3600)) + "h"
+            if delta.days != 0 and delta.seconds != 0:
+                if not negativeValue:
+                    duration = str(delta.days) + "d " + str(int(delta.seconds / 3600)) + "h"
+                else:
+                    duration = "-" + str(delta.days) + "d " + str(int(delta.seconds / 3600)) + "h"
+            elif delta.seconds != 0:
+                if not negativeValue:
+                    duration = str(int(delta.seconds / 3600)) + "h"
+                else:
+                    duration = "-" + str(int(delta.seconds / 3600)) + "h"
             else:
-                duration = str(delta.days) + "d"
+                if not negativeValue:
+                    duration = str(delta.days) + "d"
+                else:
+                    duration = "-" + str(delta.days) + "d"
             return duration
         return "0"
 

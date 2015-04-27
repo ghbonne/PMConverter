@@ -15,7 +15,7 @@ class TrackingPeriod(object):
     :var cpi
     :var spi_t
     :var p_factor
-    :var sv_t
+    :var sv_t : duration in workinghours
     """
 
     def __init__(self, tracking_period_name="", tracking_period_statusdate=datetime.now(),
