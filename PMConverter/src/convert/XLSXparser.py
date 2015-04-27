@@ -1334,32 +1334,37 @@ class XLSXParser(FileParser):
             else:
                 overview_worksheet.write_datetime(counter, 1, project_object.tracking_periods[index-1].tracking_period_statusdate, date_green_cell)
             overview_worksheet.write_datetime(counter, 2, tracking_period.tracking_period_statusdate, date_green_cell)
-            overview_worksheet.write_number(counter, 3, self.calculate_aggregated_pv(tracking_period), money_green_cell)
+
+            # calculate PV
+            PV = self.calculate_aggregated_pv(tracking_period)
+            overview_worksheet.write_number(counter, 3, PV, money_green_cell)
             # calculate EV
             EV = self.calculate_aggregated_ev(tracking_period)
             overview_worksheet.write_number(counter, 4, EV, money_green_cell)
-            overview_worksheet.write_number(counter, 5, self.calculate_aggregated_ac(tracking_period), money_green_cell)
+            # calculate AC
+            AC = self.calculate_aggregated_ac(tracking_period)
+            overview_worksheet.write_number(counter, 5, AC, money_green_cell)
             # calculate ES
             ES = self.calculate_es(project_object, generatedPVcurve, EV, tracking_period.tracking_period_statusdate)
             overview_worksheet.write_datetime(counter, 6, ES, date_green_cell)
             # calculate SV
-            sv = self.calculate_aggregated_ev(tracking_period) - self.calculate_aggregated_pv(tracking_period)
+            sv = EV - PV
             overview_worksheet.write_number(counter, 7, sv, money_green_cell)
             # calculate SPI
-            if not self.calculate_aggregated_pv(tracking_period):
+            if not PV:
                 spi = 0
             else:
-                spi = self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_pv(tracking_period)
+                spi = EV / PV
             # save spi value also in tracking_period for visualisations:
             tracking_period.spi = spi
             overview_worksheet.write(counter, 8, str(round(spi * 100)) + "%", green_cell)
             # calculate CV
-            cv = self.calculate_aggregated_ev(tracking_period) - self.calculate_aggregated_ac(tracking_period)
+            cv = EV - AC
             overview_worksheet.write_number(counter, 9, cv, money_green_cell)
-            if not self.calculate_aggregated_ac(tracking_period):
+            if not AC:
                 cpi = 0
             else:
-                cpi = self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_ac(tracking_period)
+                cpi = EV /AC
             # save cpi value also in tracking_period for visualisations:
             tracking_period.cpi = cpi
             overview_worksheet.write(counter, 10, str(round(cpi * 100)) +"%", green_cell)
@@ -1385,8 +1390,9 @@ class XLSXParser(FileParser):
             # TODO: more metrics
 
             if excel_version == ExcelVersion.EXTENDED:
-                BAC = generatedPVcurve[-1:][0][0]
-                AC = self.calculate_aggregated_ac(tracking_period)
+                BAC = generatedPVcurve[-1:][0][0]  # last PV cumsum point corresponds to BAC
+                #PD = 
+
                 # write EAC(PF = 1)
                 overview_worksheet.write_number(counter, 23, self.calculate_eac(AC, BAC, EV, 1), money_green_cell)
                 # write EAC(PF = cpi)
