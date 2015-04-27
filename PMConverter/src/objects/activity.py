@@ -19,9 +19,6 @@ class Activity(object):
     :var resource_cost: float
     :var baseline_schedule: BaseLineScheduleRecord
     :var risk_analysis: RiskAnalysisDistribution
-
-    # TODO: ActivityTrackingRecord never used here?
-    :var activity_tracking: ActivityTrackingRecord
     """
 
     def __init__(self, activity_id, name="", wbs_id=(), predecessors=[], successors=[], resources=[], resource_cost=0.0,

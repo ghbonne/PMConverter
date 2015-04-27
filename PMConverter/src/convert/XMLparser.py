@@ -16,6 +16,7 @@ from objects.agenda import Agenda
 from objects.projectobject import ProjectObject
 from convert.fileparser import FileParser
 import math
+import ast
 
 
 
@@ -309,7 +310,7 @@ class XMLParser(FileParser):
             for resource_assignment in resource_assignments.findall('ResourceAssignment'):
                 res_id=int(resource_assignment.find('FIELD1025').text)
                 activity_ID=int(resource_assignment.find('FIELD1024').text)
-                res_needed=int(resource_assignment.find('FIELD1026').text)
+                res_needed=ast.literal_eval(resource_assignment.find('FIELD1026').text)
                 for activity in activity_list:
                     if activity != None:
                        if activity.activity_id == activity_ID:

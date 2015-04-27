@@ -1,6 +1,7 @@
 import datetime
 import os
 import re
+import sys, traceback
 from convert.XLSXparser import XLSXParser
 from convert.XMLparser import XMLParser
 from visual.resourcedistribution import ResourceDistribution
@@ -32,7 +33,19 @@ for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
         excel_version = ExcelVersion.EXTENDED
 
         print("Parsing from file to project object")
-        po = xml_parser.to_schedule_object(input_path)
+        try:
+            po = xml_parser.to_schedule_object(input_path)
+        except:
+            print("FAILED")
+            print("Unhandled Exception occurred of type: {0}".format(sys.exc_info()[0]))
+            print("Unhandled Exception value = {0}".format(sys.exc_info()[1] if sys.exc_info()[1] is not None else "None"))
+            exc_type, exc_obj, tb = sys.exc_info()
+            frame = tb.tb_frame
+            linenr = tb.tb_lineno
+            filename = frame.f_code.co_filename
+            print("EXCEPTION in {0} on line {1}".format(filename, linenr))
+            traceback.print_exc()
+            continue
 
         print("Generating excel output")
         # Write the projectobject we just processed to a file
@@ -91,4 +104,4 @@ for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
                 v12.draw(workbook, worksheet,po,excel_version)
 
         workbook.close()
-    print("--DONE--")
+    print("--DONE--\n")
