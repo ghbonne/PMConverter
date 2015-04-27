@@ -115,7 +115,7 @@ class ActualCost(Visualization):
         counter = 4
 
         for atr in project_object.tracking_periods[tp].tracking_period_records:  # atr = ActivityTrackingRecord
-            if (len(atr.activity.wbs_id) == 2 and self.level_of_detail == LevelOfDetail.WORK_PACKAGES) or (len(atr.activity.wbs_id) == 3 and self.level_of_detail == LevelOfDetail.ACTIVITIES):
+            if (atr.activity.baseline_schedule.var_cost is None and self.level_of_detail == LevelOfDetail.WORK_PACKAGES) or (atr.activity.baseline_schedule.var_cost is not None and self.level_of_detail == LevelOfDetail.ACTIVITIES):
                 if self.data_type == DataType.RELATIVE:
                     # relative baseline cost
                     worksheet.write_number(counter, 29, 1, calculation)
