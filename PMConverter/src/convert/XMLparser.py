@@ -15,6 +15,7 @@ from objects.riskanalysisdistribution import StandardDistributionUnit
 from objects.agenda import Agenda
 from objects.projectobject import ProjectObject
 from convert.fileparser import FileParser
+import math
 
 
 
@@ -227,12 +228,16 @@ class XMLParser(FileParser):
                 Lag = relation.find('Lag').text
                 LagKind = relation.find('LagKind').text
                 LagType = relation.find('LagType').text
-                LagString=''
                 if LagKind == '0' and LagType == '2':
                     LagString='FS'
+                elif LagKind == '0' and LagType == '0':
+                    LagString='SS'
+                elif LagKind == '0' and LagType == '1':
+                    LagString='SF'
+                elif LagKind == '0' and LagType == '3':
+                    LagString='FF'
                 else:
-                    #TODO: Other possibilites
-                    0;
+                    raise 'Lag Undefined'
 
                 SuccessorTuple = (Successor, LagString, Lag)
                 PredecessorTuple = (Predecessor, LagString, Lag)
@@ -249,10 +254,6 @@ class XMLParser(FileParser):
                                 (activity.predecessors).append(PredecessorTuple)
                             else:
                                 (activity.predecessors) = [PredecessorTuple]
-
-
-
-
 
         ## WBS ##
         for outline in root.findall('OutlineList'):
@@ -279,8 +280,6 @@ class XMLParser(FileParser):
                                         wbsTuple=(1, counter1, counter2)
                                         activity2.wbs_id=wbsTuple
 
-
-
         ###### Resources ######
         ## Resources (Definition)
         for resources in root.findall('Resources'):
@@ -299,6 +298,9 @@ class XMLParser(FileParser):
                 total_cost=float(resource.find('FIELD776').text)
                 res=Resource(res_ID, name, res_type, availability_int, cost_per_use, cost_per_unit, total_cost)
                 res_list.append(res)
+
+
+
 
         ## Resources (Assignment)
         for resource_assignments in root.findall('ResourceAssignments'):
@@ -320,8 +322,6 @@ class XMLParser(FileParser):
                                         activity.resources.append(resourceTuple)
                                    else:
                                        activity.resources=[resourceTuple]
-
-
 
 
 
@@ -353,7 +353,6 @@ class XMLParser(FileParser):
                         i+=1
                 distribution_list[x]=(RiskAnalysisDistribution(distr_id=x,distr_name=name,distribution_type=DistributionType.MANUAL, distribution_units=ManualDistributionUnit.ABSOLUTE,
                                                                   optimistic_duration=distr[0],probable_duration=distr[1], pessimistic_duration=distr[2]))
-
         for activities in root.findall('Activities'):
             for activity in activities.findall('Activity'):
                 for activity_l in activity_list:
@@ -407,12 +406,21 @@ class XMLParser(FileParser):
                     activityTrackingRecord.tracking_status=trackingStatus
 
                     # Should have been already read from previous data fields
-                    #TODO
-                    activityTrackingRecord.actual_cost=0
-                    activityTrackingRecord.earned_value=0
-                    activityTrackingRecord.planned_actual_cost=0
-                    activityTrackingRecord.planned_remaining_cost=0
-                    activityTrackingRecord.planned_value=0
+                    activityTrackingRecord.actual_cost=\
+                        activity_list_wo_groups[activity_nr].baseline_schedule.total_cost*percentageComplete/100
+                    activityTrackingRecord.earned_value=\
+                        math.ceil(percentageComplete/100)*(activity_list_wo_groups[activity_nr].baseline_schedule.fixed_cost+\
+                                                           (activity_list_wo_groups[activity_nr].resource_cost+\
+                                                 activity_list_wo_groups[activity_nr].baseline_schedule.var_cost*\
+                                                 activity_list_wo_groups[activity_nr].baseline_schedule.duration.days)
+                                                 *percentageComplete/100)
+
+                    activityTrackingRecord.planned_actual_cost=activityTrackingRecord.actual_cost
+                    activityTrackingRecord.planned_remaining_cost=\
+                        activity_list_wo_groups[activity_nr].baseline_schedule.total_cost * (100-percentageComplete)/100
+                    activityTrackingRecord.remaining_cost=activityTrackingRecord.planned_remaining_cost
+                    activityTrackingRecord.planned_value=\
+                        activity_list_wo_groups[activity_nr].baseline_schedule.total_cost
 
                     if len(activityTrackingRecord_list)>0:
                         activityTrackingRecord_list.append(activityTrackingRecord)
@@ -439,7 +447,6 @@ class XMLParser(FileParser):
 
 
         ### Sort activities based on WBS
-        # TODO Refactor
         project_activity=Activity(activity_id=0, name=project_name, wbs_id=(1,))
         activity_list_wbs=[project_activity]
         count1 = 1
@@ -477,14 +484,13 @@ class XMLParser(FileParser):
             matrix_activity_group[i]=activity_list_wbs[1+i+sum(subgroup_count[0:i]):(2+i+sum(subgroup_count[0:i+1]))]
 
         ## Assigning Data to activity groups
-        # TODO Duration
         for ag in matrix_activity_group:
             ## Costs
             total_cost=0
             fixed_cost=0
-            bsr=BaselineScheduleRecord()
             min_start=datetime.max
             max_end=datetime.min
+            bsr=BaselineScheduleRecord()
             for i in range(1,len(ag)):
                 if ag[i].baseline_schedule.start < min_start:
                     min_start=ag[i].baseline_schedule.start
@@ -497,7 +503,7 @@ class XMLParser(FileParser):
             ag[0].baseline_schedule.end=max_end
             ag[0].baseline_schedule.total_cost = total_cost
             ag[0].baseline_schedule.fixed_cost = fixed_cost
-
+            ag[0].baseline_schedule.duration= (max_end -min_start)
         ## Assigning data to total project
         total_cost=0
         fixed_cost=0
@@ -516,7 +522,7 @@ class XMLParser(FileParser):
         activity_list_wbs[0].baseline_schedule.end=max_end
         activity_list_wbs[0].baseline_schedule.total_cost = total_cost
         activity_list_wbs[0].baseline_schedule.fixed_cost = fixed_cost
-
+        activity_list_wbs[0].baseline_schedule.duration= (max_end -min_start)
 
 
         ## Make project object
@@ -742,10 +748,18 @@ class XMLParser(FileParser):
                     file.write(lag)
                     file.write("</Lag>")
                     # LagKind/Type
-                    # TODO Other options
                     if successor[1] == "FS":
                         lagKind="0"
                         lagType="2"
+                    elif successor[1] == "FF":
+                        lagKind="0"
+                        lagType="3"
+                    elif successor[1] == "SS":
+                        lagKind="0"
+                        lagType="0"
+                    elif successor[1] == "SF":
+                        lagKind="0"
+                        lagType="1"
                     else:
                         raise "Lag Undefined"
                     file.write("<LagKind>")
@@ -858,13 +872,14 @@ class XMLParser(FileParser):
             file.write(costperunit_string)
             file.write("</FIELD771>")
             # Total cost ? not in resource information
-            file.write("<FIELD776></FIELD776>")
+            #file.write("<FIELD776></FIELD776>")
             # Availability
             file.write("<FIELD780>")
             file.write(str(resource.availability))
             file.write("</FIELD780>")
             # ?
-            file.write("""<FIELD779>-1</FIELD779><FIELD781></FIELD781><FIELD782></FIELD782><FIELD783></FIELD783>""")
+            file.write("""<FIELD779>-1</FIELD779>""")
+            #<FIELD781></FIELD781><FIELD782></FIELD782><FIELD783></FIELD783>""")
             file.write("</Resource>")
             file.write("<DATEPERCSERIE><DEFAULTAVAILABILITY>")
             file.write(str(resource.availability))
@@ -949,8 +964,13 @@ class XMLParser(FileParser):
                         if activity.activity_id == ATR.activity.activity_id:
                             #Actual Start
                             file.write("<ActualStart>")
-                            actual_start_str=self.get_date_string(ATR.actual_start,dateformat)
-                            file.write(actual_start_str)
+
+                            if ATR.actual_start != None:
+                                actual_start_str=self.get_date_string(ATR.actual_start,dateformat)
+                                file.write(actual_start_str)
+                            else:
+                                file.write("0")
+
                             file.write("</ActualStart>")
                             #Actual Duration
                             file.write("<ActualDuration>")
@@ -962,7 +982,10 @@ class XMLParser(FileParser):
                             file.write("</ActualCostDev>")
                             # Remaining Duration
                             file.write("<RemainingDuration>")
-                            file.write(str(ATR.remaining_duration.days*8))
+                            if ATR.remaining_duration != None:
+                                file.write(str(ATR.remaining_duration.days*8))
+                            else:
+                                file.write("0")
                             file.write("</RemainingDuration>")
                             # Remaining cost dev
                             file.write("<RemainingCostDev>")
@@ -977,26 +1000,32 @@ class XMLParser(FileParser):
         file.write("</TrackingList>")
 
 
-        ### Distributions ###
-        file.write("""<SensitivityDistributions><Name>SensitivityDistributions</Name><UniqueID>-1</UniqueID>
-        <UserID>0</UserID></SensitivityDistributions><SensitivityDistributions>""")
-
-        ## To many distributions will be created (Standard distrbutions will be recreated)
-        for i in range(5, len(project_object.activities)):
-            distr=project_object.activities[i].risk_analysis
-            file.write("<TProTrackSensitivityDistribution"+str(i)+">")
-            file.write("<UniqueID>"+str(i)+"</UniqueID>")
-            file.write("<Name>"+distr.distr_name+"</Name>")
-            file.write("<StartDuration>"+str(distr.optimistic_duration-1)+"</StartDuration>")
-            file.write("<EndDuration>"+str(distr.pessimistic_duration+1)+"</EndDuration>")
-            file.write("<Style>0</Style>")
-            file.write("<Distribution>")
-            file.write("<X>"+str(distr.optimistic_duration)+"</X><Y>0</Y>")
-            file.write("<X>"+str(distr.probable_duration)+"</X><Y>100</Y>")
-            file.write("<X>"+str(distr.pessimistic_duration)+"</X><Y>0</Y>")
-            file.write("</Distribution>")
-            file.write("</TProTrackSensitivityDistribution"+str(i)+">")
-        file.write("</SensitivityDistributions>")
+        ### Distributions ### # TODO Does not work correctly
+        # file.write("""<SensitivityDistributions><Name>SensitivityDistributions</Name><UniqueID>-1</UniqueID>
+        # <UserID>0</UserID></SensitivityDistributions><SensitivityDistributions>""")
+        #
+        # ## To many distributions will be created (Standard distrbutions will be recreated)
+        # counter=5
+        # for counter in range(5,len(project_object.activities)):
+        #     notdone=1
+        #     for activity in project_object.activities:
+        #         distr=activity.risk_analysis
+        #         if distr.distr_id == counter and notdone:
+        #             #counter+=1
+        #             file.write("<TProTrackSensitivityDistribution"+str(counter)+">")
+        #             file.write("<UniqueID>"+str(counter)+"</UniqueID>")
+        #             file.write("<Name>"+distr.distr_name+"</Name>")
+        #             file.write("<StartDuration>"+str(int(distr.optimistic_duration-1))+"</StartDuration>")
+        #             file.write("<EndDuration>"+str(int(distr.pessimistic_duration+1))+"</EndDuration>")
+        #             file.write("<Style>0</Style>")
+        #             file.write("<Distribution>")
+        #             file.write("<X>"+str(distr.optimistic_duration)+"</X><Y>0</Y>")
+        #             file.write("<X>"+str(distr.probable_duration)+"</X><Y>100</Y>")
+        #             file.write("<X>"+str(distr.pessimistic_duration)+"</X><Y>0</Y>")
+        #             file.write("</Distribution>")
+        #             file.write("</TProTrackSensitivityDistribution"+str(counter)+">")
+        #             notdone=0
+        # file.write("</SensitivityDistributions>")
         file.write('</Project>')
         file.close()
 
