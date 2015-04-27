@@ -80,7 +80,7 @@ class SpiTvsPfactor(Visualization):
         counter = 2
 
         for tp in project_object.tracking_periods:
-            worksheet.write_number(counter, 33, tp.spi_t/100, calculation)
-            worksheet.write_number(counter, 34, tp.p_factor/100, calculation)
+            worksheet.write_number(counter, 33, tp.spi_t, calculation)
+            worksheet.write_number(counter, 34, tp.p_factor, calculation)
             counter += 1
 

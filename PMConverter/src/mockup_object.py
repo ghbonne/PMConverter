@@ -56,11 +56,14 @@ xlsx_parser.from_schedule_object(project_object, os.path.join(os.path.dirname(__
 
 print("Parsing the extended input sheet")
 po = xlsx_parser.to_schedule_object(os.path.join(os.path.dirname(__file__),
-                                            "../administration/2_Project data input sheet_extended.xlsx"))
+                                            "../administration/2_Project data input sheet_extended_checked.xlsx"))
 
+print("Generating output")
 # Write the file we just processed to a file
-workbook = xlsx_parser.from_schedule_object(po, "output/test2.xlsx", ExcelVersion.EXTENDED)
 excel_version = ExcelVersion.EXTENDED
+workbook = xlsx_parser.from_schedule_object(po, "output/testTrackingOveriew_v2.xlsx", excel_version)
+
+
 for worksheet in workbook.worksheets():
     if worksheet.get_name() == "Resources":
         v1 = ResourceDistribution()
@@ -114,7 +117,7 @@ for worksheet in workbook.worksheets():
 
 
 workbook.close()
-os.system("start excel.exe output/test2.xlsx")
+os.system("start excel.exe output/testTrackingOveriew_v2.xlsx")
 
 
 

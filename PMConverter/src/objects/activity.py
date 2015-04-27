@@ -19,6 +19,8 @@ class Activity(object):
     :var resource_cost: float
     :var baseline_schedule: BaseLineScheduleRecord
     :var risk_analysis: RiskAnalysisDistribution
+
+    # TODO: ActivityTrackingRecord never used here?
     :var activity_tracking: ActivityTrackingRecord
     """
 

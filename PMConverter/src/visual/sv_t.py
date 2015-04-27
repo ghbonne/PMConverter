@@ -74,5 +74,5 @@ class SvT(Visualization):
         counter = 2
 
         for tp in project_object.tracking_periods:
-            worksheet.write_number(counter, 35, tp.sv_t/100, calculation)
+            worksheet.write_number(counter, 35, tp.sv_t, calculation)
             counter += 1

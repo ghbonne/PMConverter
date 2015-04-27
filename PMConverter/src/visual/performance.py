@@ -80,6 +80,6 @@ class Performance(Visualization):
         counter = 2
 
         for tp in project_object.tracking_periods:
-            worksheet.write_number(counter, 31, tp.spi/100, calculation)
-            worksheet.write_number(counter, 32, tp.cpi/100, calculation)
+            worksheet.write_number(counter, 31, tp.spi, calculation)
+            worksheet.write_number(counter, 32, tp.cpi, calculation)
             counter += 1
