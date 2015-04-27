@@ -298,9 +298,9 @@ class XMLParser(FileParser):
                     res_type= ResourceType.CONSUMABLE
                 cost_per_use=float(resource.find('FIELD770').text)
                 cost_per_unit=float(resource.find('FIELD771').text)
-                availability_int=int(resource.find('FIELD780').text)
+                availability_float=float(resource.find('FIELD780').text)
                 total_cost=float(resource.find('FIELD776').text)
-                res=Resource(res_ID, name, res_type, availability_int, cost_per_use, cost_per_unit, total_cost)
+                res=Resource(res_ID, name, res_type, availability_float, cost_per_use, cost_per_unit, total_cost)
                 res_list.append(res)
 
 
@@ -332,7 +332,7 @@ class XMLParser(FileParser):
 
 
         ### Risk Analysis ###
-        distribution_list =  [0 for x in range(len(activity_list))]  # List with possible distributions
+        distribution_list =  [0 for x in range(len(activity_list)+5)]  # List with possible distributions
         #Standard distributions
         distribution_list[1]= RiskAnalysisDistribution(distr_id=1,distribution_type=DistributionType.STANDARD, distribution_units=StandardDistributionUnit.NO_RISK, optimistic_duration=99,
                          probable_duration=100, pessimistic_duration=101)
@@ -345,7 +345,7 @@ class XMLParser(FileParser):
         i=0
         distr=[0, 0, 0]
         for distributions in root.findall('SensitivityDistributions'):
-            for x in range(5, len(activity_list)):
+            for x in range(5, len(activity_list)+5):
                 distr_string='TProTrackSensitivityDistribution'+str(x)
                 distr_x = distributions.find(distr_string)
                 if distr_x != None:
@@ -355,6 +355,8 @@ class XMLParser(FileParser):
                     for X in distribution.findall('X'):
                         distr[i]=int(X.text)
                         i+=1
+
+
                     distribution_list[x]=(RiskAnalysisDistribution(distr_id=x,distr_name=name,distribution_type=DistributionType.MANUAL, distribution_units=ManualDistributionUnit.ABSOLUTE,
                                                                   optimistic_duration=distr[0],probable_duration=distr[1], pessimistic_duration=distr[2]))
         for activities in root.findall('Activities'):
@@ -368,7 +370,7 @@ class XMLParser(FileParser):
 
         ## Activity Tracking
         for tracking_list in root.findall('TrackingList'):
-            activityTrackingRecord_list=[]
+
             ## How many Trackng periods?
             count=0
             for tracking_period_info in tracking_list.findall('TrackingPeriod'):
