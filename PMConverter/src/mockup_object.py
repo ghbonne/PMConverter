@@ -59,7 +59,7 @@ po = xlsx_parser.to_schedule_object(os.path.join(os.path.dirname(__file__),
                                             "../administration/2_Project data input sheet_extended.xlsx"))
 
 # Write the file we just processed to a file
-workbook = xlsx_parser.from_schedule_object(po, "output/test2.xlsx", True)
+workbook = xlsx_parser.from_schedule_object(po, "output/test2.xlsx", ExcelVersion.EXTENDED)
 excel_version = ExcelVersion.EXTENDED
 for worksheet in workbook.worksheets():
     if worksheet.get_name() == "Resources":
