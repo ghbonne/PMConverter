@@ -1382,17 +1382,14 @@ class XLSXParser(FileParser):
             # TODO: more metrics
 
             if excel_version == ExcelVersion.EXTENDED:
-                BAC = generatedPVcurve[-1:]
-                overview_worksheet.write_number(counter, 23, self.calculate_eac(self.calculate_aggregated_ac(tracking_period),
-                                                                                BAC, EV,
-                                                                                1), money_green_cell)
-                if cpi != 0:
-                    cpi = self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_ac(tracking_period)
-                    overview_worksheet.write_number(counter, 24, self.calculate_eac(self.calculate_aggregated_ac(tracking_period),
-                                                                                    self.get_bac(tracking_period), self.calculate_aggregated_ev(tracking_period),
-                                                                                    cpi), money_green_cell)
-                else:
-                    overview_worksheet.write_number(counter, 24, 0, money_green_cell)
+                BAC = generatedPVcurve[-1:][0][0]
+                AC = self.calculate_aggregated_ac(tracking_period)
+                # write EAC(PF = 1)
+                overview_worksheet.write_number(counter, 23, self.calculate_eac(AC, BAC, EV, 1), money_green_cell)
+                # write EAC(PF = cpi)
+                overview_worksheet.write_number(counter, 24, self.calculate_eac(AC,BAC, EV, cpi), money_green_cell)
+                
+                # write EAC(PF = spi)
                 if spi != 0:
                     spi = self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_pv(tracking_period)
                     overview_worksheet.write_number(counter, 25, self.calculate_eac(self.calculate_aggregated_ac(tracking_period),
