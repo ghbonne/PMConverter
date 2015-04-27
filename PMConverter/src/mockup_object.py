@@ -48,10 +48,11 @@ for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
             frame = tb.tb_frame
             linenr = tb.tb_lineno
             filename = frame.f_code.co_filename
-            print("EXCEPTION in {0} on line {1}".format(filename, linenr))
+            print("EXCEPTION in {0} on line {1}\n".format(filename, linenr))
             traceback.print_exc()
             continue
 
+        print("visualisations")
         #addvisualissations
         for worksheet in workbook.worksheets():
             if worksheet.get_name() == "Resources":
