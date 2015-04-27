@@ -35,6 +35,11 @@ for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
         print("Parsing from file to project object")
         try:
             po = xml_parser.to_schedule_object(input_path)
+
+            print("Generating excel output")
+            # Write the projectobject we just processed to a file
+            workbook = xlsx_parser.from_schedule_object(po, output_path, excel_version)
+
         except:
             print("FAILED")
             print("Unhandled Exception occurred of type: {0}".format(sys.exc_info()[0]))
@@ -46,10 +51,6 @@ for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
             print("EXCEPTION in {0} on line {1}".format(filename, linenr))
             traceback.print_exc()
             continue
-
-        print("Generating excel output")
-        # Write the projectobject we just processed to a file
-        workbook = xlsx_parser.from_schedule_object(po, output_path, excel_version)
 
         #addvisualissations
         for worksheet in workbook.worksheets():
