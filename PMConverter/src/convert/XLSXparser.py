@@ -1,4 +1,5 @@
 import calendar
+import math
 
 __author__ = 'PM Group 8'
 
@@ -1390,8 +1391,28 @@ class XLSXParser(FileParser):
             # TODO: more metrics
 
             if excel_version == ExcelVersion.EXTENDED:
+                workingHours_inDay = project_object.agenda.get_working_hours_in_a_day()
                 BAC = generatedPVcurve[-1:][0][0]  # last PV cumsum point corresponds to BAC
-                #PD = 
+                PD = project_object.agenda.get_time_between(generatedPVcurve[0][1], generatedPVcurve[-1:][0][1])
+                PD_workingHours = PD.days * workingHours_inDay + int(PD.seconds / 3600)  # represent Project Duration in workinghours
+
+                # write EAC(t) - PV (PF = 1)
+                PVrate = BAC / float(PD_workingHours) if PD_workingHours != 0 else 0
+                TV = sv / PVrate if PVrate != 0 else 0  # Time variance
+                EAC_t_pv1 = PD_workingHours - TV
+                EAC_t_pv1_days = math.floor(EAC_t_pv1 / workingHours_inDay)
+                overview_worksheet.write_datetime(counter, 14, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv1_days, round(EAC_t_pv1 - EAC_t_pv1_days * workingHours_inDay)), date_green_cell)
+
+                # write EAC(t) - PV (PF = spi)
+                EAC_t_pv2 = PD_workingHours / spi if spi != 0  else 0
+                EAC_t_pv2_days = math.floor(EAC_t_pv2 / workingHours_inDay)
+                overview_worksheet.write_datetime(counter, 15, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv2_days, round(EAC_t_pv2 - EAC_t_pv2_days * workingHours_inDay)), date_green_cell)
+
+                # write EAC(t) - PV (PF = SCI = SPI * CPI)
+                EAC_t_pv3 = PD_workingHours / (spi * cpi) if (spi * cpi) != 0  else 0
+                EAC_t_pv3_days = math.floor(EAC_t_pv3 / workingHours_inDay)
+                overview_worksheet.write_datetime(counter, 16, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv3_days, round(EAC_t_pv3 - EAC_t_pv3_days * workingHours_inDay)), date_green_cell)
+
 
                 # write EAC(PF = 1)
                 overview_worksheet.write_number(counter, 23, self.calculate_eac(AC, BAC, EV, 1), money_green_cell)
