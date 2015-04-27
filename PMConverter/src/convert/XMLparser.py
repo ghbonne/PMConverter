@@ -27,7 +27,7 @@ class XMLParser(FileParser):
         super().__init__()
 
     def getdate(self,datestring="", dateformat=""):
-            if dateformat == "d/MM/yyyy h:mm":
+            if dateformat == "d/MM/yyyy h:mm" or "d-M-yyyy h:m":
                 if len(datestring) == 12:
                     day=int(datestring[:2])
                     month=int(datestring[2:4])
@@ -62,7 +62,8 @@ class XMLParser(FileParser):
                 else:
                     return datetime.max
             else:
-                raise("Warning! Dateformat undefined")
+                print("Error:" + dateformat)
+                raise("Warning! Dateformat undefined" )
 
 
     def get_date_string(self,date=datetime.min,dateformat=""):
