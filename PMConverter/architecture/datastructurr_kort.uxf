@@ -60,7 +60,6 @@
 -resource_cost: float
 -baseline_schedule: BaseLineScheduleRecord
 -risk_analysis: RiskAnalysisDistribution
--activity_tracking: List(ActivityTrackingRecord)
 </panel_attributes>
     <additional_attributes/>
   </element>
@@ -239,19 +238,6 @@ m2=1..n</panel_attributes>
 m1=1
 m2=1</panel_attributes>
     <additional_attributes>10.0;10.0;210.0;10.0</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>632</x>
-      <y>184</y>
-      <w>184</w>
-      <h>64</h>
-    </coordinates>
-    <panel_attributes>lt=&lt;&lt;&lt;&lt;-
-m1=1
-m2=1..n</panel_attributes>
-    <additional_attributes>10.0;10.0;210.0;60.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
