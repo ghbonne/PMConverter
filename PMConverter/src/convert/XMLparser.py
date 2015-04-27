@@ -27,7 +27,7 @@ class XMLParser(FileParser):
         super().__init__()
 
     def getdate(self,datestring="", dateformat=""):
-            if dateformat == "d/MM/yyyy h:mm":
+            if dateformat == "d/MM/yyyy h:mm" or "d-M-yyyy h:m":
                 if len(datestring) == 12:
                     day=int(datestring[:2])
                     month=int(datestring[2:4])
@@ -62,7 +62,8 @@ class XMLParser(FileParser):
                 else:
                     return datetime.max
             else:
-                raise("Warning! Dateformat undefined")
+                print("Error:" + dateformat)
+                raise("Warning! Dateformat undefined" )
 
 
     def get_date_string(self,date=datetime.min,dateformat=""):
@@ -136,7 +137,7 @@ class XMLParser(FileParser):
             ## No holidays in example xml file: following code is educated guess
             for holidays in agenda.findall('Holidays'):
                 for holiday in holidays.findall('Holiday'):
-                    holiday=int(holiday.text)
+                    holiday=holiday.text[:8]
                     project_agenda.set_holiday(holiday)
 
 
@@ -259,6 +260,7 @@ class XMLParser(FileParser):
         ## WBS ##
         for outline in root.findall('OutlineList'):
             counter1=0
+            activity_group_count=0
             for list in outline.findall('List'):
                 for child in list.findall('Child'):
                     counter1+=1
@@ -269,6 +271,7 @@ class XMLParser(FileParser):
                             if activity.activity_id == ID:
                                 wbsTuple=(1, counter1)
                                 activity.wbs_id=wbsTuple
+                                activity_group_count+=1
                     #1.x.y
                     for list2 in child.findall('List'):
                         counter2=0
@@ -352,7 +355,7 @@ class XMLParser(FileParser):
                     for X in distribution.findall('X'):
                         distr[i]=int(X.text)
                         i+=1
-                distribution_list[x]=(RiskAnalysisDistribution(distr_id=x,distr_name=name,distribution_type=DistributionType.MANUAL, distribution_units=ManualDistributionUnit.ABSOLUTE,
+                    distribution_list[x]=(RiskAnalysisDistribution(distr_id=x,distr_name=name,distribution_type=DistributionType.MANUAL, distribution_units=ManualDistributionUnit.ABSOLUTE,
                                                                   optimistic_duration=distr[0],probable_duration=distr[1], pessimistic_duration=distr[2]))
         for activities in root.findall('Activities'):
             for activity in activities.findall('Activity'):
@@ -508,19 +511,23 @@ class XMLParser(FileParser):
             min_start=datetime.max
             max_end=datetime.min
             bsr=BaselineScheduleRecord()
-            for i in range(1,len(ag)):
-                if ag[i].baseline_schedule.start < min_start:
-                    min_start=ag[i].baseline_schedule.start
-                if ag[i].baseline_schedule.end > max_end:
-                    max_end=ag[i].baseline_schedule.end
-                total_cost += ag[i].baseline_schedule.total_cost
-                fixed_cost += ag[i].baseline_schedule.fixed_cost
-            ag[0].baseline_schedule=bsr
-            ag[0].baseline_schedule.start=min_start
-            ag[0].baseline_schedule.end=max_end
-            ag[0].baseline_schedule.total_cost = total_cost
-            ag[0].baseline_schedule.fixed_cost = fixed_cost
-            ag[0].baseline_schedule.duration= (max_end -min_start)
+            if len(ag) > 1:
+                for i in range(1,len(ag)):
+                    if ag[i].baseline_schedule.start < min_start:
+                        min_start=ag[i].baseline_schedule.start
+                    if ag[i].baseline_schedule.end > max_end:
+                        max_end=ag[i].baseline_schedule.end
+                    total_cost += ag[i].baseline_schedule.total_cost
+                    fixed_cost += ag[i].baseline_schedule.fixed_cost
+                ag[0].baseline_schedule=bsr
+                ag[0].baseline_schedule.start=min_start
+                ag[0].baseline_schedule.end=max_end
+                ag[0].baseline_schedule.total_cost = total_cost
+                ag[0].baseline_schedule.fixed_cost = fixed_cost
+                ag[0].baseline_schedule.duration= (max_end -min_start)
+            #else:
+                # no real activity group (single activity)
+
         ## Assigning data to total project
         total_cost=0
         fixed_cost=0
@@ -665,7 +672,7 @@ class XMLParser(FileParser):
         #Holidays
         for holiday in project_object.agenda.holidays:
             file.write("<Holidays>")
-            file.write(holiday+"0000")
+            file.write(str(holiday)+"0000")
             file.write("</Holidays>")
         file.write("</Agenda>")
 
@@ -955,7 +962,7 @@ class XMLParser(FileParser):
             file.write("<Name>")
             # TODO Weird bug, XML won't be correctly formatted if TP name is written
             TP_name=str(TP.tracking_period_name)
-            #file.write(TP_name)
+            file.write(TP_name)
             file.write("</Name>")
             file.write("<PredictiveLogic>0</PredictiveLogic>")
             # Unique ID
