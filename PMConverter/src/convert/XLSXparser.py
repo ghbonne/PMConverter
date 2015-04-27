@@ -1342,8 +1342,10 @@ class XLSXParser(FileParser):
             # calculate ES
             ES = self.calculate_es(project_object, generatedPVcurve, EV, tracking_period.tracking_period_statusdate)
             overview_worksheet.write_datetime(counter, 6, ES, date_green_cell)
+            # calculate SV
             sv = self.calculate_aggregated_ev(tracking_period) - self.calculate_aggregated_pv(tracking_period)
             overview_worksheet.write_number(counter, 7, sv, money_green_cell)
+            # calculate SPI
             if not self.calculate_aggregated_pv(tracking_period):
                 spi = 0
             else:
@@ -1351,6 +1353,7 @@ class XLSXParser(FileParser):
             # save spi value also in tracking_period for visualisations:
             tracking_period.spi = spi
             overview_worksheet.write(counter, 8, str(round(spi * 100)) + "%", green_cell)
+            # calculate CV
             cv = self.calculate_aggregated_ev(tracking_period) - self.calculate_aggregated_ac(tracking_period)
             overview_worksheet.write_number(counter, 9, cv, money_green_cell)
             if not self.calculate_aggregated_ac(tracking_period):
@@ -1395,8 +1398,19 @@ class XLSXParser(FileParser):
                 # write EAC(PF = spi_t)
                 overview_worksheet.write_number(counter, 26, self.calculate_eac(AC, BAC, EV, spi_t), money_green_cell)
 
+                # write EAC(PF = SCI = SPI * CPI)
+                overview_worksheet.write_number(counter, 27, self.calculate_eac(AC, BAC, EV, spi * cpi), money_green_cell)
+
+                # write EAC(PF = SCI(t) = SPI(t) * CPI
+                overview_worksheet.write_number(counter, 28, self.calculate_eac(AC, BAC, EV, spi_t * cpi), money_green_cell)
+
                 # write EAC(PF = 0.8*CPI+0.2*SPI)
                 overview_worksheet.write_number(counter, 29, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi), money_green_cell)
+
+                # write EAC(PF = 0.8*CPI+0.2*SPI(t))
+                overview_worksheet.write_number(counter, 30, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi_t), money_green_cell)
+
+
 
 
             # TODO: more metrics
