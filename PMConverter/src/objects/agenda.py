@@ -132,6 +132,86 @@ class Agenda(object):
                     end_date += timedelta(hours=1)
         return end_date
 
+    def get_next_date(self, begin_date, workingDaysDuration, workingHoursDuration=0):
+        """
+        :param begin_date: datetime
+        :param workingDaysDuration: integer
+        :param workingHoursDuration: integer; smaller then the max working hours in a day
+        :return: calculated next datetime with a valid working hour, minimum workingDaysDuration + workingHoursDuration after begin_date, based on working days, holidays and working hours
+        """
+
+        #if workingHoursDuration > self.get_working_hours_in_a_day():
+        #    raise Exception("Agenda: Wrong parameters for get_next_date: hours can't be bigger than max working hours in a day")
+        #if self.is_holiday(begin_date.strftime('%d%m%Y')):
+        #    raise Exception("Agenda: Wrong parameters for get_next_date: begin_date can't be a holiday")
+        #if not self.is_working_day(begin_date.weekday()):
+        #    raise Exception("Agenda: Wrong parameters for get_next_date: begin_date can't be a non-working day")
+        next_date = copy.deepcopy(begin_date)  # ensures that a new datetime object is returned
+
+        # first go to first working hour >= begin_date
+        if self.is_holiday(begin_date.strftime('%d%m%Y')) or not self.is_working_day(begin_date.weekday()):
+            # begin_date is not a valid workingday => set time to first working hour of day and move day to first next valid workingday:
+            next_date = next_date.replace(hour=self.get_first_working_hour())
+
+            # move day to a valid non-holiday workingday:
+            while self.is_holiday(next_date.strftime('%d%m%Y')) or not self.is_working_day(next_date.weekday()):
+                next_date += timedelta(days = 1)
+
+            
+        elif not self.is_working_hour(begin_date.time().hour):
+            # begin_date is a valid workingday but not time
+
+            if begin_date.time().hour < self.get_last_working_hour():
+                # increase hours until next valid working hour
+                while not self.is_working_hour(next_date.time().hour):
+                    next_date += timedelta(hours = 1)
+
+            else:
+                # next working hour is on the next day:
+                next_date = next_date.replace(hour=self.get_first_working_hour())
+                next_date += timedelta(days = 1)
+
+                # move day to a valid non-holiday workingday:
+                while self.is_holiday(next_date.strftime('%d%m%Y')) or not self.is_working_day(next_date.weekday()):
+                    next_date += timedelta(days = 1)
+
+        #endIf valid starting datetime
+
+        # end_date is now a valid working datetime >= begin_date
+
+        # first add the necessary workingDaysDuration:
+        while workingDaysDuration > 0:
+            next_date += timedelta(days = 1)
+            if (not self.is_holiday(next_date.strftime('%d%m%Y'))) and self.is_working_day(next_date.weekday()):
+                # next valid working datetime found
+                workingDaysDuration -= 1
+
+        # next add the necessary workingHoursDuration
+        next_date_isSet_to_startOfWorkingDay = False
+        while workingHoursDuration > 0:
+            if next_date.time().hour > self.get_last_working_hour() or self.is_holiday(next_date.strftime('%d%m%Y')) or not self.is_working_day(next_date.weekday()):
+                # no next working hours today => move to first working hour on next day:
+                next_date = next_date.replace(hour = self.get_first_working_hour())
+                next_date += timedelta(days = 1)
+                next_date_isSet_to_startOfWorkingDay = True
+                continue
+
+            if not next_date_isSet_to_startOfWorkingDay:
+                # continue 1 working hour
+                next_date += timedelta(hours = 1)
+            else:
+                next_date_isSet_to_startOfWorkingDay = False
+
+            if self.is_working_hour(next_date.time().hour):
+                # next valid working datetime found
+                workingHoursDuration -= 1
+
+        return next_date
+                
+        
+
+
+
     def get_duration_working_days(self, duration_hours=0):
         """
         :param duration_hours: integer; Working hours needed to complete activity

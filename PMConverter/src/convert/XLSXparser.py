@@ -7,12 +7,13 @@ import openpyxl
 import re
 import datetime
 import itertools
+from operator import attrgetter
 
 from objects.activity import Activity
 from objects.activitytracking import ActivityTrackingRecord
 from objects.baselineschedule import BaselineScheduleRecord
 from objects.projectobject import ProjectObject
-from objects.resource import Resource
+from objects.resource import Resource, ResourceType
 from objects.riskanalysisdistribution import RiskAnalysisDistribution, DistributionType, ManualDistributionUnit
 from objects.trackingperiod import TrackingPeriod
 from convert.fileparser import FileParser
@@ -25,7 +26,6 @@ class XLSXParser(FileParser):
     Class to convert ProjectObjects to .xlsx files and vice versa. Shout out to John McNamara for his xlsxwriter library
     and the guys from openpyxl.
 
-    :var generated_PVcurve: list of tuples, (PV cumsum value, datetime of this PV cumsum value)
     """
 
     def __init__(self):
@@ -535,19 +535,55 @@ class XLSXParser(FileParser):
                 return atr.planned_value
         return None
 
-    def get_pvs(self, tracking_periods):
-        pvs = []
-        for tracking_period in tracking_periods:
-            pvs.append(self.get_pv(tracking_period))
-        return pvs
+    #def get_pvs(self, tracking_periods):
+    #    pvs = []
+    #    for tracking_period in tracking_periods:
+    #        pvs.append(self.get_pv(tracking_period))
+    #    return pvs
 
-    def calculate_es(self, tracking_period, tracking_periods):
-        #TODO: reimplement
-        ev = self.calculate_aggregated_ev(tracking_period)
-        pvs = self.get_pvs(tracking_periods)
-        for i in range(0, len(pvs)-1):
-            if pvs[i] <= ev < pvs[i+1]:
-                x = pvs[i+1] - ev
+    #def calculate_es(self, tracking_period, tracking_periods):
+    #    #TODO: reimplement
+    #    ev = self.calculate_aggregated_ev(tracking_period)
+    #    pvs = self.get_pvs(tracking_periods)
+    #    for i in range(0, len(pvs)-1):
+    #        if pvs[i] <= ev < pvs[i+1]:
+    #            x = pvs[i+1] - ev
+
+    def calculate_es(self, project_object, PVcurve, current_EV):
+        """
+        This function calculates the ES datetime based on given PVcurve, current EV value and current time
+
+        :param project_object: ProjectObject, the project object corresponding to the PVcurve
+        :param PVcurve: list of tuples, (PV cumsum value, datetime of this PV cumsum value) as calculated by calculate_PVcurve
+        :param current_EV: float, Earned value for which to search the ES
+        """
+        # algorithm:
+        # Find t such that EV ? PV(t) and EV < PV(t+1)
+        # ES = t
+        ## according to PMKnowledgecenter the following line should be used, but an ES in the middle of non-working datetimes is not desirable!
+        ## ES = t + (EV - PV(t)) / (PV(t+1) - PV(t)) * (next_t - t)
+
+        t = min([activity.baseline_schedule.start for activity in project_object.activities])  # projectBaselineStartDate
+        lowerPV = -1
+        pointFound = False
+
+        # search first PV which is larger than EV
+        for i in range(1, len(PVcurve)):
+            if PVcurve[i][0] > current_EV:
+                # first PV point found which is larger than the given EV value
+                t = PVcurve[i-1][1]
+                lowerPV = PVcurve[i-1][0]
+                pointFound = True
+                break
+        #endFor searching larger PV point
+
+        if not pointFound:
+            t = max([activity.baseline_schedule.end for activity in project_object.activities])  # projectBaselineEndDate
+
+        ##DEBUG:
+        #timesWithSamePV = [x[1] for x in PVcurve if abs(x[0] - lowerPV) < 1e-5]
+
+        return t
 
     def calculate_PVcurve(self, project_object):
         "This function generates the PV curve of the baseline schedule of the given project."
@@ -556,32 +592,82 @@ class XLSXParser(FileParser):
         lowestLevelActivities = [activity for activity in project_object.activities if not XLSXParser.is_not_lowest_level_activity(activity)]
         lowestLevelActivitiesSorted = sorted(lowestLevelActivities, key=attrgetter('baseline_schedule.start', 'baseline_schedule.end'))
 
-        projectBaselineStartDate = min([activity.baseline_schedule.start for activity in activities])
-        projectBaselineEndDate = max([activity.baseline_schedule.start for activity in activities])
+        projectBaselineStartDate = min([activity.baseline_schedule.start for activity in project_object.activities])
+        projectBaselineEndDate = max([activity.baseline_schedule.end for activity in project_object.activities])
 
         # initial starting point
-        self.generated_PVcurve = [(0, projectBaselineStartDate)]
+        generated_PVcurve = [(0, projectBaselineStartDate)]
 
         # search end of first working hour of this project
-        currentDatetime = projectBaselineStartDate + datetime.timedelta(days = 0)  # make a deepcopy
+        currentDatetime = project_object.agenda.get_next_date(projectBaselineStartDate, 0, 0) + datetime.timedelta(hours = 1)
 
+        # loop variables
+        index_NextActivityToAdd = 0
+        currentPVcumsumValue = 0
+        runningActivities = []
+        consumableResourceIdsAlreadyUsed = []  # to only inquire once the cost/use of a consumable resource
 
         # DEBUG:
         traversedHours = 0
         
         # traverse the complete project baseline duration
-        while currentDatetime < projectBaselineEndDate:
+        while currentDatetime <= projectBaselineEndDate:
+            # update list of running activities at this time:
+            # remove ended activities: activities that finished before the start of the evaluating interval hour that ended on currentDatetime
+            for activity in runningActivities.copy():
+                if activity.baseline_schedule.end < currentDatetime:
+                    # activity ended maximally on the start of the currently evaluating interval hour of currentDatetime
+                    runningActivities.remove(activity)
 
+            # add activities that are just started:
+            while (index_NextActivityToAdd < len(lowestLevelActivitiesSorted)) and lowestLevelActivitiesSorted[index_NextActivityToAdd].baseline_schedule.start < currentDatetime:
+                if len(runningActivities) > 0:
+                    runningActivities.append(lowestLevelActivitiesSorted[index_NextActivityToAdd])
+                else:
+                    runningActivities = [lowestLevelActivitiesSorted[index_NextActivityToAdd]]
 
+                # add starting fixed cost of the newly added activity to the PVcumsumValue:
+                currentPVcumsumValue += lowestLevelActivitiesSorted[index_NextActivityToAdd].baseline_schedule.fixed_cost
+                # add starting use cost of used resources by this activity:
+                for resourceTuple in lowestLevelActivitiesSorted[index_NextActivityToAdd].resources:
+                    resource = resourceTuple[0]
+                    if resource.resource_type == ResourceType.CONSUMABLE:
+                        # only add once the cost for its use!
+                        if resource.resource_id not in consumableResourceIdsAlreadyUsed:
+                            # add cost for its use:
+                            currentPVcumsumValue += resource.cost_use
+                            if len(consumableResourceIdsAlreadyUsed) > 0:
+                                consumableResourceIdsAlreadyUsed.append(resource.resource_id)
+                            else:
+                                consumableResourceIdsAlreadyUsed = [resource.resource_id]
+                    else:
+                        # resource type is renewable:
+                        # add cost_use per demanded resource unit
+                        currentPVcumsumValue += resourceTuple[1] * resource.cost_use
+                #endFor adding resource use costs
+                index_NextActivityToAdd += 1
+            #endWhile adding new activities that started
 
-            # advance to next working hour
-            currentDatetime = project_object.agenda.get_end_date(currentDatetime, 0, hours=1)
+            # update PVcurve with one timestemp its variable added value:
+            for activity in runningActivities:
+                currentPVcumsumValue += activity.baseline_schedule.hourly_cost
+                # add also variable cost of the use of its resources
+                for resourceTuple in activity.resources:
+                    currentPVcumsumValue += resourceTuple[0].cost_unit * resourceTuple[1]  # cost/(hour * unit) * demanded units
+
+            # save the currentPVcumsumValue at its new timestep:
+            generated_PVcurve.append((currentPVcumsumValue, currentDatetime))
+
+            # advance to next working hour its end
+            currentDatetime = project_object.agenda.get_next_date(currentDatetime, 0, 0) + datetime.timedelta(hours = 1)
             # DEBUG: record how many hours processed, should match with project baseline duration
             traversedHours += 1
 
-        return
+            
+        return generated_PVcurve
 
-    def from_schedule_object(self, project_object, file_path_output, excel_version):        """
+    def from_schedule_object(self, project_object, file_path_output, excel_version):        
+        """
         This is just a lot of writing to excel code, it is ugly..
 
         """
@@ -1114,7 +1200,7 @@ class XLSXParser(FileParser):
             overview_worksheet.write('AE2', "EAC (PF=0.8*CPI+0.2*SPI(t))", header)
 
         # generate PV curve:
-        self.generated_PVcurve(project_object)
+        generatedPVcurve = self.calculate_PVcurve(project_object)
 
         counter = 2
         for tracking_period in project_object.tracking_periods:
@@ -1126,15 +1212,19 @@ class XLSXParser(FileParser):
                 overview_worksheet.write_datetime(counter, 1, project_object.tracking_periods[index-1].tracking_period_statusdate, date_green_cell)
             overview_worksheet.write_datetime(counter, 2, tracking_period.tracking_period_statusdate, date_green_cell)
             overview_worksheet.write_number(counter, 3, self.calculate_aggregated_pv(tracking_period), money_green_cell)
-            overview_worksheet.write_number(counter, 4, self.calculate_aggregated_ev(tracking_period), money_green_cell)
+            # calculate EV
+            current_EV = self.calculate_aggregated_ev(tracking_period)
+            overview_worksheet.write_number(counter, 4, current_EV, money_green_cell)
             overview_worksheet.write_number(counter, 5, self.calculate_aggregated_ac(tracking_period), money_green_cell)
-            overview_worksheet.write(counter, 6, "ES", money_green_cell)
+            overview_worksheet.write_datetime(counter, 6, self.calculate_es(project_object, generatedPVcurve, current_EV), date_green_cell)
             sv = self.calculate_aggregated_ev(tracking_period) - self.calculate_aggregated_pv(tracking_period)
             overview_worksheet.write_number(counter, 7, sv, money_green_cell)
             if not self.calculate_aggregated_pv(tracking_period):
                 spi = 0
             else:
                 spi = str(round((self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_pv(tracking_period)*100))) + "%"
+            # save spi value also in tracking_period for visualisations:
+            tracking_period.spi = spi
             overview_worksheet.write(counter, 8, spi, green_cell)
             cv = self.calculate_aggregated_ev(tracking_period) - self.calculate_aggregated_ac(tracking_period)
             overview_worksheet.write_number(counter, 9, cv, money_green_cell)
@@ -1142,6 +1232,8 @@ class XLSXParser(FileParser):
                 cpi = 0
             else:
                 cpi = str(round((self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_ac(tracking_period)*100))) + "%"
+            # save cpi value also in tracking_period for visualisations:
+            tracking_period.cpi = cpi
             overview_worksheet.write(counter, 10, cpi, green_cell)
 
             # TODO: more metrics
