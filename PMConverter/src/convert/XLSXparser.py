@@ -527,7 +527,7 @@ class XLSXParser(FileParser):
     def calculate_eac(self, ac, bac, ev, pf):
         if pf == 0:
             return 0
-        return ac + (bac - ev)/pf
+        return ac + (bac - ev)/float(pf)
 
     def get_pv(self, tracking_period):
         for atr in tracking_period.tracking_period_records:
@@ -1382,8 +1382,9 @@ class XLSXParser(FileParser):
             # TODO: more metrics
 
             if excel_version == ExcelVersion.EXTENDED:
+                BAC = generatedPVcurve[-1:]
                 overview_worksheet.write_number(counter, 23, self.calculate_eac(self.calculate_aggregated_ac(tracking_period),
-                                                                                self.get_bac(tracking_period), self.calculate_aggregated_ev(tracking_period),
+                                                                                BAC, EV,
                                                                                 1), money_green_cell)
                 if cpi != 0:
                     cpi = self.calculate_aggregated_ev(tracking_period)/self.calculate_aggregated_ac(tracking_period)
