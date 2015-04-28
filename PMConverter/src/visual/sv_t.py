@@ -20,7 +20,7 @@ class SvT(Visualization):
 
     def __init__(self):
         self.title = "SV(t)"
-        self.description = ""
+        self.description = "Shows the variance in time (ES - AT) expressed in time units"
         self.parameters = {"x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
         self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]

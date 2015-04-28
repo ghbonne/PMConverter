@@ -22,7 +22,7 @@ class CPI(Visualization):
 
     def __init__(self):
         self.title = "CPI"
-        self.description = ""
+        self.description = "Shows the performance of cost (EV / AC) in a unitless dimension"
         self.parameters = {"threshold": True,
                            "x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
