@@ -17,6 +17,7 @@ from objects.projectobject import ProjectObject
 from convert.fileparser import FileParser
 import math
 import ast
+from exceptions import XMLParseError
 
 
 
@@ -34,15 +35,14 @@ class XMLParser(FileParser):
                     year=int(datestring[4:8])
                     hour=int(datestring[8:10])
                     minute=int(datestring[10:12])
-                    date_datetime=datetime(year, month, day, hour, minute)
-                    return date_datetime
+                    return datetime(year, month, day, hour, minute)
                 elif len(datestring) == 8:
                     day=int(datestring[:2])
                     month=int(datestring[2:4])
                     year=int(datestring[4:8])
-                    date_datetime=datetime(year, month, day)
-                    return date_datetime
+                    return datetime(year, month, day)
                 else:
+                    raise XMLParseError("getdate: datestring length {0} is not equal to 8 or 12. datestring = {1}".format(len(datestring), datestring))
                     return datetime.max
             elif dateformat == "MM/d/yyyy h:mm":
                 if len(datestring) == 12:
@@ -51,22 +51,21 @@ class XMLParser(FileParser):
                     year=int(datestring[4:8])
                     hour=int(datestring[8:10])
                     minute=int(datestring[10:12])
-                    date_datetime=datetime(year, month, day, hour, minute)
-                    return date_datetime
+                    return datetime(year, month, day, hour, minute)
                 elif len(datestring) == 8:
                     month=int(datestring[:2])
                     day=int(datestring[2:4])
                     year=int(datestring[4:8])
-                    date_datetime=datetime(year, month, day)
-                    return date_datetime
+                    return datetime(year, month, day)
                 else:
+                    raise XMLParseError("getdate: datestring length {0} is not equal to 8 or 12. datestring = {1}".format(len(datestring), datestring))
                     return datetime.max
             else:
-                print("Error:" + dateformat)
-                raise("Warning! Dateformat undefined" )
+                raise XMLParseError("getdate: unexpected dateformat: {0}".format(dateformat))
 
 
     def get_date_string(self,date=None,dateformat=""):
+        "This funciton converts a datetime to a string in the given format"
         # avoid mutable default parameters!
         if date is None: date = datetime.min
 
@@ -97,13 +96,13 @@ class XMLParser(FileParser):
             minute_str="0"
             minute_str+=str(minute)
         else:
-            minute_str=str(day)
+            minute_str=str(minute)
         if dateformat == "d/MM/yyyy h:mm":
             return day_str+month_str+year_str+hour_str+minute_str
         elif dateformat == "MM/d/yyyy h:mm":
             return month_str+day_str+year_str+hour_str+minute_str
         else:
-            raise "Dateformat undefined"
+            raise XMLParseError("get_date_string: Dateformat undefined: {0}".format(dateformat))
 
     def to_schedule_object(self, file_path_input):
         tree = ET.parse(file_path_input)
@@ -628,7 +627,7 @@ class XMLParser(FileParser):
 
     @staticmethod
     def xml_escape(text):
-        "replaces undesired characters by escaped variant"
+        "Replaces undesired characters by escaped variant"
         xml_escape_table = {"&": "&amp;"}
         return "".join(xml_escape_table.get(c,c) for c in text)
 
