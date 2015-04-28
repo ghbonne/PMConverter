@@ -55,12 +55,16 @@ class XLSXParser(FileParser):
             # First we process the resources sheet, we store them in a dict, with index the resource name, to access them
             # easily later when we are processing the activities.
             resources_dict = self.process_resources(resource_sheet)
+            print(resources_dict)
             # Then we process the risk analysis sheet, again everything is stored in a dict, now index is activity_id.
             risk_analysis_dict = self.process_risk_analysis(risk_analysis_sheet, ExcelVersion.EXTENDED)
+            print(risk_analysis_dict)
             # Finally, the sheet with activities is processed, using the dicts we created above.
             # Again, a new dict is created, to process all tracking periods more easily
             activities_dict = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict, ExcelVersion.EXTENDED)
+            print(activities_dict)
             tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, ExcelVersion.EXTENDED)
+            print(tracking_periods)
             if agenda_sheet:
                 agenda = self.process_agenda(agenda_sheet)
             else:
@@ -302,7 +306,7 @@ class XLSXParser(FileParser):
                 baseline_duration_split = activities_sheet.cell(row=curr_row, column=8).value.split("d")
                 baseline_duration_days = int(baseline_duration_split[0])
                 baseline_duration_hours = 0  # We need to set this default value for the next loop
-                if baseline_duration_split[1] != '':
+                if len(baseline_duration_split) > 1 and baseline_duration_split[1] != '':
                     baseline_duration_hours = int(baseline_duration_split[1][1:-1])  # first char = " "; last char = "h"
                 baseline_duration = datetime.timedelta(days=baseline_duration_days, hours=baseline_duration_hours)
                 baseline_fixed_cost = 0.0
@@ -358,7 +362,7 @@ class XLSXParser(FileParser):
                 baseline_duration_split = activities_sheet.cell(row=curr_row, column=7).value.split("d")
                 baseline_duration_days = int(baseline_duration_split[0])
                 baseline_duration_hours = 0  # We need to set this default value for the next loop
-                if baseline_duration_split[1] != '':
+                if len(baseline_duration_split) > 1 and baseline_duration_split[1] != '':
                     baseline_duration_hours = int(baseline_duration_split[1][1:-1])  # first char = " "; last char = "h"
                 baseline_duration = datetime.timedelta(days=baseline_duration_days, hours=baseline_duration_hours)
                 baseline_fixed_cost = 0.0
