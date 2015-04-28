@@ -22,7 +22,7 @@ class SpiT(Visualization):
 
     def __init__(self):
         self.title = "SPI(t)"
-        self.description = ""
+        self.description = "Shows the performance of time (ES / AT) in a unitless dimension"
         self.parameters = {"threshold": True,
                            "x-axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
