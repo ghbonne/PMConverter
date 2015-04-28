@@ -33,6 +33,8 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
         self.ddlStep2_VisualisationType.blockSignals(True)  # avoid signalling when initing GUI
         self.listStep2_ChosenVisualisations.setDragDropMode(QAbstractItemView.InternalMove)  # enable dragging and dropping of list items
         self.lblStep2_ParamsSaved.setVisible(False)  # Message label to show when parameters are saved
+        self.lblFinished_OutputFilename.setWordWrap(True)
+        self.lblStep2_VisualisationDescription.setWordWrap(True)
         self.connect(self.cmdFinished_End, SIGNAL("clicked(bool)"), self.done)  # finish PMConvert program
 
         #self.loadingAnimation = QMovie("Loading.gif", QByteArray(), self)
@@ -47,6 +49,11 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
          # custom Application inits
         self.inputFilename = ""
         self.processor = Processor()
+        self.excel_version = None
+
+        # connect signals from Processor with GUI
+        self.connect(self.processor, self.processor.conversionSucceeded, self.ConversionSucceeded)
+        self.connect(self.processor, self.processor.conversionFailedErrorMessage, self.ShowErrorMessage)
 
         self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.StartPage))
         #DEBUG
@@ -56,32 +63,17 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
         #self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageFinished))
 
         # custom GUI inits
-        self.inputFiletypes = {"Excel": ".xlsx", "ProTrack": ".p2x"}
+        self.inputFiletypes = self.processor.inputFiletypes
         
 
         # construct visualisations dropdownlist
         ddlVisualisationsModel = QStandardItemModel()
         self.possibleVisualisations = {}
         self.chosenVisualisations = []
+        self.possibleVisualisationsStructured = {}  # translation dict, contains item.title as keys and their header as a value
         self.ddlStep2_VisualisationType.setModel(ddlVisualisationsModel)
 
-        for item in self.processor.visualizations:
-            if type(item) == str:
-                # insert header here
-                self.ddlStep2_VisualisationType.addParentItem(item)
-                pass
-            else:
-                # insert selectable item here:
-                self.ddlStep2_VisualisationType.addChildItem(item.title)
-
-                self.possibleVisualisations[item.title] = item
-        
-        
-        #self.ddlStep2_VisualisationType.setView(ddlVisualisationView)
-
-        # update parameter fields for currently preselected visualisation type
-        self.ddlStep2_VisualisationType.setCurrentIndex(1)  # set current index to 1 because 0 is a header item
-        self.on_ddlStep2_VisualisationType_currentIndexChanged(0)
+        # actual filling the ddl is done in handler which chooses to use conversion to excel       
 
         # enable blocked signals again:
         self.ddlStep2_VisualisationType.blockSignals(False)
@@ -124,7 +116,17 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
             self.ddlStep1_InputFormat.setEnabled(True)
 
             self.ddlStep1_OutputFormat.clear()
-            self.ddlStep1_OutputFormat.addItems([type for type in self.inputFiletypes.keys() if self.inputFiletypes[type] != fileExtension])
+            # allow only to convert to other formats than inputformat
+            #self.ddlStep1_OutputFormat.addItems([type for type in self.inputFiletypes.keys() if self.inputFiletypes[type] != fileExtension])
+            # Else: allow to convert to any format:
+            possibleInputTypes = [type for type in self.inputFiletypes.keys()]
+            self.ddlStep1_OutputFormat.addItems(possibleInputTypes)
+            # auto enable the first other format:
+            
+            otherFormats = [type for type in possibleInputTypes if self.inputFiletypes[type] != fileExtension]
+            self.ddlStep1_OutputFormat.setCurrentIndex(possibleInputTypes.index(otherFormats[0]))
+
+            
             self.ddlStep1_OutputFormat.setEnabled(True)
 
             #if output file format == Excel => enable chkbox
@@ -149,6 +151,28 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
     def on_cmdStep1_Next_clicked(self, clicked):
         "This function handles click events on the next button of step 1."
         if self.ddlStep1_OutputFormat.currentText() == "Excel":
+            self.excel_version = ExcelVersion.EXTENDED if self.chkStep1_ExcelExtendedVersion.isChecked() else ExcelVersion.BASIC
+            self.ddlStep2_VisualisationType.blockSignals(True)
+            currentHeader = "TOPHEADER"
+            for item in self.processor.get_supported_visualisations(self.excel_version):
+                if type(item) == str:
+                    # insert header here
+                    self.ddlStep2_VisualisationType.addParentItem(item)
+                    currentHeader = item
+                else:
+                    # insert selectable item here:
+                    self.ddlStep2_VisualisationType.addChildItem(item.title)
+                    self.possibleVisualisationsStructured[item.title] = currentHeader
+                    self.possibleVisualisations[item.title] = item
+        
+            
+            # update parameter fields for currently preselected visualisation type
+            self.ddlStep2_VisualisationType.setCurrentIndex(1)  # set current index to 1 because 0 is a header item
+            self.on_ddlStep2_VisualisationType_currentIndexChanged(1)
+
+            # re-enable signalling
+            self.ddlStep2_VisualisationType.blockSignals(False)
+
             self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageStep2))
             self.listStep2_ChosenVisualisations.clear()
             self.btnStep2_ImportSettings.setDefault(True)
@@ -156,6 +180,8 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
             self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageConverting))
             self.loadingAnimation.start()
             #TODO: start conversion to ProTrack!
+            self.processor.setConversionSettings(self.ddlStep1_InputFormat.currentText(), self.ddlStep1_OutputFormat.currentText(), self.inputFilename)
+            self.processor.start()
 
     @pyqtSlot("int")
     def on_ddlStep2_VisualisationType_currentIndexChanged(self, index):
@@ -484,7 +510,33 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
     @pyqtSlot("bool")
     def on_cmdStep2_Convert_clicked(self, clicked):
         "This function handles click events of the Convert button of Step 2"
+        # make structured dict of the wanted visualisations:
+        wantedVisualisations = {}
+
+        for chosenVisualisationTypeName in self.chosenVisualisations:
+            # add each chosen visualisation to the correct headerlist in wantedVisualisations:
+            chosenVisualisationTypeObject = self.possibleVisualisations[chosenVisualisationTypeName]
+
+            chosenVisualisationTypeHeader = self.possibleVisualisationsStructured[chosenVisualisationTypeName]
+
+            if chosenVisualisationTypeHeader not in wantedVisualisations:
+                wantedVisualisations[chosenVisualisationTypeHeader] = [chosenVisualisationTypeObject]
+            else:
+                wantedVisualisations[chosenVisualisationTypeHeader].append(chosenVisualisationTypeObject)
+
+        #endFor structuring chosen visualisations
+
+        # append the empty headers to wantedVisualisations:
+        allPossibleHeaders = [x for x in self.processor.visualizations if type(x) == str]
+        for header in allPossibleHeaders:
+            if header not in wantedVisualisations:
+                wantedVisualisations[header] = []
+
         #TODO start conversion here to excel
+        #TODO start thread here
+        self.processor.setConversionSettings(self.ddlStep1_InputFormat.currentText(), self.ddlStep1_OutputFormat.currentText(), self.inputFilename, wantedVisualisations,self.excel_version)
+        self.processor.start()
+
 
         self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageConverting))
         self.loadingAnimation.start()
@@ -661,6 +713,27 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
         self.ddlStep2_VisualisationType.setCurrentIndex(1)
         return
 
+    @pyqtSlot("QString")
+    def ConversionSucceeded(self, outputFilename):
+        "This function handles calls from backend that conversion was successful."
+        self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageFinished))
+        self.loadingAnimation.stop()
+
+        self.lblFinished_OutputFilename.setText(outputFilename)
+        self.cmdFinished_End.setDefault(True)
+
+    @pyqtSlot("QString")
+    def ShowErrorMessage(self, errorMessage):
+        "This function handles calls from backend that conversion failed due to the specified error message."
+        self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageConvertingError))
+        self.loadingAnimation.stop()
+
+        self.textEdit_errorMessagebox.clear()
+        self.textEdit_errorMessagebox.setTextColor(QColor("red"))
+        self.textEdit_errorMessagebox.setFontWeight(QFont.Bold)
+
+        self.textEdit_errorMessagebox.append(str(errorMessage))
+        
 
 
  

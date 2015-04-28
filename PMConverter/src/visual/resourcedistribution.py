@@ -16,7 +16,7 @@ class ResourceDistribution(Visualization):
     :var supported: list of ExcelVersion, containing the version that are supported
 
     Settings:
-    :var data_type: DataType, labels expressed in absolute(€) or relative(%) values
+    :var data_type: DataType, labels expressed in absolute(euro) or relative(%) values
     """
 
     def __init__(self):

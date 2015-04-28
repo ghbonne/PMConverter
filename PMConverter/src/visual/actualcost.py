@@ -16,7 +16,7 @@ class ActualCost(Visualization):
 
     Settings:
     :var level_of_detail: LevelOfDetail, graph can be shown for workpackages or activities
-    :var data_type: DataType, values expressed absolute (€) or relative (%)
+    :var data_type: DataType, values expressed absolute (euro) or relative (%)
     """
 
     def __init__(self):

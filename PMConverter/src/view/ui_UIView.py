@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'UIView.ui'
 #
-# Created: Sun Apr 26 00:13:17 2015
+# Created: Tue Apr 28 07:42:45 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -385,9 +385,9 @@ class Ui_UIView(object):
         self.line_6.setFrameShadow(QtGui.QFrame.Sunken)
         self.line_6.setObjectName(_fromUtf8("line_6"))
         self.verticalLayout_8.addWidget(self.line_6)
-        self.textEdit = QtGui.QTextEdit(self.pageConvertingError)
-        self.textEdit.setObjectName(_fromUtf8("textEdit"))
-        self.verticalLayout_8.addWidget(self.textEdit)
+        self.textEdit_errorMessagebox = QtGui.QTextEdit(self.pageConvertingError)
+        self.textEdit_errorMessagebox.setObjectName(_fromUtf8("textEdit_errorMessagebox"))
+        self.verticalLayout_8.addWidget(self.textEdit_errorMessagebox)
         self.pagesMain.addWidget(self.pageConvertingError)
         self.pageFinished = QtGui.QWidget()
         self.pageFinished.setObjectName(_fromUtf8("pageFinished"))
@@ -434,7 +434,7 @@ class Ui_UIView(object):
         self.horizontalLayout_2.addWidget(self.pagesMain)
 
         self.retranslateUi(UIView)
-        self.pagesMain.setCurrentIndex(2)
+        self.pagesMain.setCurrentIndex(4)
         QtCore.QMetaObject.connectSlotsByName(UIView)
         UIView.setTabOrder(self.cmdStep0_Start, self.btnStep1_InputFile)
         UIView.setTabOrder(self.btnStep1_InputFile, self.ddlStep1_InputFormat)
@@ -452,8 +452,8 @@ class Ui_UIView(object):
         UIView.setTabOrder(self.btnStep2_DeleteVisualisation, self.btnStep2_ImportSettings)
         UIView.setTabOrder(self.btnStep2_ImportSettings, self.btnStep2_ExportSettings)
         UIView.setTabOrder(self.btnStep2_ExportSettings, self.cmdStep2_Convert)
-        UIView.setTabOrder(self.cmdStep2_Convert, self.textEdit)
-        UIView.setTabOrder(self.textEdit, self.cmdFinished_End)
+        UIView.setTabOrder(self.cmdStep2_Convert, self.textEdit_errorMessagebox)
+        UIView.setTabOrder(self.textEdit_errorMessagebox, self.cmdFinished_End)
         UIView.setTabOrder(self.cmdFinished_End, self.listStep2_ChosenVisualisations)
         UIView.setTabOrder(self.listStep2_ChosenVisualisations, self.lineEditStep1_InputFilename)
 

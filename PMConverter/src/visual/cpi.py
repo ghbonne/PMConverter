@@ -24,7 +24,7 @@ class CPI(Visualization):
         self.title = "CPI"
         self.description = ""
         self.parameters = {"threshold": True,
-                           "x-axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
+                           "x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
         self.threshold = None
         self.thresholdValues = None

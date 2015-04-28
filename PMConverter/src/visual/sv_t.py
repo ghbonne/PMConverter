@@ -21,7 +21,7 @@ class SvT(Visualization):
     def __init__(self):
         self.title = "SV(t)"
         self.description = ""
-        self.parameters = {"x-axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
+        self.parameters = {"x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
         self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
 

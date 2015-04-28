@@ -646,11 +646,15 @@ class XMLParser(FileParser):
         file.write('</NAME>')
 
         ### Projectinfo (unimportant) ###
-        file.write("""<ProjectInfo><LastSavedBy>PMConverter</LastSavedBy><Name>ProjectInfo</Name><SavedWithMayorBuild>3</SavedWithMayorBuild><SavedWithMinorBuild>0</SavedWithMinorBuild><SavedWithVersion>0</SavedWithVersion><UniqueID>-1</UniqueID><UserID>0</UserID></ProjectInfo>""")
+        file.write("<ProjectInfo><LastSavedBy>PMConverter</LastSavedBy><Name>ProjectInfo</Name><SavedWithMayorBuild>3</SavedWithMayorBuild><SavedWithMinorBuild>0</SavedWithMinorBuild>")
+        file.write("<SavedWithVersion>0</SavedWithVersion><UniqueID>-1</UniqueID><UserID>0</UserID></ProjectInfo>")
 
         ### Settings (Somewhat important) ###
         ## A lot of this info can (and should probably) deleted
-        file.write("""<Settings><AbsProjectBuffer>311220071300</AbsProjectBuffer><ActionEndThreshold>100</ActionEndThreshold><ActionStartThreshold>60</ActionStartThreshold><ActiveSensResult>1</ActiveSensResult><ActiveTrackingPeriod>8</ActiveTrackingPeriod><AllocationMethod>0</AllocationMethod><AutomaticBuffer>0</AutomaticBuffer><ConnectResourceBars>0</ConnectResourceBars><ConstraintHardness>3</ConstraintHardness><CurrencyPrecision>2</CurrencyPrecision><CurrencySymbol></CurrencySymbol><CurrencySymbolPosition>1</CurrencySymbolPosition>""")
+        file.write("<Settings><AbsProjectBuffer>311220071300</AbsProjectBuffer><ActionEndThreshold>100</ActionEndThreshold><ActionStartThreshold>60</ActionStartThreshold>")
+        file.write("<ActiveSensResult>1</ActiveSensResult><ActiveTrackingPeriod>8</ActiveTrackingPeriod><AllocationMethod>0</AllocationMethod><AutomaticBuffer>0</AutomaticBuffer>")
+        file.write("<ConnectResourceBars>0</ConnectResourceBars><ConstraintHardness>3</ConstraintHardness><CurrencyPrecision>2</CurrencyPrecision><CurrencySymbol></CurrencySymbol>")
+        file.write("<CurrencySymbolPosition>1</CurrencySymbolPosition>")
         ### Dateformat ###
         ## TODO; Read Datetimeformat
         dateformat="d/MM/yyyy h:mm"
@@ -658,11 +662,22 @@ class XMLParser(FileParser):
         file.write(dateformat)
         file.write("</DateTimeFormat>")
 
-        file.write("""<DefaultRowBuffer>50</DefaultRowBuffer><DrawRelations>1</DrawRelations><DrawShadow>1</DrawShadow><DurationFormat>1</DurationFormat><DurationLevels>2</DurationLevels><ESSLSSFloat>0</ESSLSSFloat><GanttStartDate>080220070800</GanttStartDate><GanttZoomLevel>0.0127138157894736</GanttZoomLevel><GroupFilter>0</GroupFilter><HideGraphMarks>0</HideGraphMarks><Name>Settings</Name><PlanningEndThreshold>60</PlanningEndThreshold><PlanningStartThreshold>20</PlanningStartThreshold><PlanningUnit>1</PlanningUnit><ResAllocation1Color>12632256</ResAllocation1Color><ResAllocation2Color>8421504</ResAllocation2Color><ResAvailableColor>15780518</ResAvailableColor><ResourceChartEndDate>220520071000</ResourceChartEndDate><ResourceChartStartDate>060320060000</ResourceChartStartDate><ResOverAllocationColor>255</ResOverAllocationColor><ShowCanEditResultsInHelp>1</ShowCanEditResultsInHelp><ShowCriticalPath>1</ShowCriticalPath><ShowInputModelInfoInHelp>1</ShowInputModelInfoInHelp><SyncGanttAndResourceChart>0</SyncGanttAndResourceChart><UniqueID>-1</UniqueID><UseResourceScheduling>0</UseResourceScheduling><UserID>0</UserID><ViewDateTimeAsUnits>0</ViewDateTimeAsUnits>""")
+        file.write("<DefaultRowBuffer>50</DefaultRowBuffer><DrawRelations>1</DrawRelations><DrawShadow>1</DrawShadow><DurationFormat>1</DurationFormat><DurationLevels>2</DurationLevels>")
+        file.write("<ESSLSSFloat>0</ESSLSSFloat><GanttStartDate>080220070800</GanttStartDate><GanttZoomLevel>0.0127138157894736</GanttZoomLevel><GroupFilter>0</GroupFilter><HideGraphMarks>0</HideGraphMarks>")
+        file.write("<Name>Settings</Name><PlanningEndThreshold>60</PlanningEndThreshold><PlanningStartThreshold>20</PlanningStartThreshold><PlanningUnit>1</PlanningUnit>")
+        file.write("<ResAllocation1Color>12632256</ResAllocation1Color><ResAllocation2Color>8421504</ResAllocation2Color><ResAvailableColor>15780518</ResAvailableColor>")
+        file.write("<ResourceChartEndDate>220520071000</ResourceChartEndDate><ResourceChartStartDate>060320060000</ResourceChartStartDate><ResOverAllocationColor>255</ResOverAllocationColor>")
+        file.write("<ShowCanEditResultsInHelp>1</ShowCanEditResultsInHelp><ShowCriticalPath>1</ShowCriticalPath><ShowInputModelInfoInHelp>1</ShowInputModelInfoInHelp>")
+        file.write("<SyncGanttAndResourceChart>0</SyncGanttAndResourceChart><UniqueID>-1</UniqueID><UseResourceScheduling>0</UseResourceScheduling><UserID>0</UserID><ViewDateTimeAsUnits>0</ViewDateTimeAsUnits>")
         file.write('</Settings>')
 
         ## Defaults: Obsolete? ###
-        file.write("""<Defaults><DefaultCostPerUnit>50</DefaultCostPerUnit><DefaultDisplayDurationType>0</DefaultDisplayDurationType><DefaultDistributionType>2</DefaultDistributionType><DefaultDurationInput>0</DefaultDurationInput><DefaultLagTime>0</DefaultLagTime><DefaultNumberOfSimulationRuns>100</DefaultNumberOfSimulationRuns><DefaultNumberOfTrackingPeriodsGeneration>20</DefaultNumberOfTrackingPeriodsGeneration><DefaultNumberOfTrackingPeriodsSimulation>50</DefaultNumberOfTrackingPeriodsSimulation><DefaultRelationType>2</DefaultRelationType><DefaultResourceRenewable>1</DefaultResourceRenewable><DefaultSimulationType>0</DefaultSimulationType><DefaultStartPage>start.html</DefaultStartPage><DefaultTaskDuration>10</DefaultTaskDuration><DefaultTrackingPeriodOffset>50</DefaultTrackingPeriodOffset><DefaultWorkingDaysPerWeek>5</DefaultWorkingDaysPerWeek><DefaultWorkingHoursPerDay>8</DefaultWorkingHoursPerDay><Name>Defaults</Name><UniqueID>-1</UniqueID><UserID>0</UserID></Defaults>""")
+        file.write("<Defaults><DefaultCostPerUnit>50</DefaultCostPerUnit><DefaultDisplayDurationType>0</DefaultDisplayDurationType><DefaultDistributionType>2</DefaultDistributionType>")
+        file.write("<DefaultDurationInput>0</DefaultDurationInput><DefaultLagTime>0</DefaultLagTime><DefaultNumberOfSimulationRuns>100</DefaultNumberOfSimulationRuns>")
+        file.write("<DefaultNumberOfTrackingPeriodsGeneration>20</DefaultNumberOfTrackingPeriodsGeneration><DefaultNumberOfTrackingPeriodsSimulation>50</DefaultNumberOfTrackingPeriodsSimulation>")
+        file.write("<DefaultRelationType>2</DefaultRelationType><DefaultResourceRenewable>1</DefaultResourceRenewable><DefaultSimulationType>0</DefaultSimulationType><DefaultStartPage>start.html</DefaultStartPage>")
+        file.write("<DefaultTaskDuration>10</DefaultTaskDuration><DefaultTrackingPeriodOffset>50</DefaultTrackingPeriodOffset><DefaultWorkingDaysPerWeek>5</DefaultWorkingDaysPerWeek>")
+        file.write("<DefaultWorkingHoursPerDay>8</DefaultWorkingHoursPerDay><Name>Defaults</Name><UniqueID>-1</UniqueID><UserID>0</UserID></Defaults>")
 
         ### Agenda ###
         #Startdate
@@ -1052,6 +1067,6 @@ class XMLParser(FileParser):
 
 
 
-        return print("Write Succesful!")
+        return True #print("Write Succesful!")
 
 
