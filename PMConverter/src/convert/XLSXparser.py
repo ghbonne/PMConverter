@@ -1411,31 +1411,30 @@ class XLSXParser(FileParser):
             # save p_factor value also in tracking_period for visualisations:
             tracking_period.p_factor = p_factor
 
-            # TODO: more metrics
-
             if excel_version == ExcelVersion.EXTENDED:
                 workingHours_inDay = project_object.agenda.get_working_hours_in_a_day()
                 BAC = generatedPVcurve[-1:][0][0]  # last PV cumsum point corresponds to BAC
                 PD = project_object.agenda.get_time_between(generatedPVcurve[0][1], generatedPVcurve[-1:][0][1])
-                PD_workingHours = PD.days * workingHours_inDay + int(PD.seconds / 3600)  # represent Project Duration in workinghours
+                PD_workingHours = PD.days * workingHours_inDay + round(PD.seconds / 3600)  # represent Project Duration in workinghours
                 AT_duration = project_object.agenda.get_time_between(generatedPVcurve[0][1], tracking_period.tracking_period_statusdate)
-                AT_duration_workingHours = AT_duration.days * workingHours_inDay + int(AT_duration.seconds / 3600)  # represent AT duration since project start in workinghours
-
+                AT_duration_workingHours = AT_duration.days * workingHours_inDay + round(AT_duration.seconds / 3600)  # represent AT duration since project start in workinghours
+                ES_duration = project_object.agenda.get_time_between(generatedPVcurve[0][1], ES)
+                ES_duration_workingHours = ES_duration.days * workingHours_inDay + round(ES_duration.seconds / 3600)  # represents the ES duration since project start in workinghours
 
                 # write EAC(t) - Planned Value method (PF = 1)
-                PVrate = BAC / float(PD_workingHours) if PD_workingHours != 0 else 0
-                TV = sv / PVrate if PVrate != 0 else 0  # Time variance
+                PVrate = BAC / float(PD_workingHours) if bool(PD_workingHours) else 0
+                TV = sv / PVrate if bool(PVrate) else 0  # Time variance
                 EAC_t_pv1 = PD_workingHours - TV
                 EAC_t_pv1_days = math.floor(EAC_t_pv1 / workingHours_inDay)
                 overview_worksheet.write_datetime(counter, 14, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv1_days, round(EAC_t_pv1 - EAC_t_pv1_days * workingHours_inDay)), date_green_cell)
 
                 # write EAC(t) - Planned Value method (PF = spi)
-                EAC_t_pv2 = PD_workingHours / spi if spi != 0  else 0
+                EAC_t_pv2 = PD_workingHours / spi if bool(spi)  else 0
                 EAC_t_pv2_days = math.floor(EAC_t_pv2 / workingHours_inDay)
                 overview_worksheet.write_datetime(counter, 15, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv2_days, round(EAC_t_pv2 - EAC_t_pv2_days * workingHours_inDay)), date_green_cell)
 
                 # write EAC(t) - Planned Value method (PF = SCI = SPI * CPI)
-                EAC_t_pv3 = PD_workingHours / (spi * cpi) if (spi * cpi) != 0  else 0
+                EAC_t_pv3 = PD_workingHours / (spi * cpi) if bool(spi * cpi)  else 0
                 EAC_t_pv3_days = math.floor(EAC_t_pv3 / workingHours_inDay)
                 overview_worksheet.write_datetime(counter, 16, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv3_days, round(EAC_t_pv3 - EAC_t_pv3_days * workingHours_inDay)), date_green_cell)
 
@@ -1445,11 +1444,42 @@ class XLSXParser(FileParser):
                 EAC_t_ed1_days = math.floor(EAC_t_ed1 / workingHours_inDay)
                 overview_worksheet.write_datetime(counter, 17, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed1_days, round(EAC_t_ed1 - EAC_t_ed1_days * workingHours_inDay)), date_green_cell)
 
-                ## write EAC(t) - Earned duration method (PF = 1)
-                #ED = AT_duration_workingHours * spi
-                #EAC_t_ed1 = AT_duration_workingHours + (max(PD_workingHours, AT_duration_workingHours) - ED)
-                #EAC_t_ed1_days = math.floor(EAC_t_ed1 / workingHours_inDay)
-                #overview_worksheet.write_datetime(counter, 17, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed1_days, round(EAC_t_ed1 - EAC_t_ed1_days * workingHours_inDay)), date_green_cell)
+                # write EAC(t) - Earned duration method (PF = spi)
+                if bool(spi):
+                    EAC_t_ed2 = AT_duration_workingHours + (max(PD_workingHours, AT_duration_workingHours) - ED) / spi
+                else:
+                    EAC_t_ed2 = AT_duration_workingHours
+                EAC_t_ed2_days = math.floor(EAC_t_ed2 / workingHours_inDay)
+                overview_worksheet.write_datetime(counter, 18, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed2_days, round(EAC_t_ed2 - EAC_t_ed2_days * workingHours_inDay)), date_green_cell)
+
+                # write EAC(t) - Earned duration method (PF = SCI = SPI * CPI)
+                if bool(spi) and bool(cpi) :
+                    EAC_t_ed3 = AT_duration_workingHours + (max(PD_workingHours, AT_duration_workingHours) - ED) / (spi * cpi)
+                else:
+                    EAC_t_ed3 = AT_duration_workingHours
+                EAC_t_ed3_days = math.floor(EAC_t_ed3 / workingHours_inDay)
+                overview_worksheet.write_datetime(counter, 19, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed3_days, round(EAC_t_ed3 - EAC_t_ed3_days * workingHours_inDay)), date_green_cell)
+                
+                # write EAC(t) - Earned schedule method (PF = 1)
+                EAC_t_es1 = AT_duration_workingHours + (PD_workingHours - ES_duration_workingHours)
+                EAC_t_es1_days = math.floor(EAC_t_es1 / workingHours_inDay)
+                overview_worksheet.write_datetime(counter, 20, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_es1_days, round(EAC_t_es1 - EAC_t_es1_days * workingHours_inDay)), date_green_cell)
+
+                # write EAC(t) - Earned schedule method (PF = spi_t)
+                if bool(spi_t):
+                    EAC_t_es2 = AT_duration_workingHours + (PD_workingHours - ES_duration_workingHours) / spi_t
+                else:
+                    EAC_t_es2 = AT_duration_workingHours
+                EAC_t_es2_days = math.floor(EAC_t_es2 / workingHours_inDay)
+                overview_worksheet.write_datetime(counter, 21, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_es2_days, round(EAC_t_es2 - EAC_t_es2_days * workingHours_inDay)), date_green_cell)
+
+                # write EAC(t) - Earned schedule method (PF = SCI = SPI(t) * CPI)
+                if bool(spi_t) and bool(cpi):
+                    EAC_t_es3 = AT_duration_workingHours + (PD_workingHours - ES_duration_workingHours) / (spi_t * cpi)
+                else:
+                    EAC_t_es3 = AT_duration_workingHours
+                EAC_t_es3_days = math.floor(EAC_t_es3 / workingHours_inDay)
+                overview_worksheet.write_datetime(counter, 22, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_es3_days, round(EAC_t_es3 - EAC_t_es3_days * workingHours_inDay)), date_green_cell)
 
 
                 # write EAC(PF = 1)
@@ -1474,11 +1504,6 @@ class XLSXParser(FileParser):
 
                 # write EAC(PF = 0.8*CPI+0.2*SPI(t))
                 overview_worksheet.write_number(counter, 30, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi_t), money_green_cell)
-
-
-
-
-            # TODO: more metrics
 
             counter += 1
 
