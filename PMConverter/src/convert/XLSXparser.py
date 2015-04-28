@@ -66,10 +66,12 @@ class XLSXParser(FileParser):
             tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, ExcelVersion.EXTENDED)
             print(tracking_periods)
             if agenda_sheet:
+                print(agenda_sheet)
                 agenda = self.process_agenda(agenda_sheet)
             else:
                 agenda = Agenda()
 
+            print("check")
             return ProjectObject(activities=[i[1] for i in sorted(activities_dict.values(), key=lambda x: x[1].wbs_id)],
                                  resources=sorted(resources_dict.values(), key=lambda x: x.resource_id),
                                  tracking_periods=tracking_periods, agenda=agenda)
@@ -101,6 +103,7 @@ class XLSXParser(FileParser):
         i = 2
         while agenda_sheet.cell(row=i, column=7).value:
             holidays.append(agenda_sheet.cell(row=i, column=7).value)
+            i += 1
         return Agenda(working_hours=working_hours, working_days=working_days, holidays=holidays)
 
     def process_project_controls(self, project_control_sheets, activities_dict, excel_version):
