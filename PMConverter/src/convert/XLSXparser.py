@@ -446,10 +446,12 @@ class XLSXParser(FileParser):
     @staticmethod
     def get_nr_of_header_lines(sheet):
         header_lines = 1
-        while not(sheet.cell(row=header_lines, column=1).value is not None
-                  and (type(sheet.cell(row=header_lines, column=1).value) is int
-                       or sheet.cell(row=header_lines, column=1).value.isdigit())):
+        while sheet.cell(row=header_lines, column=1).value is None \
+                or (type(sheet.cell(row=header_lines, column=1).value) is not int
+                    and not sheet.cell(row=header_lines, column=1).value.isdigit()):
             header_lines += 1
+            if header_lines == 100:  # An after-deadline hack to avoid infinite loops
+                break
         return header_lines
 
     def calculate_aggregated_ac_per_wp(self, tracking_period):
@@ -1486,9 +1488,9 @@ class XLSXParser(FileParser):
                     duration = "-" + str(delta.days) + "d " + str(int(delta.seconds / 3600)) + "h"
             elif delta.seconds != 0:
                 if not negativeValue:
-                    duration = str(int(delta.seconds / 3600)) + "h"
+                    duration = "0d " + str(int(delta.seconds / 3600)) + "h"
                 else:
-                    duration = "-" + str(int(delta.seconds / 3600)) + "h"
+                    duration = "0d -" + str(int(delta.seconds / 3600)) + "h"
             else:
                 if not negativeValue:
                     duration = str(delta.days) + "d"

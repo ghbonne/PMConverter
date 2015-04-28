@@ -32,7 +32,7 @@ for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
         xml_parser = XMLParser()
         excel_version = ExcelVersion.EXTENDED
 
-        print("Parsing from file to project object")
+        print("Parsing xml to project object")
         try:
             po = xml_parser.to_schedule_object(input_path)
 
@@ -106,15 +106,23 @@ for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
                 v12.draw(workbook, worksheet,po,excel_version)
 
         workbook.close()
+
+dir = "../data_analyse/output"
+for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
+    if file_name.endswith(".xlsx"):
+        print(file_name)
+        input_path = input_path = dir + "/" + file_name
+        output_path = dir + "/excel_output/" + file_name[:-5] + "_excel.xlsx"
+        xlsx_parser = XLSXParser()
+        excel_version = ExcelVersion.EXTENDED
+
+        print("Parsing excel to project object")
+        po = xlsx_parser.to_schedule_object(input_path)
+
+        print("Generating excel output")
+        workbook = xlsx_parser.from_schedule_object(po, output_path, excel_version)
+
+        workbook.close()
     print("--DONE--\n")
 
 
-output_path = dir + "/output/C2011-12 Claeys-Verhelst Premises"
-xlsx_parser = XLSXParser()
-excel_version = ExcelVersion.EXTENDED
-
-po = xlsx_parser.to_schedule_object(output_path+".xlsx")
-
-workbook = xlsx_parser.from_schedule_object(po, output_path+"_excel.xlsx", excel_version)
-
-workbook.close()
