@@ -844,11 +844,11 @@ class XLSXParser(FileParser):
             bsch_worksheet.set_column(1, 1, 25)
             bsch_worksheet.set_column(2, 2, 5)
             bsch_worksheet.set_column(3, 4, 16)
-            bsch_worksheet.set_column(5, 6, 12)
+            bsch_worksheet.set_column(5, 6, 13)
             bsch_worksheet.set_column(7, 7, 8)
             bsch_worksheet.set_column(8, 8, 25)
             bsch_worksheet.set_column(9, 9, 10)
-            bsch_worksheet.set_column(10, 11, 15)
+            bsch_worksheet.set_column(10, 11, 10)
             bsch_worksheet.set_column(13, 13, 12)
         else:
             bsch_worksheet.set_column(0, 0, 3)
@@ -977,6 +977,7 @@ class XLSXParser(FileParser):
         res_worksheet.set_row(1, 25)
         res_worksheet.set_column(1, 1, 15)
         res_worksheet.set_column(6, 6, 40)
+        res_worksheet.set_column(7, 7, 10)
 
         # Write header cells (using the header format, and by merging some cells)
         res_worksheet.merge_range('A1:D1', "General", header)
@@ -1096,11 +1097,15 @@ class XLSXParser(FileParser):
             if excel_version == ExcelVersion.EXTENDED:
                 tracking_period_worksheet.set_column(0, 0, 3)
                 tracking_period_worksheet.set_column(1, 1, 18)
-                tracking_period_worksheet.set_column(2, 3, 12)
+                tracking_period_worksheet.set_column(2, 3, 13)
+                tracking_period_worksheet.set_column(4, 4, 6)
                 tracking_period_worksheet.set_column(5, 5, 22)
-                tracking_period_worksheet.set_column(11, 11, 12)
+                tracking_period_worksheet.set_column(6, 10, 10)
+                tracking_period_worksheet.set_column(11, 11, 13)
                 tracking_period_worksheet.set_column(12, 12, 6)
+                tracking_period_worksheet.set_column(13, 20, 10)
                 tracking_period_worksheet.set_column(21, 21, 8)
+                tracking_period_worksheet.set_column(22, 23, 10)
                 tracking_period_worksheet.set_row(3, 30)
 
                 tracking_period_worksheet.write('B1', 'TP Status Date', header)
@@ -1211,6 +1216,7 @@ class XLSXParser(FileParser):
                             tracking_period_worksheet.write_datetime(counter, 11, atr.actual_start, date_lime_cell)
                         else:
                             tracking_period_worksheet.write(counter, 11, '', green_cell)
+
                         tracking_period_worksheet.write(counter, 12, self.get_duration_str(atr.actual_duration), green_cell)
                         tracking_period_worksheet.write_number(counter, 13, atr.planned_actual_cost, money_gray_cell)
                         tracking_period_worksheet.write_number(counter, 14, atr.planned_remaining_cost, money_gray_cell)
@@ -1289,6 +1295,7 @@ class XLSXParser(FileParser):
         # Write the tracking overview
         overview_worksheet = workbook.add_worksheet("Tracking Overview")
         overview_worksheet.set_column(0, 13, 15)
+        overview_worksheet.set_column(14, 30, 15)
         overview_worksheet.set_row(1, 30)
         overview_worksheet.merge_range('A1:C1', 'General', header)
         overview_worksheet.merge_range('D1:G1', 'EVM Performance Measures', header)

@@ -294,7 +294,7 @@ class Agenda(object):
         currentDate = self.get_next_date(startingDate, 0,0)
 
         workinghours = 0
-        while currentDate != endingDate:
+        while currentDate < endingDate:
             currentDate = self.get_next_date(currentDate, 0, 1)
             workinghours += 1
 
