@@ -77,6 +77,14 @@ class RiskAnalysisDistribution(object):
         self.probable_duration = probable_duration
         self.pessimistic_duration = pessimistic_duration
 
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
 
+    def __ne__(self, other):
+        if isinstance(other, self.__class__):
+            return not self.__eq__(other)
+        return NotImplemented
 
 

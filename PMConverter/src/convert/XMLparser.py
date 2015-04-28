@@ -24,7 +24,7 @@ import ast
 class XMLParser(FileParser):
 
     def __init__(self):
-        super().__init__()
+        super(XMLParser, self).__init__()
 
     def getdate(self,datestring="", dateformat=""):
             if dateformat == "d/MM/yyyy h:mm" or "d-M-yyyy h:m":
@@ -66,7 +66,10 @@ class XMLParser(FileParser):
                 raise("Warning! Dateformat undefined" )
 
 
-    def get_date_string(self,date=datetime.min,dateformat=""):
+    def get_date_string(self,date=None,dateformat=""):
+        # avoid mutable default parameters!
+        if date is None: date = datetime.min
+
         if date=='0':
             return "0"
         year=date.year
@@ -196,7 +199,7 @@ class XMLParser(FileParser):
                 #BaselineCostByUnit
                 BaselineCostByUnit=float(activity.find('BaselineCostByUnit').text)
 
-                enddate=project_agenda.get_end_date(BaseLineStart,BaselineDuration_hours/8)
+                enddate=project_agenda.get_end_date(BaseLineStart,BaselineDuration_hours/8)  #TODO: magic number!
                 BSR = BaselineScheduleRecord()
                 BSR.start=BaseLineStart
                 BSR.end=enddate

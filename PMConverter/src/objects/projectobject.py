@@ -18,7 +18,13 @@ class ProjectObject(object):
     :var agenda: Agenda
     """
 
-    def __init__(self, name="", activities=[], tracking_periods=[], resources=[], agenda=Agenda(), type_check = True):
+    def __init__(self, name="", activities=None, tracking_periods=None, resources=None, agenda=None, type_check = True):
+        # avoid mutable default parameters!
+        if activities is None: activities = []
+        if tracking_periods is None: tracking_periods = []
+        if resources is None: resources = []
+        if agenda is None: agenda = Agenda()
+
         if type_check:
             if not isinstance(name, str):
                 raise  TypeError('name should be a string!')
@@ -35,3 +41,13 @@ class ProjectObject(object):
         self.tracking_periods = tracking_periods
         self.resources = resources
         self.agenda = agenda
+    
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
+
+    def __ne__(self, other):
+        if isinstance(other, self.__class__):
+            return not self.__eq__(other)
+        return NotImplemented

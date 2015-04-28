@@ -1,4 +1,6 @@
-__author__ = 'PM Group 8'
+__author__ = 'Eveline and ghbonne'
+__license__ = "GPL"
+
 import os
 import copy
 import re

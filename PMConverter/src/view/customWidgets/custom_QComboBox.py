@@ -1,3 +1,6 @@
+__author__ = 'ghbonne'
+__license__ = "GPL"
+
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from view.customWidgets.custom_QItemDelegate import Custom_QItemDelegate

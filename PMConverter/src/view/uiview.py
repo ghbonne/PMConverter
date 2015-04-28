@@ -1,4 +1,5 @@
-__author__ = 'PM Group 8'
+__author__ = 'ghbonne'
+__license__ = "GPL"
 
 #from processor.processor import Processor
 from PyQt4.QtCore import *
@@ -37,8 +38,6 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
         self.lblStep2_VisualisationDescription.setWordWrap(True)
         self.connect(self.cmdFinished_End, SIGNAL("clicked(bool)"), self.done)  # finish PMConvert program
 
-        #self.loadingAnimation = QMovie("Loading.gif", QByteArray(), self)
-        #self.loadingAnimation = QMovie("F:/Gilles/Universiteit/5e Master 2/Projectmanagement/Project/PMConverter/PMConverter/src/view/Loading.gif")
         self.loadingAnimation = QMovie("view/Loading.gif")
         if not self.loadingAnimation.isValid():
             print("Supported formats by QMovie on this system = {0}".format(QMovie.supportedFormats()))
@@ -58,13 +57,11 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
         self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.StartPage))
         #DEBUG
         #self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageStep2))
-        #self.loadingAnimation.start()
         #self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageConverting))
         #self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageFinished))
 
         # custom GUI inits
         self.inputFiletypes = self.processor.inputFiletypes
-        
 
         # construct visualisations dropdownlist
         ddlVisualisationsModel = QStandardItemModel()
@@ -122,10 +119,8 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
             possibleInputTypes = [type for type in self.inputFiletypes.keys()]
             self.ddlStep1_OutputFormat.addItems(possibleInputTypes)
             # auto enable the first other format:
-            
             otherFormats = [type for type in possibleInputTypes if self.inputFiletypes[type] != fileExtension]
             self.ddlStep1_OutputFormat.setCurrentIndex(possibleInputTypes.index(otherFormats[0]))
-
             
             self.ddlStep1_OutputFormat.setEnabled(True)
 
@@ -532,11 +527,10 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
             if header not in wantedVisualisations:
                 wantedVisualisations[header] = []
 
-        #TODO start conversion here to excel
-        #TODO start thread here
+        # start conversion here to excel
+        # start thread here
         self.processor.setConversionSettings(self.ddlStep1_InputFormat.currentText(), self.ddlStep1_OutputFormat.currentText(), self.inputFilename, wantedVisualisations,self.excel_version)
         self.processor.start()
-
 
         self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageConverting))
         self.loadingAnimation.start()
@@ -550,14 +544,11 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
         filename = QFileDialog.getSaveFileName(self, "Save current visualisation settings", filter = "PMConverter settingfile (*-PMConverterSettingsFile.xml)")
         if filename:
             # file chosen to export to
-            #print("Chosen file = {0}".format(filename))
             filenamePath, fileExtension = os.path.splitext(filename)
             # check if overwriting previous PMConverterSettingsFile => avoid appending custom file ending after custom file ending
             if filenamePath.endswith("-PMConverterSettingsFile"):
                 filenamePath = filenamePath[:-24]
             outputFilename = filenamePath + "-PMConverterSettingsFile.xml"
-
-            #print("OutputFilename = {0}".format(outputFilename))
 
             # write visualisation settings
             self.ExportChosenVisualisationSettings(outputFilename)
@@ -740,12 +731,12 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
 
 if __name__ == '__main__':
     # This is where the main function comes
-    #proc = Processor()
     
     app = QApplication(sys.argv)
-    window = UIView()
-    window.show()
+    
     try:
+        window = UIView()
+        window.show()
         app.exec_()
     except:
         print("Unhandled Exception occurred in PMConverter of type: {0}\n".format(sys.exc_info()[0]))

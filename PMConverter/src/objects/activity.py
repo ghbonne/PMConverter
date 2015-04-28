@@ -21,14 +21,21 @@ class Activity(object):
     :var risk_analysis: RiskAnalysisDistribution
     """
 
-    def __init__(self, activity_id, name="", wbs_id=(), predecessors=[], successors=[], resources=[], resource_cost=0.0,
-                 baseline_schedule=BaselineScheduleRecord(), risk_analysis=RiskAnalysisDistribution(),
+    def __init__(self, activity_id, name="", wbs_id=(), predecessors=None, successors=None, resources=None, resource_cost=0.0,
+                 baseline_schedule=None, risk_analysis=None,
                  type_check = True):
         """
         Initialize an Activity. The data types of the parameters must be the same as the properties of an Activity.
 
         :raises TypeError: one of the parameters is not the right type.
         """
+        # avoid mutable default parameters!
+        if predecessors is None: predecessors = []
+        if successors is None: successors = []
+        if resources is None: resources = []
+        if baseline_schedule is None: baseline_schedule =  BaselineScheduleRecord()
+        if risk_analysis is None: risk_analysis = RiskAnalysisDistribution()
+
         if type_check:
             if not isinstance(activity_id, int):
                 raise TypeError('activity_id should be a number!')
@@ -85,4 +92,12 @@ class Activity(object):
         self.baseline_schedule = baseline_schedule
         self.risk_analysis = risk_analysis
 
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
 
+    def __ne__(self, other):
+        if isinstance(other, self.__class__):
+            return not self.__eq__(other)
+        return NotImplemented

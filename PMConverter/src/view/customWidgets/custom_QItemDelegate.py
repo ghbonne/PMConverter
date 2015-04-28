@@ -1,3 +1,6 @@
+__author__ = 'ghbonne'
+__license__ = "GPL"
+
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
@@ -12,7 +15,6 @@ class Custom_QItemDelegate(QItemDelegate):
         if type == "parent":
             parentOption = option
             parentOption.state |= Qt.ItemIsEnabled
-            #QItemDelegate.paint(painter, parentOption, index)
             super(Custom_QItemDelegate, self).paint(painter, parentOption, index)
         elif type == "child":
             childOption = option

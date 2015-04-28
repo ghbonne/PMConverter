@@ -2,6 +2,8 @@ import calendar
 import math
 
 __author__ = 'PM Group 8'
+__license__ = ["BSD", "MIT/expat"]
+__credits__ = ["John McNamara"]
 
 import xlsxwriter
 import openpyxl
@@ -30,7 +32,7 @@ class XLSXParser(FileParser):
     """
 
     def __init__(self):
-        super().__init__()
+        super(XLSXParser, self).__init__()
 
     def to_schedule_object(self, file_path_input):
         # TODO: determine if we're reading a basic or extended version (#columns)
@@ -600,8 +602,8 @@ class XLSXParser(FileParser):
         # Correct ES to statusDate if PVcumsum has the same value there:
         timesWithSamePV = [x[1] for x in PVcurve if abs(x[0] - lowerPV) < 1e-5] 
         # currentTime can be the start of a workingInterval or the end of a working interval
-        if currentTime in timesWithSamePV or project_object.agenda.get_previous_working_hour(currentTime) in timesWithSamePV:
-            return project_object.agenda.get_previous_working_hour(currentTime)
+        if currentTime in timesWithSamePV or project_object.agenda.get_previous_working_hour_end(currentTime) in timesWithSamePV:
+            return project_object.agenda.get_previous_working_hour_end(currentTime)
 
         return t
 
@@ -690,24 +692,20 @@ class XLSXParser(FileParser):
         returns: (SV(t) in workinghours, string representation of SV(t))
         """
         # determine the time between ES and currentTime:
-        currentTimeValidDatetime = project_object.agenda.get_next_date(currentTime, 0,0)
-        ESvalidDate = project_object.agenda.get_next_date(ES, 0,0)
 
         if ES >= currentTime:
-            timeBetween = project_object.agenda.get_time_between(currentTimeValidDatetime, ESvalidDate)
+            timeBetween = project_object.agenda.get_time_between(currentTime, ES)
             return (timeBetween.days * project_object.agenda.get_working_hours_in_a_day() + int(timeBetween.seconds / 3600), XLSXParser.get_duration_str(timeBetween, False))
         else:
-            timeBetween = project_object.agenda.get_time_between(ESvalidDate, currentTimeValidDatetime)
+            timeBetween = project_object.agenda.get_time_between(ES, currentTime)
             return (- timeBetween.days * project_object.agenda.get_working_hours_in_a_day() - int(timeBetween.seconds / 3600), XLSXParser.get_duration_str(timeBetween, True))
 
     def calculate_SPIt(self, project_object, ES, currentTime):
         "This fuction calculates the SPI(t) value = ES / AT"
-        ESvalidDate = project_object.agenda.get_next_date(ES, 0,0)
-        currentTimeValidDatetime = project_object.agenda.get_next_date(currentTime, 0,0)
 
         projectBaselineStartDate = min([activity.baseline_schedule.start for activity in project_object.activities])
-        durationWorkingTimeES = project_object.agenda.get_time_between(projectBaselineStartDate , ESvalidDate)
-        durationWorkingTimeAT = project_object.agenda.get_time_between(projectBaselineStartDate , currentTimeValidDatetime)
+        durationWorkingTimeES = project_object.agenda.get_time_between(projectBaselineStartDate , ES)
+        durationWorkingTimeAT = project_object.agenda.get_time_between(projectBaselineStartDate , currentTime)
 
         if durationWorkingTimeAT.total_seconds() <= 0:
             return 0
@@ -717,14 +715,11 @@ class XLSXParser(FileParser):
     def calculate_p_factor(self, project_object, tracking_period, ES):
         "This function calculates the p-factor for the given tracking_period and ES datetime"
         # using algorithm:
-        # p-factor = sum(i?N)[ min(PV(i,ES), EV(i,AT))] / sum(i?N)[ PV(i,ES)]
+        # p-factor = sum(i:N)[ min(PV(i,ES), EV(i,AT))] / sum(i:N)[ PV(i,ES)]
         # with 
         # N: The set of all activities of the project network
         # PV(i,ES): The planned value of activity i at time ES 
         # EV(i,AT): The earned value of activity i at time AT
-
-        # DEBUG:
-        # print("XLSXParser:calculate_p_factor: given tracking_period_records length = {0}".format(len(tracking_period.tracking_period_records)))
 
         # sort the tracking_period_records according to its activity baseline schedule start and end date => can figure out which activity uses first a consumable resource
 
@@ -735,15 +730,14 @@ class XLSXParser(FileParser):
         numerator = 0
         denominator = 0
         consumableResourceIdsAlreadyUsed = []  # to only inquire once the cost/use of a consumable resource
-        ESdatetime = project_object.agenda.get_next_date(ES, 0,0)
 
         for atr in lowestLevelActivitiesTrackingRecordsSorted:
             # determine The planned value of activity i at time ES:
             PV_i_ES = 0
-            if ESdatetime <= atr.activity.baseline_schedule.start:
+            if ES <= atr.activity.baseline_schedule.start:
                 # activity is not yet started according to plan => no planned value
                 pass
-            elif ESdatetime >= atr.activity.baseline_schedule.end:
+            elif ES >= atr.activity.baseline_schedule.end:
                 # activity is already finished according to plan => PVi = total_cost
                 PV_i_ES = atr.activity.baseline_schedule.total_cost
                 # check if to add resosurce type to consumableResourceIdsAlreadyUsed:
@@ -752,10 +746,7 @@ class XLSXParser(FileParser):
                     if resource.resource_type == ResourceType.CONSUMABLE:
                         # only add once the cost for its use!
                         if resource.resource_id not in consumableResourceIdsAlreadyUsed:
-                            if len(consumableResourceIdsAlreadyUsed) > 0:
-                                consumableResourceIdsAlreadyUsed.append(resource.resource_id)
-                            else:
-                                consumableResourceIdsAlreadyUsed = [resource.resource_id]
+                            consumableResourceIdsAlreadyUsed.append(resource.resource_id)
                 #endFor adding resource use costs
             else:
                 # activity is still running => calculate intermediate PV value:
@@ -769,10 +760,7 @@ class XLSXParser(FileParser):
                         if resource.resource_id not in consumableResourceIdsAlreadyUsed:
                             # add cost for its use:
                             PV_i_ES += resource.cost_use
-                            if len(consumableResourceIdsAlreadyUsed) > 0:
-                                consumableResourceIdsAlreadyUsed.append(resource.resource_id)
-                            else:
-                                consumableResourceIdsAlreadyUsed = [resource.resource_id]
+                            consumableResourceIdsAlreadyUsed.append(resource.resource_id)
                     else:
                         # resource type is renewable:
                         # add cost_use per demanded resource unit
@@ -780,10 +768,8 @@ class XLSXParser(FileParser):
                 #endFor adding resource use costs
 
                 # add variable costs of this activity according to duration that this activity is running:
-                # determine running duration:
-                actStartDatetime = project_object.agenda.get_next_date(atr.activity.baseline_schedule.start, 0,0)
-                
-                runningTimedelta = project_object.agenda.get_time_between(actStartDatetime, ESdatetime)
+                # determine running duration:                
+                runningTimedelta = project_object.agenda.get_time_between(atr.activity.baseline_schedule.start, ES)
                 runningWorkingHours = runningTimedelta.days * project_object.agenda.get_working_hours_in_a_day() + int(runningTimedelta.seconds / 3600)
 
                 # activity variable cost:

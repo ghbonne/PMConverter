@@ -50,6 +50,16 @@ class BaselineScheduleRecord(object):
         """
 
         if self._duration.seconds > 0:
-            return "{0}d {1}h".format(self._duration.days, self._duration.seconds//3600)
+            return "{0}d {1}h".format(self._duration.days, round(self._duration.seconds / 3600))
         else:
             return "{0}d".format(self._duration.days)
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
+
+    def __ne__(self, other):
+        if isinstance(other, self.__class__):
+            return not self.__eq__(other)
+        return NotImplemented

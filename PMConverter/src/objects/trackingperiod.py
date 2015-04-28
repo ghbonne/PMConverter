@@ -19,7 +19,10 @@ class TrackingPeriod(object):
     """
 
     def __init__(self, tracking_period_name="", tracking_period_statusdate=datetime.now(),
-                 tracking_period_records=[], type_check=True):
+                 tracking_period_records=None, type_check=True):
+        # avoid mutable default parameters!
+        if tracking_period_records is None: tracking_period_statusdate = []
+
         if type_check:
             if not isinstance(tracking_period_name, str):
                 raise TypeError('tracking_period_name should be a string!')
@@ -37,5 +40,15 @@ class TrackingPeriod(object):
         self.spi_t = 0
         self.p_factor = 0
         self.sv_t = 0
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
+
+    def __ne__(self, other):
+        if isinstance(other, self.__class__):
+            return not self.__eq__(other)
+        return NotImplemented
 
 

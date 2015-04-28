@@ -48,4 +48,12 @@ class Resource(object):
         self.cost_use = cost_use
         self.cost_unit = cost_unit
 
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
 
+    def __ne__(self, other):
+        if isinstance(other, self.__class__):
+            return not self.__eq__(other)
+        return NotImplemented
