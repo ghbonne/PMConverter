@@ -623,6 +623,11 @@ class XMLParser(FileParser):
         project_object=ProjectObject(project_name, activity_list_wbs, TP_list, res_list, project_agenda)
         return project_object
 
+    @staticmethod
+    def xml_escape(text):
+        "replaces undesired characters by escaped variant"
+        xml_escape_table = {"&": "&amp;"}
+        return "".join(xml_escape_table.get(c,c) for c in text)
 
     def from_schedule_object(self, project_object, file_path_output="output.xml"):
 
@@ -641,25 +646,11 @@ class XMLParser(FileParser):
         file.write('</NAME>')
 
         ### Projectinfo (unimportant) ###
-        file.write("""<ProjectInfo><LastSavedBy>jbatseli</LastSavedBy><Name>ProjectInfo</Name>
-        <SavedWithMayorBuild>3</SavedWithMayorBuild><SavedWithMinorBuild>0</SavedWithMinorBuild>
-        <SavedWithVersion>0</SavedWithVersion><UniqueID>-1</UniqueID><UserID>0</UserID></ProjectInfo>""")
+        file.write("""<ProjectInfo><LastSavedBy>PMConverter</LastSavedBy><Name>ProjectInfo</Name><SavedWithMayorBuild>3</SavedWithMayorBuild><SavedWithMinorBuild>0</SavedWithMinorBuild><SavedWithVersion>0</SavedWithVersion><UniqueID>-1</UniqueID><UserID>0</UserID></ProjectInfo>""")
 
         ### Settings (Somewhat important) ###
         ## A lot of this info can (and should probably) deleted
-        file.write("""<Settings>
-        <AbsProjectBuffer>311220071300</AbsProjectBuffer>
-        <ActionEndThreshold>100</ActionEndThreshold>
-        <ActionStartThreshold>60</ActionStartThreshold>
-        <ActiveSensResult>1</ActiveSensResult>
-        <ActiveTrackingPeriod>8</ActiveTrackingPeriod>
-        <AllocationMethod>0</AllocationMethod>
-        <AutomaticBuffer>0</AutomaticBuffer>
-        <ConnectResourceBars>0</ConnectResourceBars>
-        <ConstraintHardness>3</ConstraintHardness>
-        <CurrencyPrecision>2</CurrencyPrecision>
-        <CurrencySymbol></CurrencySymbol>
-        <CurrencySymbolPosition>1</CurrencySymbolPosition>""")
+        file.write("""<Settings><AbsProjectBuffer>311220071300</AbsProjectBuffer><ActionEndThreshold>100</ActionEndThreshold><ActionStartThreshold>60</ActionStartThreshold><ActiveSensResult>1</ActiveSensResult><ActiveTrackingPeriod>8</ActiveTrackingPeriod><AllocationMethod>0</AllocationMethod><AutomaticBuffer>0</AutomaticBuffer><ConnectResourceBars>0</ConnectResourceBars><ConstraintHardness>3</ConstraintHardness><CurrencyPrecision>2</CurrencyPrecision><CurrencySymbol></CurrencySymbol><CurrencySymbolPosition>1</CurrencySymbolPosition>""")
         ### Dateformat ###
         ## TODO; Read Datetimeformat
         dateformat="d/MM/yyyy h:mm"
@@ -667,58 +658,11 @@ class XMLParser(FileParser):
         file.write(dateformat)
         file.write("</DateTimeFormat>")
 
-        file.write("""<DefaultRowBuffer>50</DefaultRowBuffer>
-        <DrawRelations>1</DrawRelations>
-        <DrawShadow>1</DrawShadow>
-        <DurationFormat>1</DurationFormat>
-        <DurationLevels>2</DurationLevels>
-        <ESSLSSFloat>0</ESSLSSFloat>
-        <GanttStartDate>080220070800</GanttStartDate>
-        <GanttZoomLevel>0.0127138157894736</GanttZoomLevel>
-        <GroupFilter>0</GroupFilter>
-        <HideGraphMarks>0</HideGraphMarks>
-        <Name>Settings</Name>
-        <PlanningEndThreshold>60</PlanningEndThreshold>
-        <PlanningStartThreshold>20</PlanningStartThreshold>
-        <PlanningUnit>1</PlanningUnit>
-        <ResAllocation1Color>12632256</ResAllocation1Color>
-        <ResAllocation2Color>8421504</ResAllocation2Color>
-        <ResAvailableColor>15780518</ResAvailableColor>
-        <ResourceChartEndDate>220520071000</ResourceChartEndDate>
-        <ResourceChartStartDate>060320060000</ResourceChartStartDate>
-        <ResOverAllocationColor>255</ResOverAllocationColor>
-        <ShowCanEditResultsInHelp>1</ShowCanEditResultsInHelp>
-        <ShowCriticalPath>1</ShowCriticalPath>
-        <ShowInputModelInfoInHelp>1</ShowInputModelInfoInHelp>
-        <SyncGanttAndResourceChart>0</SyncGanttAndResourceChart>
-        <UniqueID>-1</UniqueID>
-        <UseResourceScheduling>0</UseResourceScheduling>
-        <UserID>0</UserID>
-        <ViewDateTimeAsUnits>0</ViewDateTimeAsUnits>""")
+        file.write("""<DefaultRowBuffer>50</DefaultRowBuffer><DrawRelations>1</DrawRelations><DrawShadow>1</DrawShadow><DurationFormat>1</DurationFormat><DurationLevels>2</DurationLevels><ESSLSSFloat>0</ESSLSSFloat><GanttStartDate>080220070800</GanttStartDate><GanttZoomLevel>0.0127138157894736</GanttZoomLevel><GroupFilter>0</GroupFilter><HideGraphMarks>0</HideGraphMarks><Name>Settings</Name><PlanningEndThreshold>60</PlanningEndThreshold><PlanningStartThreshold>20</PlanningStartThreshold><PlanningUnit>1</PlanningUnit><ResAllocation1Color>12632256</ResAllocation1Color><ResAllocation2Color>8421504</ResAllocation2Color><ResAvailableColor>15780518</ResAvailableColor><ResourceChartEndDate>220520071000</ResourceChartEndDate><ResourceChartStartDate>060320060000</ResourceChartStartDate><ResOverAllocationColor>255</ResOverAllocationColor><ShowCanEditResultsInHelp>1</ShowCanEditResultsInHelp><ShowCriticalPath>1</ShowCriticalPath><ShowInputModelInfoInHelp>1</ShowInputModelInfoInHelp><SyncGanttAndResourceChart>0</SyncGanttAndResourceChart><UniqueID>-1</UniqueID><UseResourceScheduling>0</UseResourceScheduling><UserID>0</UserID><ViewDateTimeAsUnits>0</ViewDateTimeAsUnits>""")
         file.write('</Settings>')
 
         ## Defaults: Obsolete? ###
-        file.write("""<Defaults>
-        <DefaultCostPerUnit>50</DefaultCostPerUnit>
-        <DefaultDisplayDurationType>0</DefaultDisplayDurationType>
-        <DefaultDistributionType>2</DefaultDistributionType>
-        <DefaultDurationInput>0</DefaultDurationInput>
-        <DefaultLagTime>0</DefaultLagTime>
-        <DefaultNumberOfSimulationRuns>100</DefaultNumberOfSimulationRuns>
-        <DefaultNumberOfTrackingPeriodsGeneration>20</DefaultNumberOfTrackingPeriodsGeneration>
-        <DefaultNumberOfTrackingPeriodsSimulation>50</DefaultNumberOfTrackingPeriodsSimulation>
-        <DefaultRelationType>2</DefaultRelationType>
-        <DefaultResourceRenewable>1</DefaultResourceRenewable>
-        <DefaultSimulationType>0</DefaultSimulationType>
-        <DefaultStartPage>start.html</DefaultStartPage>
-        <DefaultTaskDuration>10</DefaultTaskDuration>
-        <DefaultTrackingPeriodOffset>50</DefaultTrackingPeriodOffset>
-        <DefaultWorkingDaysPerWeek>5</DefaultWorkingDaysPerWeek>
-        <DefaultWorkingHoursPerDay>8</DefaultWorkingHoursPerDay>
-        <Name>Defaults</Name>
-        <UniqueID>-1</UniqueID>
-        <UserID>0</UserID>
-        </Defaults>""")
+        file.write("""<Defaults><DefaultCostPerUnit>50</DefaultCostPerUnit><DefaultDisplayDurationType>0</DefaultDisplayDurationType><DefaultDistributionType>2</DefaultDistributionType><DefaultDurationInput>0</DefaultDurationInput><DefaultLagTime>0</DefaultLagTime><DefaultNumberOfSimulationRuns>100</DefaultNumberOfSimulationRuns><DefaultNumberOfTrackingPeriodsGeneration>20</DefaultNumberOfTrackingPeriodsGeneration><DefaultNumberOfTrackingPeriodsSimulation>50</DefaultNumberOfTrackingPeriodsSimulation><DefaultRelationType>2</DefaultRelationType><DefaultResourceRenewable>1</DefaultResourceRenewable><DefaultSimulationType>0</DefaultSimulationType><DefaultStartPage>start.html</DefaultStartPage><DefaultTaskDuration>10</DefaultTaskDuration><DefaultTrackingPeriodOffset>50</DefaultTrackingPeriodOffset><DefaultWorkingDaysPerWeek>5</DefaultWorkingDaysPerWeek><DefaultWorkingHoursPerDay>8</DefaultWorkingHoursPerDay><Name>Defaults</Name><UniqueID>-1</UniqueID><UserID>0</UserID></Defaults>""")
 
         ### Agenda ###
         #Startdate
@@ -747,11 +691,7 @@ class XMLParser(FileParser):
         file.write("</Agenda>")
 
         ### Activities ###
-        file.write("""<Activities>
-        <Name>Activities</Name>
-        <UniqueID>-1</UniqueID>
-        <UserID>0</UserID>
-        </Activities><Activities>""")
+        file.write("""<Activities><Name>Activities</Name><UniqueID>-1</UniqueID><UserID>0</UserID></Activities><Activities>""")
 
 
         for activity in project_object.activities:
@@ -774,18 +714,9 @@ class XMLParser(FileParser):
                 file.write(BaselineStartString)
                 file.write("</BaseLineStart>")
                 # Constraints (Unimportant)
-                file.write("""<Constraints>
-                <Direction>0</Direction>
-                <DueDateEnd>010101000000</DueDateEnd>
-                <DueDateStart>010101000000</DueDateStart>
-                <LockedTimeEnd>010101000000</LockedTimeEnd>
-                <LockedTimeStart>010101000000</LockedTimeStart>
-                <Name/>
-                <ReadyTimeEnd>010101000000</ReadyTimeEnd>
-                <ReadyTimeStart>010101000000</ReadyTimeStart>
-                <UniqueID>-1</UniqueID>
-                <UserID>0</UserID>
-                </Constraints>""")
+                file.write("""<Constraints><Direction>0</Direction><DueDateEnd>010101000000</DueDateEnd><DueDateStart>010101000000</DueDateStart><LockedTimeEnd>010101000000</LockedTimeEnd>""")
+                file.write("<LockedTimeStart>010101000000</LockedTimeStart><Name/><ReadyTimeEnd>010101000000</ReadyTimeEnd><ReadyTimeStart>010101000000</ReadyTimeStart>")
+                file.write("<UniqueID>-1</UniqueID><UserID>0</UserID></Constraints>")
                 # Distribution
                 file.write("<Distribution>")
                 distr=str(activity.risk_analysis.distr_id)
@@ -804,7 +735,7 @@ class XMLParser(FileParser):
                 file.write("<IsMilestone>0</IsMilestone>")
                 # Activity name
                 file.write("<Name>")
-                name=str(activity.name)
+                name=str(XMLParser.xml_escape(activity.name)).lstrip(' ')
                 file.write(name)
                 file.write("</Name>")
                 # ?
@@ -822,8 +753,7 @@ class XMLParser(FileParser):
 
 
         ### Relations ###
-        file.write("""<Relations><Name>Relations</Name><UniqueID>-1</UniqueID><UserID>0</UserID></Relations>
-        <Relations>""")
+        file.write("""<Relations><Name>Relations</Name><UniqueID>-1</UniqueID><UserID>0</UserID></Relations><Relations>""")
         # Start with ID = 5? (Shouldn't matter anyway)
         unique_resource_id_counter=4
         for activity in project_object.activities:
@@ -878,8 +808,7 @@ class XMLParser(FileParser):
         file.write("</Relations>")
 
         ### Activity Groups ###
-        file.write("""<ActivityGroups><Name>ActivityGroups</Name><UniqueID>-1</UniqueID><UserID>0</UserID>
-        </ActivityGroups><ActivityGroups>""")
+        file.write("""<ActivityGroups><Name>ActivityGroups</Name><UniqueID>-1</UniqueID><UserID>0</UserID></ActivityGroups><ActivityGroups>""")
         for activitygroup in project_object.activities:
             if len(activitygroup.wbs_id) == 2:
                 # Only Activity groups
@@ -888,7 +817,7 @@ class XMLParser(FileParser):
                 file.write("<Expanded>1</Expanded>")
                 # Name
                 file.write("<Name>")
-                name=str(activitygroup.name)
+                name=str(XMLParser.xml_escape(activitygroup.name)).lstrip(' ')
                 file.write(name)
                 file.write("</Name>")
                 # ID
@@ -937,7 +866,7 @@ class XMLParser(FileParser):
             file.write("</FIELD0>")
             #
             file.write("<FIELD1>")
-            res_name=str(resource.name)
+            res_name=str(XMLParser.xml_escape(resource.name))
             file.write(res_name)
             file.write("</FIELD1>")
             file.write("<FIELD768></FIELD768>")
@@ -982,8 +911,7 @@ class XMLParser(FileParser):
 
 
         ### Resource Assignment ###
-        file.write("""<ResourceAssignments><Name>ResourceAssignments</Name><UniqueID>-1</UniqueID><UserID>0</UserID>
-        </ResourceAssignments><ResourceAssignments>""")
+        file.write("""<ResourceAssignments><Name>ResourceAssignments</Name><UniqueID>-1</UniqueID><UserID>0</UserID></ResourceAssignments><ResourceAssignments>""")
         for activity in project_object.activities:
             if len(activity.resources) !=0:
                 for resourceTuple in activity.resources:
@@ -1015,8 +943,7 @@ class XMLParser(FileParser):
         project_object.activities=activity_list_id
 
         ### TrackingPeriods ####
-        file.write("""<TrackingList><Name>TrackingList</Name><UniqueID>-1</UniqueID>
-        <UserID>0</UserID></TrackingList>""")
+        file.write("""<TrackingList><Name>TrackingList</Name><UniqueID>-1</UniqueID><UserID>0</UserID></TrackingList>""")
         file.write("<TrackingList>")
         TP_count=0
         for TP in project_object.tracking_periods:
@@ -1030,9 +957,9 @@ class XMLParser(FileParser):
             file.write("</EndDate>")
             # Name
             file.write("<Name>")
-            # TODO Weird bug, XML won't be correctly formatted if TP name is written
+            # Weird bug, XML won't be correctly formatted if TP name is written => replace unwanted characters!
             TP_name=str(TP.tracking_period_name)
-            file.write(TP_name)
+            file.write(XMLParser.xml_escape(TP_name))
             file.write("</Name>")
             file.write("<PredictiveLogic>0</PredictiveLogic>")
             # Unique ID
