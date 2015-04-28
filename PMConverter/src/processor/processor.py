@@ -73,7 +73,7 @@ class Processor(QThread):
                 return
 
         # Parse from project object
-        file_path_to = inputFilePath + "_converted" + time.strftime("%Y-%m-%d_%H-%M-%S") + self.inputFiletypes[self.parser_to]
+        file_path_to = inputFilePath + "_converted_" + time.strftime("%Y-%m-%d_%H-%M-%S") + self.inputFiletypes[self.parser_to]
         if self.parser_to == "Excel":
             try:
                 xlsx_parser = XLSXParser()
@@ -106,7 +106,7 @@ class Processor(QThread):
             except:
                 self.emit(self.conversionFailedErrorMessage, "Failed to convert {0} to Excel\nException of type {1} occurred.\nValue of exception = {2}".format(inputfilename, sys.exc_info()[0], sys.exc_info()[1] if sys.exc_info()[1] is not None else ""))
                 return
-        elif parser_to == "ProTrack":
+        elif self.parser_to == "ProTrack":
             try:
                 xml_parser = XMLParser()
                 parsingSuccessful = xml_parser.from_schedule_object(project_object, file_path_to)
