@@ -107,3 +107,14 @@ for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
 
         workbook.close()
     print("--DONE--\n")
+
+
+output_path = dir + "/output/C2011-12 Claeys-Verhelst Premises"
+xlsx_parser = XLSXParser()
+excel_version = ExcelVersion.EXTENDED
+
+po = xlsx_parser.to_schedule_object(output_path+".xlsx")
+
+workbook = xlsx_parser.from_schedule_object(po, output_path+"_excel.xlsx", excel_version)
+
+workbook.close()

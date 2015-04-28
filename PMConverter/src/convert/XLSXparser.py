@@ -163,7 +163,7 @@ class XLSXParser(FileParser):
                         percentage_completed_str = percentage_completed_str[:-1]
                     if float(percentage_completed_str) < 1:
                         percentage_completed_str = float(float(percentage_completed_str)*100)
-                    percentage_completed = int(percentage_completed_str)
+                    percentage_completed = int(round(float(percentage_completed_str)))
                     if percentage_completed > 100:
                         print("Gilles V has made a stupid error by putting some ifs & transformations in XLSXparser.py "
                               "with the variable percentage_completed_str")
@@ -197,7 +197,7 @@ class XLSXParser(FileParser):
                     activity_id = int(project_control_sheet.cell(row=curr_row, column=1).value)
                     actual_start = None  # Set a default value in case there is nothing in that cell
                     if project_control_sheet.cell(row=curr_row, column=3).value:
-                        if type(project_control_sheet.cell(row=curr_row, column=3).value) is not datetime:
+                        if type(project_control_sheet.cell(row=curr_row, column=3).value) is not datetime.datetime:
                             actual_start = datetime.datetime.utcfromtimestamp(((project_control_sheet.cell(row=curr_row, column=3)
                                                                                 .value - 25569)*86400))  # ugly hack to convert
                         else:
@@ -406,12 +406,12 @@ class XLSXParser(FileParser):
                 if len(temp) == 2:
                     # Was it a + or -?
                     minus_plus = predecessor.split("-")
-                    if minus_plus[1]:
+                    if len(minus_plus) == 2:
                         # It was a -
-                        predecessor_lag = -minus_plus[1]
+                        predecessor_lag = -int(temp[1])
                     else:
                         # It was a +
-                        predecessor_lag = minus_plus[1]
+                        predecessor_lag = int(temp[1])
                 else:
                     predecessor_lag = 0
                 activity_predecessors.append((predecessor_activity, predecessor_relation, predecessor_lag))
@@ -431,12 +431,12 @@ class XLSXParser(FileParser):
                 if len(temp) == 2:
                     # Was it a + or -?
                     minus_plus = successor.split("-")
-                    if minus_plus[1]:
+                    if len(minus_plus) == 2:
                         # It was a -
-                        successor_lag = -minus_plus[1]
+                        successor_lag = -int(temp[1])
                     else:
                         # It was a +
-                        successor_lag = minus_plus[1]
+                        successor_lag = int(temp[1])
                 else:
                     successor_lag = 0
                 activity_successors.append((successor_activity, successor_relation, successor_lag))
@@ -715,7 +715,7 @@ class XLSXParser(FileParser):
         # EV(i,AT): The earned value of activity i at time AT
 
         # DEBUG:
-        print("XLSXParser:calculate_p_factor: given tracking_period_records length = {0}".format(len(tracking_period.tracking_period_records)))
+        # print("XLSXParser:calculate_p_factor: given tracking_period_records length = {0}".format(len(tracking_period.tracking_period_records)))
 
         # sort the tracking_period_records according to its activity baseline schedule start and end date => can figure out which activity uses first a consumable resource
 
@@ -1182,7 +1182,7 @@ class XLSXParser(FileParser):
                         tracking_period_worksheet.write_number(counter, 8, atr.activity.baseline_schedule.hourly_cost, money_cyan_cell)
                         tracking_period_worksheet.write(counter, 9, "", money_cyan_cell)
                         tracking_period_worksheet.write_number(counter, 10, atr.activity.baseline_schedule.total_cost, money_cyan_cell)
-                        if atr.actual_start:
+                        if atr.actual_start and atr.actual_start.year < 2500:
                             tracking_period_worksheet.write_datetime(counter, 11, atr.actual_start, date_cyan_cell)
                         else:
                             tracking_period_worksheet.write(counter, 11, '', cyan_cell)
@@ -1212,7 +1212,7 @@ class XLSXParser(FileParser):
                         tracking_period_worksheet.write_number(counter, 8, atr.activity.baseline_schedule.hourly_cost, money_gray_cell)
                         tracking_period_worksheet.write_number(counter, 9, atr.activity.baseline_schedule.var_cost, money_gray_cell)
                         tracking_period_worksheet.write_number(counter, 10, atr.activity.baseline_schedule.total_cost, money_gray_cell)
-                        if atr.actual_start:
+                        if atr.actual_start and atr.actual_start.year < 2500:
                             tracking_period_worksheet.write_datetime(counter, 11, atr.actual_start, date_lime_cell)
                         else:
                             tracking_period_worksheet.write(counter, 11, '', green_cell)
@@ -1244,7 +1244,7 @@ class XLSXParser(FileParser):
                     if self.is_not_lowest_level_activity(atr.activity, project_object.activities):
                         tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, cyan_cell)
                         tracking_period_worksheet.write(counter, 1, atr.activity.name, cyan_cell)
-                        if atr.actual_start:
+                        if atr.actual_start and atr.actual_start.year < 2500:
                             tracking_period_worksheet.write_datetime(counter, 2, atr.actual_start, date_cyan_cell)
                         else:
                             tracking_period_worksheet.write(counter, 2, '', cyan_cell)
@@ -1255,7 +1255,7 @@ class XLSXParser(FileParser):
                     else:
                         tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, gray_cell)
                         tracking_period_worksheet.write(counter, 1, atr.activity.name, gray_cell)
-                        if atr.actual_start:
+                        if atr.actual_start and atr.actual_start.year < 2500:
                             tracking_period_worksheet.write_datetime(counter, 2, atr.actual_start, date_lime_cell)
                         else:
                             tracking_period_worksheet.write(counter, 2, '', green_cell)
