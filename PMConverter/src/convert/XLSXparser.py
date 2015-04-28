@@ -1578,6 +1578,8 @@ class XLSXParser(FileParser):
                 to_write += resources[i][0].name
                 if resources[i][1] > 1:
                     to_write += "[" + str(float(resources[i][1])) + " #" + str(resources[i][0].availability) + "]; "
+                else:
+                    to_write += "; "
             to_write += resources[-1][0].name
             if resources[-1][1] > 1:
                 to_write += "[" + str(float(resources[-1][1])) + " #" + str(resources[-1][0].availability) + "]"

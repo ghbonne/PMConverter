@@ -19,7 +19,7 @@ from visual.cpi import CPI
 from visual.spi_t import SpiT
 
 __author__ = 'gilles'
-"""
+
 dir = "../data_analyse"
 for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
     if file_name.endswith(".p2x"):
@@ -106,7 +106,7 @@ for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
                 v12.draw(workbook, worksheet,po,excel_version)
 
         workbook.close()
-"""
+
 dir = "../data_analyse/output"
 for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
     if file_name.endswith(".xlsx"):
