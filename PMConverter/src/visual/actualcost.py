@@ -122,7 +122,7 @@ class ActualCost(Visualization):
                     # relative actual cost
                     bc = atr.activity.baseline_schedule.total_cost
                     ac = atr.actual_cost
-                    if ac:
+                    if ac and bool(bc):
                         ac_rel = ac/bc
                         worksheet.write_number(counter, 30, ac_rel, calculation)
                     # percentage completed

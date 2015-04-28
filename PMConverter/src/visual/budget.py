@@ -25,7 +25,7 @@ class CV(Visualization):
         self.x_axis = None
         self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
 
-    def draw(self, workbook, worksheet, project_object, excel_version): #todo probleem met percenten
+    def draw(self, workbook, worksheet, project_object, excel_version):
         if not self.x_axis:
             raise Exception("Please first set var x_axis")
 

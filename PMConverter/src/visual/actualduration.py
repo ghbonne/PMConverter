@@ -119,8 +119,8 @@ class ActualDuration(Visualization):
                     # relative baseline duration
                     worksheet.write(counter, 26, 1, calculation)
                     # relative actual duration
-                    bd = self.get_duration(atr.activity.baseline_schedule.duration)
-                    ad = self.get_duration(atr.actual_duration)
+                    bd = self.get_duration(atr.activity.baseline_schedule.duration, project_object.agenda)
+                    ad = self.get_duration(atr.actual_duration, project_object.agenda)
                     if ad:
                         ad_rel = ad/bd
                         worksheet.write(counter, 27, ad_rel, calculation)
@@ -128,10 +128,10 @@ class ActualDuration(Visualization):
                     worksheet.write(counter, 28, atr.percentage_completed/100, calculation)
                 elif self.data_type == DataType.ABSOLUTE:
                     # absolute baseline duration (float)
-                    pd = self.get_duration(atr.activity.baseline_schedule.duration)
+                    pd = self.get_duration(atr.activity.baseline_schedule.duration, project_object.agenda)
                     worksheet.write(counter, 26, pd, calculation)
                     # absolute actual duration
-                    ad = self.get_duration(atr.actual_duration)
+                    ad = self.get_duration(atr.actual_duration, project_object.agenda)
                     worksheet.write(counter, 27, ad, calculation)
                     # absolute completed
                     percent = atr.percentage_completed
@@ -142,7 +142,7 @@ class ActualDuration(Visualization):
             counter += 1
 
     @staticmethod
-    def get_duration(delta):
+    def get_duration(delta, agenda):
         """
         Convert from timedelta to a number, this number is the time expressed in days
         :param delta: timedelta
@@ -151,7 +151,7 @@ class ActualDuration(Visualization):
         if delta:
             if delta.seconds != 0:
                 days = delta.days
-                hours = delta.seconds / (3600 * 24) #hours expressed in days
+                hours = delta.seconds / (3600 * agenda.get_working_hours_in_a_day()) #hours expressed in workingdays
                 duration = days + hours
             else:
                 duration = delta.days
