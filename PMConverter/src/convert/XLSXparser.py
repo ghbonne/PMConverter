@@ -1,4 +1,5 @@
 import calendar
+import math
 
 __author__ = 'PM Group 8'
 
@@ -113,9 +114,8 @@ class XLSXParser(FileParser):
                     activity_id = int(project_control_sheet.cell(row=curr_row, column=1).value)
                     actual_start = None  # Set a default value in case there is nothing in that cell
                     if project_control_sheet.cell(row=curr_row, column=12).value:
-                        if type(project_control_sheet.cell(row=curr_row, column=12).value) is not datetime:
-                            actual_start = datetime.datetime.utcfromtimestamp(((project_control_sheet.cell(row=curr_row, column=12)
-                                                                                .value - 25569)*86400))  # ugly hack to convert
+                        if type(project_control_sheet.cell(row=curr_row, column=12).value) is not datetime.datetime:
+                            actual_start = datetime.datetime.utcfromtimestamp(((project_control_sheet.cell(row=curr_row, column=12).value - 25569)*86400))  # ugly hack to convert
                         else:
                             actual_start = project_control_sheet.cell(row=curr_row, column=12).value
                     actual_duration = None
@@ -844,11 +844,11 @@ class XLSXParser(FileParser):
             bsch_worksheet.set_column(1, 1, 25)
             bsch_worksheet.set_column(2, 2, 5)
             bsch_worksheet.set_column(3, 4, 16)
-            bsch_worksheet.set_column(5, 6, 12)
+            bsch_worksheet.set_column(5, 6, 13)
             bsch_worksheet.set_column(7, 7, 8)
             bsch_worksheet.set_column(8, 8, 25)
             bsch_worksheet.set_column(9, 9, 10)
-            bsch_worksheet.set_column(10, 11, 15)
+            bsch_worksheet.set_column(10, 11, 10)
             bsch_worksheet.set_column(13, 13, 12)
         else:
             bsch_worksheet.set_column(0, 0, 3)
@@ -977,6 +977,7 @@ class XLSXParser(FileParser):
         res_worksheet.set_row(1, 25)
         res_worksheet.set_column(1, 1, 15)
         res_worksheet.set_column(6, 6, 40)
+        res_worksheet.set_column(7, 7, 10)
 
         # Write header cells (using the header format, and by merging some cells)
         res_worksheet.merge_range('A1:D1', "General", header)
@@ -1049,7 +1050,8 @@ class XLSXParser(FileParser):
                 if excel_version == ExcelVersion.EXTENDED:
                     ra_worksheet.write_number(counter, 0, activity.activity_id, cyan_cell)
                     ra_worksheet.write(counter, 1, str(activity.name), cyan_cell)
-                    ra_worksheet.write(counter, 2, self.get_duration_str(activity.baseline_schedule.duration), cyan_cell)
+                    ra_worksheet.write(counter, 2, self.get_duration_hours_str(activity.baseline_schedule.duration, project_object.agenda.get_working_hours_in_a_day()), cyan_cell)
+                    #ra_worksheet.write(counter, 2, self.get_duration_str(activity.baseline_schedule.duration), cyan_cell)
                     ra_worksheet.write(counter, 3, "", cyan_cell)
                     ra_worksheet.write(counter, 4, "", cyan_cell)
                     ra_worksheet.write(counter, 5, "", cyan_cell)
@@ -1065,7 +1067,8 @@ class XLSXParser(FileParser):
                 if excel_version == ExcelVersion.EXTENDED:
                     ra_worksheet.write_number(counter, 0, activity.activity_id, gray_cell)
                     ra_worksheet.write(counter, 1, str(activity.name), gray_cell)
-                    ra_worksheet.write(counter, 2, self.get_duration_str(activity.baseline_schedule.duration), gray_cell)
+                    ra_worksheet.write(counter, 2, self.get_duration_hours_str(activity.baseline_schedule.duration, project_object.agenda.get_working_hours_in_a_day()), gray_cell)
+                    #ra_worksheet.write(counter, 2, self.get_duration_str(activity.baseline_schedule.duration), gray_cell)
                     description = str(activity.risk_analysis.distribution_type.value) + " - " \
                                       + str(activity.risk_analysis.distribution_units.value)
                     ra_worksheet.write(counter, 3, description, yellow_cell)
@@ -1094,11 +1097,15 @@ class XLSXParser(FileParser):
             if excel_version == ExcelVersion.EXTENDED:
                 tracking_period_worksheet.set_column(0, 0, 3)
                 tracking_period_worksheet.set_column(1, 1, 18)
-                tracking_period_worksheet.set_column(2, 3, 12)
+                tracking_period_worksheet.set_column(2, 3, 13)
+                tracking_period_worksheet.set_column(4, 4, 6)
                 tracking_period_worksheet.set_column(5, 5, 22)
-                tracking_period_worksheet.set_column(11, 11, 12)
+                tracking_period_worksheet.set_column(6, 10, 10)
+                tracking_period_worksheet.set_column(11, 11, 13)
                 tracking_period_worksheet.set_column(12, 12, 6)
+                tracking_period_worksheet.set_column(13, 20, 10)
                 tracking_period_worksheet.set_column(21, 21, 8)
+                tracking_period_worksheet.set_column(22, 23, 10)
                 tracking_period_worksheet.set_row(3, 30)
 
                 tracking_period_worksheet.write('B1', 'TP Status Date', header)
@@ -1209,6 +1216,7 @@ class XLSXParser(FileParser):
                             tracking_period_worksheet.write_datetime(counter, 11, atr.actual_start, date_lime_cell)
                         else:
                             tracking_period_worksheet.write(counter, 11, '', green_cell)
+
                         tracking_period_worksheet.write(counter, 12, self.get_duration_str(atr.actual_duration), green_cell)
                         tracking_period_worksheet.write_number(counter, 13, atr.planned_actual_cost, money_gray_cell)
                         tracking_period_worksheet.write_number(counter, 14, atr.planned_remaining_cost, money_gray_cell)
@@ -1287,6 +1295,7 @@ class XLSXParser(FileParser):
         # Write the tracking overview
         overview_worksheet = workbook.add_worksheet("Tracking Overview")
         overview_worksheet.set_column(0, 13, 15)
+        overview_worksheet.set_column(14, 30, 15)
         overview_worksheet.set_row(1, 30)
         overview_worksheet.merge_range('A1:C1', 'General', header)
         overview_worksheet.merge_range('D1:G1', 'EVM Performance Measures', header)
@@ -1396,8 +1405,43 @@ class XLSXParser(FileParser):
             # TODO: more metrics
 
             if excel_version == ExcelVersion.EXTENDED:
+                workingHours_inDay = project_object.agenda.get_working_hours_in_a_day()
                 BAC = generatedPVcurve[-1:][0][0]  # last PV cumsum point corresponds to BAC
-                #PD = 
+                PD = project_object.agenda.get_time_between(generatedPVcurve[0][1], generatedPVcurve[-1:][0][1])
+                PD_workingHours = PD.days * workingHours_inDay + int(PD.seconds / 3600)  # represent Project Duration in workinghours
+                AT_duration = project_object.agenda.get_time_between(generatedPVcurve[0][1], tracking_period.tracking_period_statusdate)
+                AT_duration_workingHours = AT_duration.days * workingHours_inDay + int(AT_duration.seconds / 3600)  # represent AT duration since project start in workinghours
+
+
+                # write EAC(t) - Planned Value method (PF = 1)
+                PVrate = BAC / float(PD_workingHours) if PD_workingHours != 0 else 0
+                TV = sv / PVrate if PVrate != 0 else 0  # Time variance
+                EAC_t_pv1 = PD_workingHours - TV
+                EAC_t_pv1_days = math.floor(EAC_t_pv1 / workingHours_inDay)
+                overview_worksheet.write_datetime(counter, 14, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv1_days, round(EAC_t_pv1 - EAC_t_pv1_days * workingHours_inDay)), date_green_cell)
+
+                # write EAC(t) - Planned Value method (PF = spi)
+                EAC_t_pv2 = PD_workingHours / spi if spi != 0  else 0
+                EAC_t_pv2_days = math.floor(EAC_t_pv2 / workingHours_inDay)
+                overview_worksheet.write_datetime(counter, 15, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv2_days, round(EAC_t_pv2 - EAC_t_pv2_days * workingHours_inDay)), date_green_cell)
+
+                # write EAC(t) - Planned Value method (PF = SCI = SPI * CPI)
+                EAC_t_pv3 = PD_workingHours / (spi * cpi) if (spi * cpi) != 0  else 0
+                EAC_t_pv3_days = math.floor(EAC_t_pv3 / workingHours_inDay)
+                overview_worksheet.write_datetime(counter, 16, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv3_days, round(EAC_t_pv3 - EAC_t_pv3_days * workingHours_inDay)), date_green_cell)
+
+                # write EAC(t) - Earned duration method (PF = 1)
+                ED = AT_duration_workingHours * spi
+                EAC_t_ed1 = AT_duration_workingHours + (max(PD_workingHours, AT_duration_workingHours) - ED)
+                EAC_t_ed1_days = math.floor(EAC_t_ed1 / workingHours_inDay)
+                overview_worksheet.write_datetime(counter, 17, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed1_days, round(EAC_t_ed1 - EAC_t_ed1_days * workingHours_inDay)), date_green_cell)
+
+                ## write EAC(t) - Earned duration method (PF = 1)
+                #ED = AT_duration_workingHours * spi
+                #EAC_t_ed1 = AT_duration_workingHours + (max(PD_workingHours, AT_duration_workingHours) - ED)
+                #EAC_t_ed1_days = math.floor(EAC_t_ed1 / workingHours_inDay)
+                #overview_worksheet.write_datetime(counter, 17, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed1_days, round(EAC_t_ed1 - EAC_t_ed1_days * workingHours_inDay)), date_green_cell)
+
 
                 # write EAC(PF = 1)
                 overview_worksheet.write_number(counter, 23, self.calculate_eac(AC, BAC, EV, 1), money_green_cell)
@@ -1452,6 +1496,14 @@ class XLSXParser(FileParser):
                     duration = "-" + str(delta.days) + "d"
             return duration
         return "0"
+
+    @staticmethod
+    def get_duration_hours_str(delta, workingHoursInDay):
+        if delta:
+            totalWorkingHours = delta.days * workingHoursInDay + int(delta.seconds / 3600)
+            return "{0}h".format(totalWorkingHours)
+        else:
+            return "0"
 
     @staticmethod
     def write_wbs(worksheet, row, column, wbs, format):

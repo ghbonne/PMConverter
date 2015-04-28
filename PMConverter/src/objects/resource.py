@@ -34,8 +34,8 @@ class Resource(object):
                     resource_type = ResourceType.CONSUMABLE
             if not isinstance(resource_type, ResourceType):
                 raise TypeError('resource_type should be an element of ResourceType enum')
-            if not isinstance(availability, float):
-                raise TypeError('availability should be a float')
+            if not isinstance(availability, float) and not isinstance(availability, int):
+                raise TypeError('availability should be a float or integer')
             if not isinstance(cost_use, float):
                 raise TypeError('cost_use should be an float')
             if not isinstance(cost_unit, float):
