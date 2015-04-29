@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import copy
-import math
+import re
 
 __author__ = 'Eveline'
 
@@ -15,8 +15,7 @@ class Agenda(object):
     :var holidays: list of holidays: holiday = string in format "ddmmyyyy"
     """
 
-    def __init__(self, working_hours=None,
-                 working_days=None, holidays=None):
+    def __init__(self, working_hours=None, working_days=None, holidays=None):
         # avoid mutable default parameters!
         if working_hours is None: working_hours = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0]
         if working_days is None: working_days = [1, 1, 1, 1, 1, 0, 0]
@@ -26,6 +25,9 @@ class Agenda(object):
             raise TypeError("Working hours should be a list of 24 bits")
         if len(working_days) != 7 or not all(working_days[i] in [0, 1] for i in range(0, len(working_days))):
             raise TypeError("Working days should be a list of 7 bits")
+        # there has to be at least 1 working hour a day and 1 working day a week:
+        if 1 not in working_hours or 1 not in working_days:
+            raise Exception("Agenda: No workinghours in a week!")
 
         self.working_hours = working_hours
         self.working_days = working_days
@@ -49,6 +51,7 @@ class Agenda(object):
                 return i
 
     def get_number_of_working_days(self):
+        "This function returns the number of working days in a week."
         counter = 0
         for i in range(0, 7):
             if self.working_days[i]:
@@ -67,6 +70,8 @@ class Agenda(object):
         :param hour: integer value between 0 and 23
         """
         self.working_hours[hour] = False
+        if 1 not in working_hours:
+            raise Exception("Agenda:set_non_working_hour({0}): No workinghours in a day!".format(hour))
 
     def is_working_day(self, day):
         """
@@ -80,6 +85,8 @@ class Agenda(object):
         :param day: integer value between 0 and 6
         """
         self.working_days[day] = False
+        if 1 not in working_days:
+            raise Exception("Agenda:set_non_working_day({0}): No workingdays in a week!".format(day))
 
     def is_holiday(self, holiday):
         return holiday in self.holidays
@@ -239,6 +246,51 @@ class Agenda(object):
             hour += 1 #because we want the end of the hour
             result = result.replace(hour=hour)
         return result
+
+    def convert_durationString_to_workingHours(self, duration_string):
+        """
+        This function converts a duration from a string to a timedelta of workingdays and workinghours
+        :param duration_string: string with working duration formatted in weeks, days and hours
+        :return: int, workinghours
+        """
+        durationMatch = re.match(r"(\s*)?((?P<weeks>\d+)w)?(\s*)?((?P<days>\d+)d)?(\s*)?((?P<hours>\d+)(h|u))?(\s*)?", duration_string)
+
+        if durationMatch is not None:
+            weeks = durationMatch.group("weeks")
+            days = durationMatch.group("days")
+            hours = durationMatch.group("hours")
+
+            workingHoursInDay = self.get_working_hours_in_a_day()
+
+            totalWorkingHours = int(weeks) * self.get_number_of_working_days() * workingHoursInDay if weeks is not None else 0
+            totalWorkingHours += int(days) * workingHoursInDay if days is not None else 0
+            totalWorkingHours += int(hours) if hours is not None else 0
+            return totalWorkingHours 
+        else:
+            # string is empty or does not match format
+            return 0
+
+    def convert_workingHours_to_durationString(self, workingHoursDuration, convertDaysToWeeks= True):
+        """
+        This function converts a duration from a timedelta in workingdays and workinghours to a formatted string
+        :param workingHoursDuration: int, workinghours
+        :param convertDaysToWeeks: bool, sets behaviour to convert days > days in workingweek to a week
+        :return: formatted string
+        """
+        workingHoursInDay = self.get_working_hours_in_a_day()
+        workingDaysInWeek = self.get_number_of_working_days()
+        totalWorkingDays = int(workingHoursDuration / workingHoursInDay)
+        
+        weeks = int(totalWorkingDays / workingDaysInWeek) if convertDaysToWeeks else 0
+        days = totalWorkingDays - weeks * workingDaysInWeek
+        hours = workingHoursDuration - totalWorkingDays * workingHoursInDay
+
+        # build output string:
+        durationString = str(weeks) + "w" if weeks else ""
+        durationString += (" " if durationString and days else "") + str(days) + "d" if days else ""
+        durationString += (" " if durationString and hours else "") + str(hours) + "h" if hours else ""
+        
+        return durationString
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):

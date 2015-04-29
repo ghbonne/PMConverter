@@ -13,8 +13,8 @@ class Activity(object):
     :var activity_id: int
     :var name: String
     :var wbs_id: tuple of ints, the id in the work breakdown structure (e.g (1, 2, 2))
-    :var predecessors: list of tuples (activity_id, Relation, lag), relations are (FS (Finish-Start), FF, SS, SF)
-    :var successors: list of tuples (activity_id, Relation, lag)
+    :var predecessors: list of tuples (activity_id, Relation, lag), relations are (FS (Finish-Start), FF, SS, SF), lag is an int expressed in workinghours (can be positive or negative)
+    :var successors: list of tuples (activity_id, Relation, lag) lag is an int expressed in workinghours (can be positive or negative)
     :var resources: list of tuples (Resource, demand)
     :var resource_cost: float
     :var baseline_schedule: BaseLineScheduleRecord

@@ -54,7 +54,13 @@ class XLSXParser(FileParser):
 
         if activities_sheet.cell(row=2, column=14).value:  # We know if is an extended version if the baseline schedule contains 14 columns
             # We are processing an extended version
-            # First we process the resources sheet, we store them in a dict, with index the resource name, to access them
+            # Process the agenda sheet first to have an agendo to parse all dates in in the other sheets
+            if agenda_sheet:
+                print(agenda_sheet) #DEBUG
+                agenda = self.process_agenda(agenda_sheet)
+            else:
+                agenda = Agenda()
+            # Next we process the resources sheet, we store them in a dict, with index the resource name, to access them
             # easily later when we are processing the activities.
             resources_dict = self.process_resources(resource_sheet)
             print(resources_dict)
@@ -63,31 +69,26 @@ class XLSXParser(FileParser):
             print(risk_analysis_dict)
             # Finally, the sheet with activities is processed, using the dicts we created above.
             # Again, a new dict is created, to process all tracking periods more easily
-            activities_dict = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict, ExcelVersion.EXTENDED)
+            activities_dict = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict, ExcelVersion.EXTENDED, agenda)
             print(activities_dict)
             tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, ExcelVersion.EXTENDED)
-            print(tracking_periods)
-            if agenda_sheet:
-                print(agenda_sheet)
-                agenda = self.process_agenda(agenda_sheet)
-            else:
-                agenda = Agenda()
+            #print(tracking_periods)
 
-            print("check")
+            #print("check")
             return ProjectObject(activities=[i[1] for i in sorted(activities_dict.values(), key=lambda x: x[1].wbs_id)],
                                  resources=sorted(resources_dict.values(), key=lambda x: x.resource_id),
                                  tracking_periods=tracking_periods, agenda=agenda)
         else:
             # We are processing the basic version
-            resources_dict = self.process_resources(resource_sheet)
-            risk_analysis_dict = self.process_risk_analysis(risk_analysis_sheet, ExcelVersion.BASIC)
-            activities_dict = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict, ExcelVersion.BASIC)
-            tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, ExcelVersion.BASIC)
             if agenda_sheet:
                 agenda = self.process_agenda(agenda_sheet)
             else:
                 agenda = Agenda()
-
+            resources_dict = self.process_resources(resource_sheet)
+            risk_analysis_dict = self.process_risk_analysis(risk_analysis_sheet, ExcelVersion.BASIC)
+            activities_dict = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict, ExcelVersion.BASIC, agenda)
+            tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, ExcelVersion.BASIC)
+            
             return ProjectObject(activities=[i[1] for i in sorted(activities_dict.values(), key=lambda x: x[0])],
                                  resources=list(resources_dict.values()), tracking_periods=tracking_periods,
                                  agenda=agenda)
@@ -284,7 +285,7 @@ class XLSXParser(FileParser):
                                                                        pessimistic_duration=risk_ana_pess_duration)
         return risk_analysis_dict
 
-    def process_baseline_schedule(self, activities_sheet, resources_dict, risk_analysis_dict, excel_version):
+    def process_baseline_schedule(self, activities_sheet, resources_dict, risk_analysis_dict, excel_version, agenda):
         activities_dict = {}
         if excel_version == ExcelVersion.EXTENDED:
             for curr_row in range(self.get_nr_of_header_lines(activities_sheet), activities_sheet.get_highest_row()+1):
@@ -293,8 +294,8 @@ class XLSXParser(FileParser):
                 activity_wbs = ()
                 for number in activities_sheet.cell(row=curr_row, column=3).value.split("."):
                     activity_wbs = activity_wbs + (int(number),)
-                activity_predecessors = self.process_predecessors(activities_sheet.cell(row=curr_row, column=4).value)
-                activity_successors = self.process_successors(activities_sheet.cell(row=curr_row, column=5).value)
+                activity_predecessors = self.process_predecessors(activities_sheet.cell(row=curr_row, column=4).value, agenda)
+                activity_successors = self.process_successors(activities_sheet.cell(row=curr_row, column=5).value, agenda)
                 activity_resource_cost = 0.0
                 if activities_sheet.cell(row=curr_row, column=10).value:
                     activity_resource_cost = float(activities_sheet.cell(row=curr_row, column=10).value)
@@ -352,8 +353,8 @@ class XLSXParser(FileParser):
             for curr_row in range(self.get_nr_of_header_lines(activities_sheet), activities_sheet.get_highest_row()+1):
                 activity_id = int(activities_sheet.cell(row=curr_row, column=1).value)
                 activity_name = activities_sheet.cell(row=curr_row, column=2).value
-                activity_predecessors = self.process_predecessors(activities_sheet.cell(row=curr_row, column=3).value)
-                activity_successors = self.process_successors(activities_sheet.cell(row=curr_row, column=4).value)
+                activity_predecessors = self.process_predecessors(activities_sheet.cell(row=curr_row, column=3).value, agenda)
+                activity_successors = self.process_successors(activities_sheet.cell(row=curr_row, column=4).value, agenda)
                 if type(activities_sheet.cell(row=curr_row, column=5).value) is float:
                     baseline_start = datetime.datetime.utcfromtimestamp(((activities_sheet.cell(row=curr_row, column=5).value -
                                                                           25569)*86400))  # Convert to correct date
@@ -403,7 +404,7 @@ class XLSXParser(FileParser):
         return activities_dict
 
     @staticmethod
-    def process_predecessors(predecessors):
+    def process_predecessors(predecessors, agenda):
         if predecessors:
             activity_predecessors = []
             for predecessor in predecessors.split(";"):
@@ -417,10 +418,10 @@ class XLSXParser(FileParser):
                     minus_plus = predecessor.split("-")
                     if len(minus_plus) == 2:
                         # It was a -
-                        predecessor_lag = -int(temp[1])
+                        predecessor_lag = -agenda.convert_durationString_to_workingHours(temp[1]) #extract workinghours from string
                     else:
                         # It was a +
-                        predecessor_lag = int(temp[1])
+                        predecessor_lag = agenda.convert_durationString_to_workingHours(temp[1]) #extract workinghours from string
                 else:
                     predecessor_lag = 0
                 activity_predecessors.append((predecessor_activity, predecessor_relation, predecessor_lag))
@@ -428,12 +429,12 @@ class XLSXParser(FileParser):
         return []
 
     @staticmethod
-    def process_successors(successors):
+    def process_successors(successors, agenda):
         if successors:
             activity_successors = []
             for successor in successors.split(";"):
                 temp = re.split('\-|\+', successor)
-                # The first two characters are the relation type (e.g. xFS or xxFS), activity can be variable
+                # The first two characters are the relation type (e.g. FSx or FSxx), activity can be variable
                 # number of digits
                 successor_activity = int(temp[0][2:])
                 successor_relation = temp[0][0:2]
@@ -442,10 +443,10 @@ class XLSXParser(FileParser):
                     minus_plus = successor.split("-")
                     if len(minus_plus) == 2:
                         # It was a -
-                        successor_lag = -int(temp[1])
+                        successor_lag = -agenda.convert_durationString_to_workingHours(temp[1]) # extract workinghours from string
                     else:
                         # It was a +
-                        successor_lag = int(temp[1])
+                        successor_lag = agenda.convert_durationString_to_workingHours(temp[1]) # extract workinghours from string
                 else:
                     successor_lag = 0
                 activity_successors.append((successor_activity, successor_relation, successor_lag))
@@ -906,8 +907,8 @@ class XLSXParser(FileParser):
                     bsch_worksheet.write_number(counter, 0, activity.activity_id, green_cell)
                     bsch_worksheet.write(counter, 1, str(activity.name), green_cell)
                     self.write_wbs(bsch_worksheet, counter, 2, activity.wbs_id, gray_cell) ####
-                    self.write_predecessors(bsch_worksheet, counter, 3, activity.predecessors, green_cell)
-                    self.write_successors(bsch_worksheet, counter, 4, activity.successors, green_cell)
+                    self.write_predecessors(bsch_worksheet, counter, 3, activity.predecessors, green_cell, project_object.agenda)
+                    self.write_successors(bsch_worksheet, counter, 4, activity.successors, green_cell, project_object.agenda)
                     bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.start, date_lime_cell)
                     bsch_worksheet.write_datetime(counter, 6, activity.baseline_schedule.end, date_green_cell)
                     bsch_worksheet.write(counter, 7, self.get_duration_str(activity.baseline_schedule.duration), green_cell)
@@ -923,8 +924,8 @@ class XLSXParser(FileParser):
                 else:
                     bsch_worksheet.write_number(counter, 0, activity.activity_id, green_cell)
                     bsch_worksheet.write(counter, 1, str(activity.name), green_cell)
-                    self.write_predecessors(bsch_worksheet, counter, 2, activity.predecessors, green_cell)
-                    self.write_successors(bsch_worksheet, counter, 3, activity.successors, green_cell)
+                    self.write_predecessors(bsch_worksheet, counter, 2, activity.predecessors, green_cell, project_object.agenda)
+                    self.write_successors(bsch_worksheet, counter, 3, activity.successors, green_cell, project_object.agenda)
                     bsch_worksheet.write_datetime(counter, 4, activity.baseline_schedule.start, date_lime_cell)
                     bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.end, date_green_cell)
                     bsch_worksheet.write(counter, 6, self.get_duration_str(activity.baseline_schedule.duration), green_cell)
@@ -941,8 +942,8 @@ class XLSXParser(FileParser):
                     bsch_worksheet.write_number(counter, 0, activity.activity_id, yellow_cell)
                     bsch_worksheet.write(counter, 1, str(activity.name), yellow_cell)
                     self.write_wbs(bsch_worksheet, counter, 2, activity.wbs_id, cyan_cell)
-                    self.write_predecessors(bsch_worksheet, counter, 3, activity.predecessors, cyan_cell)
-                    self.write_successors(bsch_worksheet, counter, 4, activity.successors, cyan_cell)
+                    self.write_predecessors(bsch_worksheet, counter, 3, activity.predecessors, cyan_cell, project_object.agenda)
+                    self.write_successors(bsch_worksheet, counter, 4, activity.successors, cyan_cell, project_object.agenda)
                     bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.start, date_cyan_cell)
                     bsch_worksheet.write_datetime(counter, 6, activity.baseline_schedule.end, date_cyan_cell)
                     bsch_worksheet.write(counter, 7, self.get_duration_str(activity.baseline_schedule.duration), cyan_cell)
@@ -955,8 +956,8 @@ class XLSXParser(FileParser):
                 else:
                     bsch_worksheet.write_number(counter, 0, activity.activity_id, yellow_cell)
                     bsch_worksheet.write(counter, 1, str(activity.name), yellow_cell)
-                    self.write_predecessors(bsch_worksheet, counter, 2, activity.predecessors, cyan_cell)
-                    self.write_successors(bsch_worksheet, counter, 3, activity.successors, cyan_cell)
+                    self.write_predecessors(bsch_worksheet, counter, 2, activity.predecessors, cyan_cell, project_object.agenda)
+                    self.write_successors(bsch_worksheet, counter, 3, activity.successors, cyan_cell, project_object.agenda)
                     bsch_worksheet.write_datetime(counter, 4, activity.baseline_schedule.start, date_cyan_cell)
                     bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.end, date_cyan_cell)
                     bsch_worksheet.write(counter, 6, self.get_duration_str(activity.baseline_schedule.duration), cyan_cell)
@@ -1401,7 +1402,7 @@ class XLSXParser(FileParser):
 
             if excel_version == ExcelVersion.EXTENDED:
                 workingHours_inDay = project_object.agenda.get_working_hours_in_a_day()
-                BAC = generatedPVcurve[-1:][0][0]  # last PV cumsum point corresponds to BAC
+                BAC = generatedPVcurve[-1][0]  # last PV cumsum point corresponds to BAC
                 PD = project_object.agenda.get_time_between(generatedPVcurve[0][1], generatedPVcurve[-1:][0][1])
                 PD_workingHours = PD.days * workingHours_inDay + round(PD.seconds / 3600)  # represent Project Duration in workinghours
                 AT_duration = project_object.agenda.get_time_between(generatedPVcurve[0][1], tracking_period.tracking_period_statusdate)
@@ -1538,33 +1539,33 @@ class XLSXParser(FileParser):
         worksheet.write(row, column, to_write, format)
 
     @staticmethod
-    def write_successors(worksheet, row, column, successors, format):
+    def write_successors(worksheet, row, column, successors, format, agenda):
         # Write in format of FSxx;SSxx..
         to_write = ''
         if len(successors) > 0:
             for i in range(0, len(successors)-1):
                 to_write += str(successors[i][1]) + str(successors[i][0])
                 if successors[i][2] != 0:
-                    to_write += "+" + str(successors[i][2])
+                    to_write += ("+" if successors[i][2] > 0 else "-") + agenda.convert_workingHours_to_durationString(abs(successors[i][2])) # convert workinghours to formatted string
                 to_write += ";"
             to_write += str(successors[-1][1]) + str(successors[-1][0])
             if successors[-1][2] != 0:
-                to_write += "+" + str(successors[-1][2])
+                to_write += ("+" if successors[-1][2] > 0 else "-") + agenda.convert_workingHours_to_durationString(abs(successors[-1][2])) # convert workinghours to formatted string
         worksheet.write(row, column, to_write, format)
 
     @staticmethod
-    def write_predecessors(worksheet, row, column, predecessors, format):
+    def write_predecessors(worksheet, row, column, predecessors, format, agenda):
         # Write in format of xxSF;xxFF..
         to_write = ''
         if len(predecessors) > 0:
             for i in range(0, len(predecessors)-1):
                 to_write += str(predecessors[i][0]) + str(predecessors[i][1])
                 if predecessors[i][2] != 0:
-                    to_write += "+" + str(predecessors[i][2])
+                    to_write += ("+" if predecessors[i][2] > 0 else "-") + agenda.convert_workingHours_to_durationString(abs(predecessors[i][2])) # convert workinghours to formatted string
                 to_write += ";"
             to_write += str(predecessors[-1][0]) + str(predecessors[-1][1])
             if predecessors[-1][2] != 0:
-                to_write += "+" + str(predecessors[-1][2])
+                to_write += ("+" if predecessors[-1][2] > 0 else "-") + agenda.convert_workingHours_to_durationString(abs(predecessors[-1][2])) # convert workinghours to formatted string
         worksheet.write(row, column, to_write, format)
 
     @staticmethod
