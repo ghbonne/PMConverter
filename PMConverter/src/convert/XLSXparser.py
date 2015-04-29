@@ -166,7 +166,7 @@ class XLSXParser(FileParser):
                     if type(percentage_completed_str) != str:
                         percentage_completed_str *= 100
                     if type(percentage_completed_str) == float:
-                        percentage_completed_str = int(percentage_completed_str)
+                        percentage_completed_str = int(round(percentage_completed_str))  # round the floating point number to an int
                     percentage_completed_str = str(percentage_completed_str)
                     if not percentage_completed_str[-1].isdigit():
                         percentage_completed_str = percentage_completed_str[:-1]
@@ -227,7 +227,7 @@ class XLSXParser(FileParser):
                     if type(percentage_completed_str) != str:
                         percentage_completed_str *= 100
                     if type(percentage_completed_str) == float:
-                        percentage_completed_str = int(percentage_completed_str)
+                        percentage_completed_str = int(round(percentage_completed_str)) # round the floating point number to an int
                     percentage_completed_str = str(percentage_completed_str)
                     if not percentage_completed_str[-1].isdigit():
                         percentage_completed_str = percentage_completed_str[:-1]
@@ -825,6 +825,7 @@ class XLSXParser(FileParser):
                                               'num_format': '#,##0.00' + u"\u20AC", 'font_size': 8})
         money_gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1,
                                               'num_format': '#,##0.00' + u"\u20AC", 'font_size': 8})
+        percent_green_cell = workbook.add_format({'bg_color': '#9BBB59', 'text_wrap': True, 'border': 1, 'font_size': 8,'num_format': '0%'})
 
         # Worksheets
         bsch_worksheet = workbook.add_worksheet("Baseline Schedule")
@@ -1368,6 +1369,7 @@ class XLSXParser(FileParser):
             # save spi value also in tracking_period for visualisations:
             tracking_period.spi = spi
             overview_worksheet.write(counter, 8, str(round(spi * 100)) + "%", green_cell)
+
             # calculate CV
             cv = EV - AC
             overview_worksheet.write_number(counter, 9, cv, money_green_cell)

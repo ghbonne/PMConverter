@@ -1,3 +1,3 @@
 __author__ = 'gilles'
 
-from parseexceptions import *
+from exceptions.parseexceptions import *
