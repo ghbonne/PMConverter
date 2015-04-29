@@ -15,31 +15,36 @@ class Resource(object):
     :var resource_id: int
     :var name: String
     :var resource_type: "Renewable" or "Consumable"
-    :var availability: int, number of units available
+    :var availability: int, number of units available OR float, percentage of resource available ELSE -1 = infinity for consumable resource 
     :var cost_use: float, one-time cost that is incurred every time that the resource is used by an activity
     :var cost_unit: float, cost per unit
+
+    # DEBUG
+    :var total_resource_cost: float or int, total value spent at this resource in the project
     """
 
     def __init__(self, resource_id, name="", resource_type=ResourceType.RENEWABLE, availability=0, cost_use=0.0,
-                 cost_unit=0.0, type_check = True):
+                 cost_unit=0.0, total_resource_cost=0, type_check = True):
         if type_check:
             if not isinstance(resource_id, int):
-                raise TypeError('resource_id should be an integer')
+                raise TypeError('Resource: resource_id should be an integer')
             if not isinstance(name, str):
-                raise TypeError('name should be an string')
+                raise TypeError('Resource: name should be an string')
             if type(resource_type) is str:
                 if resource_type.lower() == 'RENEWABLE'.lower():
                     resource_type = ResourceType.RENEWABLE
                 elif resource_type.lower() == 'CONSUMABLE'.lower():
                     resource_type = ResourceType.CONSUMABLE
             if not isinstance(resource_type, ResourceType):
-                raise TypeError('resource_type should be an element of ResourceType enum')
-            if not isinstance(availability, float) and not isinstance(availability, int):
-                raise TypeError('availability should be a float or integer')
+                raise TypeError('Resource: resource_type should be an element of ResourceType enum')
+            if not isinstance(availability, (float, int)):
+                raise TypeError('Resource: availability should be a float or integer')
             if not isinstance(cost_use, float):
-                raise TypeError('cost_use should be an float')
+                raise TypeError('Resource: cost_use should be an float')
             if not isinstance(cost_unit, float):
-                raise TypeError('cost_unit should be an float')
+                raise TypeError('Resource: cost_unit should be an float')
+            if not isinstance(total_resource_cost, (float, int)):
+                raise TypeError('Resource: total_resource_cost should be an integer or float')
 
         self.resource_id = resource_id
         self.name = name
@@ -47,6 +52,7 @@ class Resource(object):
         self.availability = availability
         self.cost_use = cost_use
         self.cost_unit = cost_unit
+        self.total_resource_cost = total_resource_cost
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
