@@ -18,22 +18,26 @@ class BaselineScheduleRecord(object):
     """
 
     def __init__(self, start=datetime.datetime.now(), end=datetime.datetime.now() + datetime.timedelta(days=10),
-                 duration=datetime.timedelta(days=10), fixed_cost=0.0, hourly_cost=0.0, var_cost=0.0, total_cost=0.0,
+                 duration=datetime.timedelta(days=10), fixed_cost=0.0, hourly_cost=0.0, var_cost=None, total_cost=0.0,
                  type_check=True):
         if type_check:
             if not isinstance(start, datetime.datetime):
-                raise TypeError('start should be a datetime')
+                raise TypeError('BaselineScheduleRecord: start should be a datetime')
             if not isinstance(end, datetime.datetime):
-                raise TypeError('end should be a datetime')
+                raise TypeError('BaselineScheduleRecord: end should be a datetime')
             if not isinstance(duration, datetime.timedelta):
-                raise TypeError('duration should be a timedelta')
+                raise TypeError('BaselineScheduleRecord: duration should be a timedelta')
             if not isinstance(fixed_cost, float):
-                raise TypeError('fixed_cost should be a float')
+                raise TypeError('BaselineScheduleRecord: fixed_cost should be a float')
             if not isinstance(hourly_cost, float):
-                raise TypeError('hourly_cost should be a float')
-            # NOTE: typecheck of var_cost is omitted. This is to allow var_cost to be None => indicating that this is not an activity of the lowest level
+                raise TypeError('BaselineScheduleRecord: hourly_cost should be a float')
+            # NOTE: var_cost is allowed to be None => indicating that this is not an activity of the lowest level, else it should be a float
+            if var_cost is not None:
+                # typecheck:
+                if not isinstance(var_cost, float):
+                    raise TypeError('BaselineScheduleRecord: var_cost should be a float if it is not part of an activityGroup')
             if not isinstance(total_cost, float):
-                raise TypeError('total_cost should be a float')
+                raise TypeError('BaselineScheduleRecord: total_cost should be a float')
         self.start = start
         self.end = end
         self.duration = duration
