@@ -42,7 +42,7 @@ class XMLParser(FileParser):
                     year=int(datestring[4:8])
                     return datetime(year, month, day)
                 else:
-                    raise XMLParseError("getdate: datestring length {0} is not equal to 8 or 12. datestring = {1}".format(len(datestring), datestring))
+                    #raise XMLParseError("getdate: datestring length {0} is not equal to 8 or 12. datestring = {1}".format(len(datestring), datestring))  #TODO: datestring="0" gets here
                     return datetime.max
             elif dateformat == "MM/d/yyyy h:mm":
                 if len(datestring) == 12:
@@ -58,7 +58,7 @@ class XMLParser(FileParser):
                     year=int(datestring[4:8])
                     return datetime(year, month, day)
                 else:
-                    raise XMLParseError("getdate: datestring length {0} is not equal to 8 or 12. datestring = {1}".format(len(datestring), datestring))
+                    #raise XMLParseError("getdate: datestring length {0} is not equal to 8 or 12. datestring = {1}".format(len(datestring), datestring))
                     return datetime.max
             else:
                 raise XMLParseError("getdate: unexpected dateformat: {0}".format(dateformat))
@@ -104,27 +104,62 @@ class XMLParser(FileParser):
         else:
             raise XMLParseError("get_date_string: Dateformat undefined: {0}".format(dateformat))
 
+    def set_wbs_read_activities_and_groups(self, parent_wbs, children_nodes, activity_dict, activityGroup_dict):
+        "This function sets the wbs id tuple of the given children outlineList nodes and adds it to their corresponding activity or activityGroup."
+        # make starting wbs from parent
+        current_wbs_list = list(parent_wbs).append(1)
+        for child_node in children_nodes:
+            # determine type of child:
+            nodeType_node = child_node.find("Type")
+            nodeType = 0 if nodeType_node is None else int(nodeType_node.text)
+            if nodeType == 1:
+                # this node corresponds with an activityGroup:
+                activityGroupId = int(child_node.find("Data").text)
+                if activityGroupId in activityGroup_dict:
+                    activityGroup_dict[activityGroupId].wbs_id = tuple(current_wbs_list)
+                    grandChildrenNode = child_node.find("List")
+                    if grandChildrenNode is not None:
+                        # call recursive function to add its children:
+                        self.set_wbs_read_activities_and_groups(tuple(current_wbs_list), list(grandChildrenNode), activity_dict, activityGroup_dict)
+
+                    # increment wbs_id for next child
+                    current_wbs_list[-1] += 1
+                else:
+                    raise XMLParseError("set_wbs_read_activities_and_groups: Could not find activityGroup with id = {0} in read activityGroups.".format(activityGroupId))
+            elif nodeType == 2:
+                # this node corresponds with an activity:
+                activityId = int(child_node.find("Data").text)
+                if activityId in activity_dict:
+                    activity_dict[activityId].wbs_id = tuple(current_wbs_list)
+                    # increment wbs_id for next child
+                    current_wbs_list[-1] += 1
+                else:
+                    raise XMLParseError("set_wbs_read_activities_and_groups: Could not find activity with id = {0} in read activities.".format(activityId))
+            else:
+                # not a valid node
+                continue
+        return
+
     def to_schedule_object(self, file_path_input):
         tree = ET.parse(file_path_input)
         root = tree.getroot()
 
-        activity_list=[]
-        activity_list_wo_groups=[]
-        res_list=[]
-        max=0
+        # read dicts from ProTrack file:
+        activity_dict = []
+        activityGroup_dict = {}
+        res_dict = {}  # resources dict
+        project_agenda = Agenda()
 
         ## Project name
-        project_name=root.find("NAME").text
+        project_name = root.find("NAME").text
 
         ## Dateformat
+        dateformat = ""
         for settings in root.findall('Settings'):
             dateformat=settings.find('DateTimeFormat').text
 
-
-
         ## Create Agenda: Working hours, Working days, Holidays
         for agenda in root.findall('Agenda'):
-            project_agenda=Agenda()
             # working hours
             for nonworkinghour in agenda.findall('NonWorkingHours'):
                 for hours in nonworkinghour.findall('Hour'):
@@ -136,12 +171,160 @@ class XMLParser(FileParser):
                     day=int(days.text)
                     project_agenda.set_non_working_day(day)
             # Holidays
-            ## No holidays in example xml file: following code is educated guess
             for holidays in agenda.findall('Holidays'):
                 for holiday in holidays.findall('Holiday'):
                     holiday=holiday.text[:8]
                     project_agenda.set_holiday(holiday)
 
+        ###### Resources ######
+        ## Resources (Definition): create dict of all resources in project:
+        for resourcesNode in root.findall('Resources'):
+            for resourceNode in resourcesNode.findall('Resource'):
+                res_ID = int(resourceNode.find('FIELD0').text)
+                name = resourceNode.find('FIELD1').text
+                res_type = ResourceType.RENEWABLE if int(resourceNode.find('FIELD769').text) else ResourceType.CONSUMABLE
+                cost_per_use = float(resourceNode.find('FIELD770').text)
+                cost_per_unit = float(resourceNode.find('FIELD771').text)
+                total_resource_cost = ast.literal_eval(resourceNode.find('FIELD776').text)
+                availability_default = ast.literal_eval(resourceNode.find('FIELD780').text)
+                res_dict[res_ID] = Resource(res_ID, name, res_type, availability_default, cost_per_use, cost_per_unit, total_resource_cost, type_check = True)
+                
+
+        ### Risk Analysis ###
+        distribution_dict =  {} # dict with possible distributions and their ID as key
+        #Standard distributions
+        distribution_dict[1] = RiskAnalysisDistribution(distribution_type=DistributionType.STANDARD, distribution_units=StandardDistributionUnit.NO_RISK, optimistic_duration=99,
+                         probable_duration=100, pessimistic_duration=101)
+        distribution_dict[2] = RiskAnalysisDistribution(distribution_type=DistributionType.STANDARD, distribution_units=StandardDistributionUnit.SYMMETRIC, optimistic_duration=80,
+                         probable_duration=100, pessimistic_duration=120)
+        distribution_dict[3] = RiskAnalysisDistribution(distribution_type=DistributionType.STANDARD, distribution_units=StandardDistributionUnit.SKEWED_LEFT, optimistic_duration=80,
+                         probable_duration=110, pessimistic_duration=120)
+        distribution_dict[4] = RiskAnalysisDistribution(distribution_type=DistributionType.STANDARD, distribution_units=StandardDistributionUnit.SKEWED_RIGHT, optimistic_duration=80,
+                         probable_duration=90, pessimistic_duration=120)
+
+        for distributionsNode in root.findall('SensitivityDistributions'):
+            # in a distributions node, loop over all its children nodes starting with a tag "TProTrackSensitivityDistribution"
+            for distribution_node in list(distributionsNode):
+                if distribution_node.tag.startswith("TProTrackSensitivityDistribution"):
+                    # found sensitivity distribution node:
+                    distributionID = int(distribution_node.find("UniqueID").text)
+                    distribution_units = ManualDistributionUnit.RELATIVE if int(distribution_node.find("Style").text) else ManualDistributionUnit.ABSOLUTE
+                    distributionPointsNode = distribution_node.find("Distribution")
+                    # extract X and Y points:
+                    distributionXPoints = distributionPointsNode.findall("X")
+                    distributionYPoints = distributionPointsNode.findall("Y")
+                    if len(distributionXPoints) != 3 or len(distributionYPoints) != 3 or not (distributionYPoints == [0, 100, 0]):
+                        # unsupported distribution type: don't fail conversion by this
+                        print("XMLparser:to_schedule_object: Only sensitivity distributions defined by 3 points are supported!\n Not with {0} points.".format(len(distributionXPoints)))
+                        continue
+                    # valid 3 point distribution here:
+                    distribution_dict[distributionID] = RiskAnalysisDistribution(distribution_type=DistributionType.MANUAL, distribution_units=distribution_units,
+                                                                  optimistic_duration=distributionXPoints[0],probable_duration=distributionXPoints[1], pessimistic_duration=distributionXPoints[2])
+
+
+        ### Read all activities and store them in list ###
+        for activitiesNode in root.findall('Activities'):  # findall because ProTrack constains 1 dummy "activities" node
+            for activityNode in activitiesNode.findall('Activity'):
+                activityID = int(activityNode.find('UniqueID').text)
+                activityName = activityNode.find("Name").text
+                usedDistributionId = int(activityNode.find("Distribution").text)
+                # Note: the same distribution object is used for different activities pointing to the same sensitivity distribution
+                activity_distribution = RiskAnalysisDistribution(DistributionType.MANUAL, ManualDistributionUnit.RELATIVE, 99,100,101,False) if usedDistributionId not in distribution_dict \
+                                        else distribution_dict[usedDistributionId]
+
+                ##BaseLineSchedule
+                #Baseline duration (workinghours)
+                baselineDuration_hours = int(activityNode.find('BaseLineDuration').text)
+                baselineDuration = project_agenda.get_workingDuration_timedelta(duration_hours=BaselineDuration_hours)
+                #BaseLineStart
+                baseLineStart = self.getdate(activityNode.find('BaseLineStart').text, dateformat)
+                #FixedBaselineCost
+                baselineFixedCost = float(activityNode.find('FixedBaselineCost').text)
+                #BaselineCostByUnit
+                baselineCostByUnit = float(activityNode.find('BaselineCostByUnit').text)
+
+                # calculate derived fields:
+                baseline_enddate = project_agenda.get_end_date(BaseLineStart, baselineDuration.days, round(baselineDuration.seconds / 3600))
+                baseline_var_cost = baselineDuration_hours * baselineCostByUnit
+                # activity_total_cost != baselineFixedCost + baseline_var_cost, because resource cost should be incorporated! => calculate it afterwards
+                activity_baselineScheduleRecord = BaselineScheduleRecord(baseLineStart, baseline_enddate, baselineDuration, baselineFixedCost, baselineCostByUnit, baseline_var_cost, 0, True)
+                # add new activity to the dict of all read activities
+                activity_dict[activity_ID] = Activity(activity_id= activity_ID, name= activityName, baseline_schedule= activity_baselineScheduleRecord, risk_analysis= activity_distribution, type_check= True)
+
+
+        ### Read activitygroups and store them: ###
+        for activityGroupsNode in root.findall("ActivityGroups"):
+            for activityGroupNode in activityGroupsNode.findall("ActivityGroup"):
+                #UniqueID
+                activityID = int(activityGroupNode.find('UniqueID').text)
+                #Name
+                activityName = activityGroupNode.find('Name').text
+                # add activity group to dict:
+                activityGroup_dict[activityID] = Activity(activity_id= activityID, name= activityName)
+
+        ### Read the activities outline tree for wbs and filter all activities and groups not in that tree ###
+        outlineListNode = root.find("OutlineList").find("List")
+        outlineListChildren = list(outlineListNode)
+        if len(outlineListChildren) > 0:
+            # Call recursive function here to process the children of an activityGroup:
+            self.set_wbs_read_activities_and_groups((1,), list(grandChildrenNode), activity_dict, activityGroup_dict)
+            # add project activityGroup root:
+            activityGroup_dict[0] = Activity(activity_id= 0, name= project_name, wbs_id= (1,))
+
+        else:
+            print("XMLparser:to_schedule_°object: Activity outline list is empty!")
+            activity_dict = {}
+            activityGroup_dict = {}
+
+        # filter out any activityGroup or activity that has no wbs_id:
+        activity_dict = {key: value for key, value in activity_dict.items() if value.wbs_id} 
+        activityGroup_dict = {key: value for key, value in activityGroup_dict.items() if value.wbs_id}
+
+
+        ### Read activity relations and add them directly to the corresponding activities ###
+        lagTypeConversion_dict = {0: "SS", 1: "SF", 2:"FS", 3: "FF"}
+
+        for relationsNode in root.findall('Relations'):
+            for relationNode in relationsNode.findall('Relation'):
+                predecessor = int(relationNode.find('FromTask').text)
+                successor = int(relationNode.find('ToTask').text)
+                lag = int(relationNode.find('Lag').text)
+                lagKind = int(relationNode.find('LagKind').text)
+                lagType = int(relationNode.find('LagType').text)
+                
+                if lagType not in lagTypeConversion_dict:
+                    raise XMLParseError("to_schedule_object:Reading relations: Unexpected lagType, expects lagType in {0} but found {1}".format(list(lagTypeConversion_dict.keys()), lagType))
+
+                lagType_str = lagTypeConversion_dict[lagType]
+                if lagKind != 0:
+                    print("XMLparser:to_schedule_object: Reading relations: Expects LagKing = 0 but found a relation with LagKind = {0} for relation id = {1}".format(lagKind, relationNode.find("UniqueID")))
+                    lagType_str = "undefinedLagKind"
+
+                successorTuple = (successor, lagType_str, lag)
+                predecessorTuple = (predecessor, lagType_str, lag)
+
+                # add tuples to the resource lists of the specified activities if both activities can be found:
+                if predecessor in activity_dict and successor in activity_dict:
+                    activity_dict[predecessor].successors.append(successorTuple)
+                    activity_dict[successor].predecessors.append(predecessorTuple)
+                #else:
+                #    # found loose relation
+                #    pass
+
+
+        # Read the activity resource assignments and add them directly to the corresponding activities:
+        #TODO
+        # if resource assignment to a non-existing activity: ignore it
+
+        # Read trackinglist:
+        #TODO
+        # don't add non-existing activities to a tracking period
+
+
+
+
+        # TODO: calculate and add total cost for each activity
+        ################################################################################################ OLD CODE   #########################################################################
 
         ## max number activity?
         for activities in root.findall('ActivityGroups'):
@@ -176,7 +359,7 @@ class XMLParser(FileParser):
 
 
 
-        ## Activity name, ID, Baseline schefule
+        ## Activity name, ID, Baseline schedule
         for activities in root.findall('Activities'):
             for activity in activities.findall('Activity'):
                 #UniqueID
@@ -222,42 +405,7 @@ class XMLParser(FileParser):
 
 
 
-        ## Successor/Predeccessors ##
-        for relations in root.findall('Relations'):
-            for relation in relations.findall('Relation'):
-                # Successors
-                Predecessor = relation.find('FromTask').text
-                Successor = relation.find('ToTask').text
-                #Lag
-                Lag = relation.find('Lag').text
-                LagKind = relation.find('LagKind').text
-                LagType = relation.find('LagType').text
-                if LagKind == '0' and LagType == '2':
-                    LagString='FS'
-                elif LagKind == '0' and LagType == '0':
-                    LagString='SS'
-                elif LagKind == '0' and LagType == '1':
-                    LagString='SF'
-                elif LagKind == '0' and LagType == '3':
-                    LagString='FF'
-                else:
-                    raise 'Lag Undefined'
-
-                SuccessorTuple = (Successor, LagString, Lag)
-                PredecessorTuple = (Predecessor, LagString, Lag)
-
-                for activity in activity_list:
-                    if activity != None:
-                        if activity.activity_id == int(Predecessor):
-                                if len(activity.successors) > 0:
-                                    (activity.successors).append(SuccessorTuple)
-                                else:
-                                    (activity.successors) = [SuccessorTuple]
-                        elif activity.activity_id == int(Successor):
-                            if len(activity.predecessors) > 0:
-                                (activity.predecessors).append(PredecessorTuple)
-                            else:
-                                (activity.predecessors) = [PredecessorTuple]
+        
 
         ## WBS ##
         for outline in root.findall('OutlineList'):
