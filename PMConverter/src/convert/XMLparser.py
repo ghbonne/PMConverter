@@ -104,10 +104,21 @@ class XMLParser(FileParser):
         else:
             raise XMLParseError("get_date_string: Dateformat undefined: {0}".format(dateformat))
 
-    def set_wbs_read_activities_and_groups(self, parent_wbs, children_nodes, activity_dict, activityGroup_dict):
-        "This function sets the wbs id tuple of the given children outlineList nodes and adds it to their corresponding activity or activityGroup."
+    def set_wbs_read_activities_and_groups(self, parent_wbs, children_nodes, activity_dict, activityGroup_dict, parentActivityGroup_id, activityGroup_to_childActivities_dict):
+        """
+        This function sets the wbs id tuple of the given children outlineList nodes and adds it to their corresponding activity or activityGroup.
+        :param parent_wbs: tuple, identifies the wbs id of the parent activityGroup
+        :param children_nodes: list of Elements, below the parent activityGroup
+        :param activity_dict: dict, activity_Id: Activity
+        :param activityGroup_dict: dict: activityGroup_Id: Activity
+        :param parentActivityGroup_id: int, id of the parent acitivityGroup
+        :param activityGroup_to_childActivities_dict: dict, activityGroup_id: list of Activivities, links an activityGroup to all its child low-level activities
+
+        :returns: list of all low-level activity id's below the parent_wbs
+        """
         # make starting wbs from parent
         current_wbs_list = list(parent_wbs).append(1)
+        current_child_activityIds = []
         for child_node in children_nodes:
             # determine type of child:
             nodeType_node = child_node.find("Type")
@@ -120,7 +131,16 @@ class XMLParser(FileParser):
                     grandChildrenNode = child_node.find("List")
                     if grandChildrenNode is not None:
                         # call recursive function to add its children:
-                        self.set_wbs_read_activities_and_groups(tuple(current_wbs_list), list(grandChildrenNode), activity_dict, activityGroup_dict)
+                        grandchild_activityIds = self.set_wbs_read_activities_and_groups(tuple(current_wbs_list), list(grandChildrenNode), activity_dict, activityGroup_dict)
+                        # save children ids of this activityGroup:
+                        activityGroup_to_childActivities_dict[activityGroupId] = grandchild_activityIds
+
+                        # also add grandchildren to the children's list of this parent
+                        current_child_activityIds.extend(grandchild_activityIds)
+                    else:
+                        # activityGroup has no children:
+                        print("XMLparser:set_wbs_read_activities_and_groups: Found an activityGroup without child activities!") # Warning
+                        activityGroup_to_childActivities_dict[activityGroupId] = []
 
                     # increment wbs_id for next child
                     current_wbs_list[-1] += 1
@@ -131,6 +151,9 @@ class XMLParser(FileParser):
                 activityId = int(child_node.find("Data").text)
                 if activityId in activity_dict:
                     activity_dict[activityId].wbs_id = tuple(current_wbs_list)
+                    # add child id to list of parent:
+                    current_child_activityIds.append(activityId)
+
                     # increment wbs_id for next child
                     current_wbs_list[-1] += 1
                 else:
@@ -138,7 +161,187 @@ class XMLParser(FileParser):
             else:
                 # not a valid node
                 continue
-        return
+        return current_child_activityIds
+
+    def update_activities_aggregated_costs(self, activities_list, agenda):
+        "This function updates the given activities their total_cost and resource_cost fields"
+        for activity in activities_list:
+            resource_cost = 0
+            for resourceTuple in activity.resources:
+                resource = resourceTuple[0]
+                if resource.resource_type == ResourceType.CONSUMABLE:
+                    ## only add once the cost for its use!
+                    # check if fixed resource assignment:
+                    if resourceTuple[2]:
+                        # fixed resource assignment => variable cost is not multiplied by activity duration:
+                        resource_cost += resource.cost_use + resourceTuple[1] * resource.cost_unit
+                    else:
+                        # non fixed resource assignment:
+                        resource_cost += resource.cost_use + resourceTuple[1] * resource.cost_unit * actualDuration_hours
+                else:
+                    #resource type is renewable:
+                    #add cost_use and variable cost:
+                    resource_cost += resourceTuple[1] * (resource.cost_use + resource.cost_unit * actualDuration_hours)
+            #endFor adding resource costs
+
+            activity.resource_cost = resource_cost
+
+            activityDuration_hours = activity.baseline_schedule.duration.days * agenda.get_working_hours_in_a_day() + round(activity.baseline_schedule.duration.seconds / 3600)
+
+            # calculate total activity cost:
+            activity.baseline_schedule.total_cost = activity.resource_cost + activity.baseline_schedule.fixed_cost + activity.baseline_schedule.hourly_cost * activityDuration_hours
+
+    def update_activityGroups_aggregated_values(self, activityGroups_list, activity_dict, activityGroup_to_childActivities_dict, agenda):
+        "This function calculates the aggregated values of activityGroups"
+
+        for activityGroup in activityGroups_list:
+            childActivityIds = activityGroup_to_childActivities_dict[activityGroup.activity_id]
+
+            earliestStart = datetime.max
+            latestFinish = datetime.min
+
+            for childActivityId in childActivityIds:
+                childActivity = activity_dict[childActivityId]
+
+                if childActivity.baseline_schedule.start < earliestStart:
+                    earliestStart = childActivity.baseline_schedule.start
+                if childActivity.baseline_schedule.end > latestFinish:
+                    latestFinish = childActivity.baseline_schedule.end
+
+                activityGroup.baseline_schedule.fixed_cost += childActivity.baseline_schedule.fixed_cost
+                activityGroup.baseline_schedule.total_cost += childActivity.baseline_schedule.total_cost
+
+            # calculate activityGroup duration:
+            activityGroup.baseline_schedule.duration = agenda.get_time_between(earliestStart, latestFinish)
+                    
+
+    def process_activityTrackingRecord_Node(self, activity, activityTrackingRecord_node, statusdate_datetime, agenda):
+        """"
+        This function processes an acitivityTrackingRecord node from ProTrack p2x file.
+        :returns: ActivityTrackingRecord
+        """
+        # Read Data
+        actualStart = self.getdate(tracking_activity.find('ActualStart').text, dateformat)
+        actualDuration_hours = int(tracking_activity.find('ActualDuration').text)
+        actualDuration = agenda.get_workingDuration_timedelta(duration_hours=actualDuration_hours)
+        actualCostDev = float(tracking_activity.find('ActualCostDev').text)
+        remainingDuration_hours = int(tracking_activity.find('RemainingDuration').text)
+        remainingDuration = agenda.get_workingDuration_timedelta(duration_hours=remainingDuration_hours)
+        remainingCostDev = float(tracking_activity.find('RemainingCostDev').text)
+        percentageComplete = float(tracking_activity.find('PercentageComplete').text)*100
+        if percentageComplete >= 100:
+            trackingStatus='Finished'
+        elif abs(percentageComplete) < 1e-5: # compare float with 0
+            trackingStatus='Not Started'
+        else:
+            trackingStatus='Started'
+
+        # derive remaining data fields:
+        #planned_actual_cost = 0
+        #planned_remaining_cost = 0
+        #actual_cost = 0
+        #remaining_cost = 0
+        #earned_value = 0
+        #planned_value = 0
+
+        # Calculate PAC and PRC:
+        if actualDuration_hours > 0:
+            # activity started or already finished: PAC depends on real actual duration!
+            planned_actual_cost = activity.baseline_schedule.fixed_cost + actualDuration_hours * activity.baseline_schedule.hourly_cost
+            # no fixed starting costs anymore for PRC:
+            planned_remaining_cost = remainingDuration_hours * activity.baseline_schedule.hourly_cost
+            # add costs of used resources:
+            for resourceTuple in activity.resources:
+                resource = resourceTuple[0]
+                if resource.resource_type == ResourceType.CONSUMABLE:
+                    ## only add once the cost for its use!
+                    # check if fixed resource assignment:
+                    if resourceTuple[2]:
+                        # fixed resource assignment => variable cost is not multiplied by activity duration:
+                        planned_actual_cost += resource.cost_use + resourceTuple[1] * resource.cost_unit
+                        # NOTE: expects fixed resource assignment to take place at start of the activity => no contribution to PRC
+                    else:
+                        # non fixed resource assignment:
+                        planned_actual_cost += resource.cost_use + resourceTuple[1] * resource.cost_unit * actualDuration_hours
+                        planned_remaining_cost += resourceTuple[1] * resource.cost_unit * remainingDuration_hours
+                else:
+                    #resource type is renewable:
+                    #add cost_use and variable cost:
+                    planned_actual_cost += resourceTuple[1] * (resource.cost_use + resource.cost_unit * actualDuration_hours)
+                    planned_remaining_cost += resourceTuple[1] * resource.cost_unit * remainingDuration_hours
+            #endFor adding resource costs
+
+        else:
+            # activity not yet started:
+            planned_actual_cost = 0
+            planned_remaining_cost = activity.baseline_schedule.total_cost
+
+        actual_cost = planned_actual_cost + actualCostDev
+        remaining_cost = planned_remaining_cost + remainingCostDev
+
+        # Calculate EV:
+        if remainingDuration_hours == 0:
+            # activity finished
+            earned_value = activity.baseline_schedule.total_cost
+        elif actualDuration_hours == 0:
+            # activity not yet started:
+            earned_value = 0
+        else:
+            # activity running:
+            earned_value = activity.baseline_schedule.fixed_cost + percentageComplete * (activity.baseline_schedule.var_cost + activity.resource_cost)
+
+        # Calculate PV:
+        if statusdate_datetime >= activity.baseline_schedule.end:
+            # activity should be finished according to baselinschedule
+            planned_value = activity.baseline_schedule.total_cost
+        elif statusdate_datetime < activity.baseline_schedule.start:
+            # activity is not yet started according to baselineschedule
+            planned_value = 0
+        else:
+            # activity is running
+            activityRunningDuration = agenda.get_time_between(activity.baseline_schedule.start, statusdate_datetime)
+            activityRunningDuration_workingHours = activityRunningDuration.days * agenda.get_working_hours_in_a_day() + activityRunningDuration.seconds / 3600
+
+            planned_value = activity.baseline_schedule.fixed_cost + activityRunningDuration_workingHours * activity.baseline_schedule.hourly_cost
+                    
+            # add costs of resources until now:
+            for resourceTuple in activityTrackingRecord.activity.resources:
+                resource = resourceTuple[0]
+                if resource.resource_type == ResourceType.CONSUMABLE:
+                    ## only add once the cost for its use!
+                    # check if fixed resource assignment:
+                    if resourceTuple[2]:
+                        # fixed resource assignment => variable cost is not multiplied by activity duration:
+                        planned_value += resource.cost_use + resourceTuple[1] * resource.cost_unit
+                    else:
+                        # non fixed resource assignment:
+                        planned_value += resource.cost_use + resourceTuple[1] * resource.cost_unit * activityRunningDuration_workingHours
+                else:
+                    #resource type is renewable:
+                    #add cost_use and variable cost:
+                    planned_value += resourceTuple[1] * (resource.cost_use + resource.cost_unit * activityRunningDuration_workingHours)
+            #endFor adding resource costs
+        #endIf calculating PV
+        
+        return ActivityTrackingRecord(activity, actualStart, actualDuration, planned_actual_cost, planned_remaining_cost, remainingDuration, actualCostDev,
+                                                        remainingCostDev, actual_cost, remaining_cost, int(round(percentageComplete)), trackingStatus, earned_value, planned_value, True)
+
+    def construct_activityGroup_trackingRecord(self, activityGroup, childActivityIds, currentTrackingPeriod_records_dict):
+        """This function constructs an aggregated trackingRecord of an activityGroup
+        :returns: ActivityTrackingRecord of aggregated activityGroup
+        """
+
+        total_earned_value = 0.
+        total_planned_value = 0.
+
+        if childActivityIds:
+            for childActivityId in childActivityIds:
+                childActivityTrackingRecord = currentTrackingPeriod_records_dict[childActivityId]
+                total_earned_value += childActivityTrackingRecord.earned_value
+                total_planned_value += childActivityTrackingRecord.planned_value
+
+        percentage_completed = int(round(total_earned_value / activityGroup.baseline_schedule.total_cost))
+        return ActivityTrackingRecord(activity= activityGroup, percentage_completed= percentage_completed, earned_value= total_earned_value, planned_value= total_planned_value)
 
     def to_schedule_object(self, file_path_input):
         tree = ET.parse(file_path_input)
@@ -147,7 +350,9 @@ class XMLParser(FileParser):
         # read dicts from ProTrack file:
         activity_dict = []
         activityGroup_dict = {}
+        activityGroup_to_childActivities_dict = {} # links activityGroup ids to all child low-level activity id's
         res_dict = {}  # resources dict
+        trackingPeriodsList = []
         project_agenda = Agenda()
 
         ## Project name
@@ -266,13 +471,15 @@ class XMLParser(FileParser):
         outlineListNode = root.find("OutlineList").find("List")
         outlineListChildren = list(outlineListNode)
         if len(outlineListChildren) > 0:
-            # Call recursive function here to process the children of an activityGroup:
-            self.set_wbs_read_activities_and_groups((1,), list(grandChildrenNode), activity_dict, activityGroup_dict)
             # add project activityGroup root:
             activityGroup_dict[0] = Activity(activity_id= 0, name= project_name, wbs_id= (1,))
+            # Call recursive function here to process the children of an activityGroup:
+            child_activity_Ids = self.set_wbs_read_activities_and_groups((1,), list(grandChildrenNode), activity_dict, activityGroup_dict, 0, activityGroup_to_childActivities_dict)
+            activityGroup_to_childActivities_dict[0] = child_activity_Ids
+            
 
         else:
-            print("XMLparser:to_schedule_°object: Activity outline list is empty!")
+            print("XMLparser:to_schedule_ï¿½object: Activity outline list is empty!")
             activity_dict = {}
             activityGroup_dict = {}
 
@@ -312,466 +519,115 @@ class XMLParser(FileParser):
                 #    pass
 
 
-        # Read the activity resource assignments and add them directly to the corresponding activities:
-        #TODO
-        # if resource assignment to a non-existing activity: ignore it
-
-        # Read trackinglist:
-        #TODO
-        # don't add non-existing activities to a tracking period
-
-
-
-
-        # TODO: calculate and add total cost for each activity
-        ################################################################################################ OLD CODE   #########################################################################
-
-        ## max number activity?
-        for activities in root.findall('ActivityGroups'):
-            for activity in activities.findall('ActivityGroup'):
-                #UniqueID
-                UniqueID=int(activity.find('UniqueID').text)
-                if(UniqueID > max):
-                    max = UniqueID
-        for activities in root.findall('Activities'):
-            for activity in activities.findall('Activity'):
-                #UniqueID
-                UniqueID=int(activity.find('UniqueID').text)
-                if(UniqueID > max):
-                    max = UniqueID
-
-        #Initialize activity list
-        activity_list_interim=[None for x in range(max)]
-        activity_list_wo_groups_interim=[None for x in range(max)]
-
-        activity_group_count=0
-        ## Activity group, ID, Name
-        for activities in root.findall('ActivityGroups'):
-            for activity in activities.findall('ActivityGroup'):
-                #UniqueID
-                UniqueID=int(activity.find('UniqueID').text)
-                a_g = Activity(int(UniqueID));
-                #Name
-                Name=activity.find('Name').text
-                a_g.name= Name
-                activity_group_count+=1
-                activity_list_interim[UniqueID-1]=a_g
-
-
-
-        ## Activity name, ID, Baseline schedule
-        for activities in root.findall('Activities'):
-            for activity in activities.findall('Activity'):
-                #UniqueID
-                UniqueID=int(activity.find('UniqueID').text)
-                a = Activity((UniqueID));
-                #Name
-                Name=activity.find('Name').text
-                a.name= Name
-
-                ##BaseLineSchedule
-                #Baseline duration (hours)
-                BaselineDuration_hours = int(activity.find('BaseLineDuration').text)
-                #agenda=Agenda()
-                BaselineDuration=project_agenda.get_workingDuration_timedelta(duration_hours=BaselineDuration_hours)
-                #BaseLineStart
-                BaseLineStart=self.getdate(activity.find('BaseLineStart').text, dateformat)
-                #FixedBaselineCost
-                FixedBaselineCost=float(activity.find('FixedBaselineCost').text)
-                #BaselineCostByUnit
-                BaselineCostByUnit=float(activity.find('BaselineCostByUnit').text)
-
-                enddate=project_agenda.get_end_date(BaseLineStart,BaselineDuration_hours/8)  #TODO: magic number!
-                BSR = BaselineScheduleRecord()
-                BSR.start=BaseLineStart
-                BSR.end=enddate
-                BSR.duration=BaselineDuration
-                BSR.fixed_cost=FixedBaselineCost
-                BSR.hourly_cost=BaselineCostByUnit
-                BSR.var_cost = BSR.hourly_cost*BaselineDuration_hours
-                BSR.total_cost = BSR.var_cost+BSR.fixed_cost
-                a.baseline_schedule=BSR
-                activity_list_interim[UniqueID-1]=a
-                activity_list_wo_groups_interim[UniqueID-1]=a
-
-
-        # Removing empty activities from list (list is sorted)
-        for i in range(0, len(activity_list_interim)):
-            if activity_list_interim[i] != None:
-                activity_list.append(activity_list_interim[i])
-            if activity_list_wo_groups_interim[i] != None:
-                activity_list_wo_groups.append(activity_list_wo_groups_interim[i])
-
-
-
-
-        
-
-        ## WBS ##
-        for outline in root.findall('OutlineList'):
-            counter1=0
-            activity_group_count=0
-            for list in outline.findall('List'):
-                for child in list.findall('Child'):
-                    counter1+=1
-                    ID=int(child.find('Data').text)
-                    #1.x
-                    for activity in activity_list:
-                        if activity != None:
-                            if activity.activity_id == ID:
-                                wbsTuple=(1, counter1)
-                                activity.wbs_id=wbsTuple
-                                activity_group_count+=1
-                    #1.x.y
-                    for list2 in child.findall('List'):
-                        counter2=0
-                        for child2 in list2.findall('Child'):
-                            counter2+=1
-                            ID2=int(child2.find('Data').text)
-                            for activity2 in activity_list:
-                                if activity2 != None:
-                                    if activity2.activity_id == ID2:
-                                        wbsTuple=(1, counter1, counter2)
-                                        activity2.wbs_id=wbsTuple
-
-        ###### Resources ######
-        ## Resources (Definition)
-        for resources in root.findall('Resources'):
-            for resource in resources.findall('Resource'):
-                res_ID=int(resource.find('FIELD0').text)
-                name=resource.find('FIELD1').text
-                availability=resource.find('FIELD778').text
-                renewable=bool(resource.find('FIELD769').text)
-                if renewable == 1:
-                    res_type= ResourceType.RENEWABLE
-                else:
-                    res_type= ResourceType.CONSUMABLE
-                cost_per_use=float(resource.find('FIELD770').text)
-                cost_per_unit=float(resource.find('FIELD771').text)
-                availability_float=float(resource.find('FIELD780').text)
-                total_cost=float(resource.find('FIELD776').text)
-                res=Resource(res_ID, name, res_type, availability_float, cost_per_use, cost_per_unit, total_cost)
-                res_list.append(res)
-
-
-
-
-        ## Resources (Assignment)
-        for resource_assignments in root.findall('ResourceAssignments'):
-            for resource_assignment in resource_assignments.findall('ResourceAssignment'):
-                res_id=int(resource_assignment.find('FIELD1025').text)
-                activity_ID=int(resource_assignment.find('FIELD1024').text)
-                res_needed=ast.literal_eval(resource_assignment.find('FIELD1026').text)
-                for activity in activity_list:
-                    if activity != None:
-                       if activity.activity_id == activity_ID:
-                           for resource in res_list:
-                               resourceTuple=(resource, res_needed)
-                               if resource.resource_id == res_id:
-                                   #print(activity.activity_id,activity.baseline_schedule.duration)
-                                   activity_duration=activity.baseline_schedule.duration
-                                   activity.resource_cost=resource.cost_unit*res_needed*activity_duration.days*8
-                                   activity.baseline_schedule.total_cost+=activity.resource_cost
-                                   if len(activity.resources) >0:
-                                        activity.resources.append(resourceTuple)
-                                   else:
-                                       activity.resources=[resourceTuple]
-
-
-
-
-
-        ### Risk Analysis ###
-        distribution_list =  [0 for x in range(len(activity_list)+5)]  # List with possible distributions
-        #Standard distributions
-        distribution_list[1]= RiskAnalysisDistribution(distr_id=1,distribution_type=DistributionType.STANDARD, distribution_units=StandardDistributionUnit.NO_RISK, optimistic_duration=99,
-                         probable_duration=100, pessimistic_duration=101)
-        distribution_list[2]=RiskAnalysisDistribution(distr_id=2,distribution_type=DistributionType.STANDARD, distribution_units=StandardDistributionUnit.SYMMETRIC, optimistic_duration=80,
-                         probable_duration=100, pessimistic_duration=120)
-        distribution_list[3]=RiskAnalysisDistribution(distr_id=3,distribution_type=DistributionType.STANDARD, distribution_units=StandardDistributionUnit.SKEWED_LEFT, optimistic_duration=80,
-                         probable_duration=110, pessimistic_duration=120)
-        distribution_list[4]=RiskAnalysisDistribution(distr_id=4,distribution_type=DistributionType.STANDARD, distribution_units=StandardDistributionUnit.SKEWED_RIGHT, optimistic_duration=80,
-                         probable_duration=90, pessimistic_duration=120)
-        i=0
-        distr=[0, 0, 0]
-        for distributions in root.findall('SensitivityDistributions'):
-            for x in range(5, len(activity_list)+5):
-                distr_string='TProTrackSensitivityDistribution'+str(x)
-                distr_x = distributions.find(distr_string)
-                if distr_x != None:
-                    distribution=distr_x.find('Distribution')
-                    name=distr_x.find('Name').text
-                    i=0
-                    for X in distribution.findall('X'):
-                        distr[i]=int(X.text)
-                        i+=1
-
-
-                    distribution_list[x]=(RiskAnalysisDistribution(distr_id=x,distr_name=name,distribution_type=DistributionType.MANUAL, distribution_units=ManualDistributionUnit.ABSOLUTE,
-                                                                  optimistic_duration=distr[0],probable_duration=distr[1], pessimistic_duration=distr[2]))
-        for activities in root.findall('Activities'):
-            for activity in activities.findall('Activity'):
-                for activity_l in activity_list:
-                    if activity != None and activity_l!=None:
-                        if int(activity.find('UniqueID').text) == activity_l.activity_id:
-                            distr_number=int(activity.find('Distribution').text)
-                            activity_l.risk_analysis=distribution_list[distr_number]
-
-
-        ## Activity Tracking
-        for tracking_list in root.findall('TrackingList'):
-
-            ## How many Trackng periods?
-            count=0
-            for tracking_period_info in tracking_list.findall('TrackingPeriod'):
-                count+=1
-            TP_list=[0 for x in range(count)]
-            ATR_matrix=[]
-            for tracking_period in tracking_list.findall('TProTrackActivities-1'):
-                activity_nr=0
-
-                #ATR_matrix=[None for x in range(count)]
-
-                activityTrackingRecord_list=[]
-                for tracking_activity in tracking_period.findall('TProTrackActivityTracking-1'):
-                    # Read Data
-                    actualStart=self.getdate(tracking_activity.find('ActualStart').text, dateformat)
-                    actualDuration_hours=int(tracking_activity.find('ActualDuration').text)
-                    actualDuration=project_agenda.get_workingDuration_timedelta(duration_hours=actualDuration_hours)
-                    actualCostDev=float(tracking_activity.find('ActualCostDev').text)
-                    remainingDuration_hours=int(tracking_activity.find('RemainingDuration').text)
-                    remainingDuration=project_agenda.get_workingDuration_timedelta(duration_hours=remainingDuration_hours)
-                    remainingCostDev=float(tracking_activity.find('RemainingCostDev').text)
-                    percentageComplete=float(tracking_activity.find('PercentageComplete').text)*100
-                    #Assign Data
-                    activityTrackingRecord=ActivityTrackingRecord()
-                    # From xml
-                    activityTrackingRecord.activity=activity_list_wo_groups[activity_nr]
-                    activityTrackingRecord.actual_start=actualStart
-                    activityTrackingRecord.actual_duration=actualDuration
-                    activityTrackingRecord.deviation_pac=actualCostDev
-                    activityTrackingRecord.deviation_prc=remainingCostDev
-                    activityTrackingRecord.remaining_duration=remainingDuration
-                    activityTrackingRecord.percentage_completed=percentageComplete
-                    if percentageComplete >= 100:
-                        trackingStatus='Finished'
-                    elif percentageComplete == 0:
-                        trackingStatus='Not Started'
-                    else:
-                        trackingStatus='Started'
-                    activityTrackingRecord.tracking_status=trackingStatus
-
-                    # deriving remaining data fields:
-
-                    # Calculate PAC and PRC:
-
-                    if actualDuration_hours > 0:
-                        # activity started or already finished: PAC depends on real actual duration!
-                        activityTrackingRecord.planned_actual_cost = activityTrackingRecord.activity.baseline_schedule.fixed_cost + actualDuration_hours * activityTrackingRecord.activity.baseline_schedule.hourly_cost
-                        # no fixed starting costs anymore for PRC:
-                        activityTrackingRecord.planned_remaining_cost = remainingDuration_hours * activityTrackingRecord.activity.baseline_schedule.hourly_cost
-                        # add costs of used resources:
-                        for resourceTuple in activityTrackingRecord.activity.resources:
-                            resource = resourceTuple[0]
-                            if resource.resource_type == ResourceType.CONSUMABLE:
-                                # activities should be sorted according to starting date: not done here => don't implement
-                                ## only add once the cost for its use!
-                                #if resource.resource_id not in consumableResourceIdsAlreadyUsed:
-                                #    # add cost for its use:
-                                #    currentPVcumsumValue += resource.cost_use
-                                #    if len(consumableResourceIdsAlreadyUsed) > 0:
-                                #        consumableResourceIdsAlreadyUsed.append(resource.resource_id)
-                                #    else:
-                                #        consumableResourceIdsAlreadyUsed = [resource.resource_id]
-                                pass
-                            else:
-                                #resource type is renewable:
-                                #add cost_use: 
-                                activityTrackingRecord.planned_actual_cost += resourceTuple[1] * resource.cost_use
-
-                            #variable cost of actualDuration_hours per demanded resource unit
-                            activityTrackingRecord.planned_actual_cost += resourceTuple[1] * (resource.cost_unit * actualDuration_hours)
-
-                            # no fixed starting costs anymore for PRC:
-                            activityTrackingRecord.planned_remaining_cost += resourceTuple[1] * remainingDuration_hours * resource.cost_unit
-                        #endFor adding resource costs
-
-                    else:
-                        # activity not yet started:
-                        activityTrackingRecord.planned_actual_cost = 0
-                        activityTrackingRecord.planned_remaining_cost = activityTrackingRecord.activity.baseline_schedule.total_cost
-
-                    activityTrackingRecord.actual_cost = activityTrackingRecord.planned_actual_cost + activityTrackingRecord.deviation_pac
-                    activityTrackingRecord.remaining_cost = activityTrackingRecord.planned_remaining_cost + activityTrackingRecord.deviation_prc
-
-                    # Calculate EV:
-                    if remainingDuration_hours == 0:
-                        # activity finished
-                        activityTrackingRecord.earned_value = activityTrackingRecord.activity.baseline_schedule.total_cost
-                    elif actualDuration_hours == 0:
-                        # activity not yet started:
-                        activityTrackingRecord.earned_value = 0
-                    else:
-                        # activity running:
-                        activityTrackingRecord.earned_value = activityTrackingRecord.activity.baseline_schedule.fixed_cost \
-                            + (actualDuration_hours / (actualDuration_hours + remainingDuration_hours)) * (activityTrackingRecord.activity.baseline_schedule.var_cost + activityTrackingRecord.activity.resource_cost)
-
-                    # Calculate PV:
-                    activityTrackingRecord.planned_value = 0  # this field is calculated below, where we know the status date
-
-
-                    if len(activityTrackingRecord_list)>0:
-                        activityTrackingRecord_list.append(activityTrackingRecord)
-                    else:
-                        activityTrackingRecord_list=[activityTrackingRecord]
-                    activity_nr+=1
-
-                if len(ATR_matrix)>0:
-                    ATR_matrix.append(activityTrackingRecord_list)
-                else:
-                    ATR_matrix=[activityTrackingRecord_list]
-
-
-        #TrackingPeriod Activity info
-        count=0
-        for tracking_period_info in tracking_list.findall('TrackingPeriod'):
-            name=tracking_period_info.find('Name').text
-            statusdate=tracking_period_info.find('EndDate').text
-            statusdate_datetime=self.getdate(statusdate,dateformat)
-            TP_list[count]=TrackingPeriod(name,statusdate_datetime, ATR_matrix[count])
-
-            # get valid working datetime:
-            statusdate_workingDatetime = project_agenda.get_next_date(statusdate_datetime, 0,0)
-
-            for activityTrackingRecord in ATR_matrix[count]:
-                activityTrackingRecord.tracking_period = TP_list[count]
-
-                # calculate the planned value of this activity at this statusdate:
-                if statusdate_workingDatetime >= activityTrackingRecord.activity.baseline_schedule.end:
-                    # activity should be finished according to baselinschedule
-                    activityTrackingRecord.planned_value = activityTrackingRecord.activity.baseline_schedule.total_cost
-                elif statusdate_workingDatetime < activityTrackingRecord.activity.baseline_schedule.start:
-                    # activity is not yet started according to baselineschedule
-                    activityTrackingRecord.planned_value = 0
-                else:
-                    # activity is running
-                    activityRunningDuration = project_agenda.get_time_between(activityTrackingRecord.activity.baseline_schedule.start, statusdate_workingDatetime)
-                    activityRunningDuration_workingHours = activityRunningDuration.days * project_agenda.get_working_hours_in_a_day() + activityRunningDuration.seconds / 3600
-
-                    activityTrackingRecord.planned_value = activityTrackingRecord.activity.baseline_schedule.fixed_cost + activityRunningDuration_workingHours * activityTrackingRecord.activity.baseline_schedule.hourly_cost
-                    
-                    # add costs of resources until now:
-                    for resourceTuple in activityTrackingRecord.activity.resources:
-                        resource = resourceTuple[0]
-                        if resource.resource_type == ResourceType.CONSUMABLE:
-                            # activities should be sorted according to starting date: not done here => don't implement
-                            ## only add once the cost for its use!
-                            #if resource.resource_id not in consumableResourceIdsAlreadyUsed:
-                            #    # add cost for its use:
-                            #    currentPVcumsumValue += resource.cost_use
-                            #    if len(consumableResourceIdsAlreadyUsed) > 0:
-                            #        consumableResourceIdsAlreadyUsed.append(resource.resource_id)
-                            #    else:
-                            #        consumableResourceIdsAlreadyUsed = [resource.resource_id]
-                            pass
-                        else:
-                            # resource type is renewable:
-                            # add cost_use per demanded resource unit
-                            activityTrackingRecord.planned_value += resourceTuple[1] * resource.cost_use
-                        # add variable cost of resource:
-                        activityTrackingRecord.planned_value += resourceTuple[1] * activityRunningDuration_workingHours * resource.cost_unit
-                    #endFor adding resource use costs
-                #endIf calculating PV
-
-            count+=1
-
-
-        ### Sort activities based on WBS
-        project_activity=Activity(activity_id=0, name=project_name, wbs_id=(1,))
-        activity_list_wbs=[project_activity]
-        count1 = 1
-        for activity_group2 in activity_list:
-            for activity_group in activity_list:
-                if activity_group.wbs_id == (1, count1):
-                    count2 = 1
-                    activity_list_wbs.append(activity_group)
-                    for activity2 in activity_list:
-                        for activity in activity_list:
-                            if activity.wbs_id == (1, count1, count2):
-                                count2 += 1
-                                activity_list_wbs.append(activity)
-                    count1 += 1
-
-        ## Subdividing list into Activity groups
-        count1=1
-        subgroup_count=[0 for x in range(activity_group_count)]
-        # Counting activity groups
-        for activity in activity_list_wbs:
-            if activity.wbs_id == (1, count1):
-                count2=1
-                for activity in activity_list_wbs:
-                    if activity.wbs_id == (1, count1,count2):
-                        subgroup_count[count1-1]+=1
-                        count2+=1
-                count1+=1
-
-
-        matrix_activity_group=[[] for x in range(activity_group_count)]
-        matrix_activity_group[0]=activity_list_wbs[1:(2+subgroup_count[0])]
-
-        # Making list per activity group: matrix_activity_group[i] contains all activities which are part of activity group i
-        for i in range(1,len(subgroup_count)):
-            matrix_activity_group[i]=activity_list_wbs[1+i+sum(subgroup_count[0:i]):(2+i+sum(subgroup_count[0:i+1]))]
-
-        ## Assigning Data to activity groups
-        for ag in matrix_activity_group:
-            ## Costs
-            total_cost=0
-            fixed_cost=0
-            min_start=datetime.max
-            max_end=datetime.min
-            bsr=BaselineScheduleRecord()
-            if len(ag) > 1:
-                for i in range(1,len(ag)):
-                    if ag[i].baseline_schedule.start < min_start:
-                        min_start=ag[i].baseline_schedule.start
-                    if ag[i].baseline_schedule.end > max_end:
-                        max_end=ag[i].baseline_schedule.end
-                    total_cost += ag[i].baseline_schedule.total_cost
-                    fixed_cost += ag[i].baseline_schedule.fixed_cost
-                ag[0].baseline_schedule=bsr
-                ag[0].baseline_schedule.start=min_start
-                ag[0].baseline_schedule.end=max_end
-                ag[0].baseline_schedule.total_cost = total_cost
-                ag[0].baseline_schedule.fixed_cost = fixed_cost
-                ag[0].baseline_schedule.duration= project_agenda.get_time_between(min_start, max_end)
-            #else:
-                # no real activity group (single activity)
-
-        ## Assigning data to total project
-        total_cost=0
-        fixed_cost=0
-        min_start=datetime.max
-        max_end=datetime.min
-        bsr=BaselineScheduleRecord()
-        for ag in matrix_activity_group:
-            total_cost+=ag[0].baseline_schedule.total_cost
-            fixed_cost+=ag[0].baseline_schedule.fixed_cost
-            if ag[0].baseline_schedule.start < min_start:
-                min_start=ag[0].baseline_schedule.start
-            if ag[0].baseline_schedule.end > max_end:
-                max_end=ag[0].baseline_schedule.end
-        activity_list_wbs[0].baseline_schedule=bsr
-        activity_list_wbs[0].baseline_schedule.start=min_start
-        activity_list_wbs[0].baseline_schedule.end=max_end
-        activity_list_wbs[0].baseline_schedule.total_cost = total_cost
-        activity_list_wbs[0].baseline_schedule.fixed_cost = fixed_cost
-        activity_list_wbs[0].baseline_schedule.duration= project_agenda.get_time_between(min_start, max_end)
+        ### Read the activity resource assignments and add them directly to the corresponding activities:
+        for resource_assignmentsNode in root.findall('ResourceAssignments'):
+            for resource_assignmentNode in resource_assignmentsNode.findall('ResourceAssignment'):
+                res_id = int(resource_assignmentNode.find('FIELD1025').text)
+                activity_ID = int(resource_assignmentNode.find('FIELD1024').text)
+                res_demand = ast.literal_eval(resource_assignmentNode.find('FIELD1026').text)
+                res_fixed_assignment = False if int(resource_assignmentNode.find('FIELD1027').text) == 0 else True  # fixed assignment of consumable resources
+
+                # look if both resource_id and activity_ID are found before adding them
+                if res_id in res_dict and activity_ID in activity_dict:
+                    # both Id's are found => add resource assignment
+                    resource = res_dict[res_id]
+                    # check if consumable resource if to add fixed assignment
+                    res_assignment = (resource, res_demand, False if resource.resource_type != ResourceType.CONSUMABLE else res_fixed_assignment)
+                    activity_dict[activity_ID].resources.append(res_assignment)
+                #else:
+                #    # resource assignment to a non-existing acitivity or resource: ignore
+                #    pass
+
+        # calculate and add total cost for each activity, resource_cost of activity
+        self.update_activities_aggregated_costs(list(activity_dict.values()), project_agenda)
+        self.update_activityGroups_aggregated_values(list(activityGroup_dict.values()), activity_dict, activityGroup_to_childActivities_dict, project_agenda)
+
+        # check total resource cost with read value
+        #DEBUG: #TODO
+
+        ### Read trackinglist:
+        for trackingListNode in root.findall("TrackingList"):
+            trackingPeriodHeaderNode_list = trackingListNode.findall("TrackingPeriod")
+            if not trackingPeriodHeaderNode_list:
+                # no tracking periods found
+                continue
+            # tracking periods found:
+            trackingPeriodNode_list = trackingListNode.findall("TProTrackActivities-1")
+
+            if len(trackingPeriodHeaderNode_list) != len(trackingPeriodNode_list):
+                raise XMLParseError("to_schedule_object:Reading TrackingList: Inconsistent number of TrackingPeriod nodes w.r.t. TProTrackActivities-1 nodes: {0} != {1}".format(
+                    len(trackingPeriodHeaderNode_list), len(trackingPeriodNode_list)))
+
+            # process each tracking period:  
+            for i in range(0, len(trackingPeriodHeaderNode_list)):
+                # read tracking period header first:
+                name = trackingPeriodHeaderNode_list[i].find('Name').text
+                statusdate = trackingPeriodHeaderNode_list[i].find('EndDate').text
+                statusdate_datetime = self.getdate(statusdate, dateformat)
+
+                # first, make a TrackingPeriod object
+                currentTrackingPeriod = TrackingPeriod(tracking_period_name= name, tracking_period_statusdate= statusdate_datetime)
+
+                # next, process all activity tracking records:
+                activityTrackingHeader_nodes = trackingPeriodNode_list[i].findall("Activity")
+                activityTrackingRecord_nodes = trackingPeriodNode_list[i].findall("TProTrackActivityTracking-1")
+                if len(activityTrackingHeader_nodes) != len(activityTrackingRecord_nodes):
+                    raise XMLParseError("to_schedule_object:Reading TrackingList: Inconsistent number of Activity nodes w.r.t. TProTrackActivityTracking-1 nodes in TrackingPeriod {0}: {1} != {2}".format( name,
+                        len(activityTrackingHeader_nodes), len(activityTrackingRecord_nodes)))
+
+                currentTrackingPeriod_records_dict = {}  # dict to link an activityId with its trackingRecord in the current trackingPeriod
+                # process all activity tracking records:
+                for j in range(0, len(activityTrackingHeader_nodes)):
+                    activityID = int(activityTrackingHeader_nodes[j].text)
+
+                    if activityID in activity_dict:
+                        # valid activity to track:
+                        activity_record = self.process_activityTrackingRecord_Node(activity_dict[activityID], activityTrackingRecord_nodes[j], statusdate_datetime, project_agenda)
+                        currentTrackingPeriod_records_dict[activityID] = activity_record
+
+                    elif activityID in activityGroup_dict:
+                        raise NotImplementedError("""XMLparser:to_schedule_object: Tracking records for activityGroups is a feature currently not implemented in PMConverter. 
+                                                TrackingRecord found for activityGroupid = {0}""".format(activityID))
+                    #else:
+                    #    # invalid tracking record.
+                    #    # could be of an acitivity we filtered out because it is not present in outlinelist.
+                    #    pass
+
+                #endFor activityTrackingRecords
+
+                # calculate aggregated values for activityGroups and add them to currentTrackingPeriod:
+                for activityGroupId in activityGroup_dict.keys():
+                    childActivityIds = activityGroup_to_childActivities_dict[activityGroupId]
+                    # construct the activityGroup trackingRecord:
+                    activityGroup_trackingRecord = self.construct_activityGroup_trackingRecord(activityGroup_dict[activityGroupId], childActivityIds, currentTrackingPeriod_records_dict)
+                    currentTrackingPeriod.tracking_period_records.append(activityGroup_trackingRecord)
+
+                # add all activity records to trackingPeriod:
+                currentTrackingPeriod.tracking_period_records.extend(list(currentTrackingPeriod_records_dict.values()))
+
+                # sort currentTrackingPeriod on wbs:
+                currentTrackingPeriod.tracking_period_records = sorted(currentTrackingPeriod.tracking_period_records, key=lambda activityTrackingRecord: activityTrackingRecord.activity.wbs_id)
+
+                # add trackingperiod to list
+                trackingPeriodsList.append(currentTrackingPeriod)
+            #endFor processing trackingPeriods
+        #endFor processing trackingLists
+
+        # sort tracking periods on status_date
+        trackingPeriodsList = sorted(trackingPeriodsList, key= lambda trackingPeriod: trackingPeriod.tracking_period_statusdate)
+
+        # combine activities and activityGroups in 1 list:
+        activities_list = list(activity_dict.values())
+        activities_list.extend(list(activityGroup_dict.values()))
+
+        # sort resources:
+        resources_list = sorted(list(res_dict.values()), key= lambda resource: resource.resource_id)
 
+        # sort activities_list on wbs:
+        activities_list = sorted(activities_list, key= lambda activity: activity.wbs_id)
 
         ## Make project object
-        project_object=ProjectObject(project_name, activity_list_wbs, TP_list, res_list, project_agenda)
-        return project_object
+        return ProjectObject(project_name, activities_list, trackingPeriodsList, resources_list, project_agenda)
 
     @staticmethod
     def xml_escape(text):

@@ -1,8 +1,9 @@
 
 --- Project Info ----
+<NAME>ProjectName</NAME> 			--- Projectnaam
 <ProjectInfo>
 	<LastSavedBy>jbatseli</LastSavedBy>
-	<Name>ProjectInfo</Name> 									--- Projectnaam
+	<Name>ProjectInfo</Name> 									
 	<SavedWithMayorBuild>3</SavedWithMayorBuild>
 	<SavedWithMinorBuild>0</SavedWithMinorBuild>
 	<SavedWithVersion>0</SavedWithVersion>
@@ -20,23 +21,23 @@
 	<ActionEndThreshold>100</ActionEndThreshold>
 	<ActionStartThreshold>60</ActionStartThreshold>
 	<ActiveSensResult>1</ActiveSensResult>
-	<ActiveTrackingPeriod>8</ActiveTrackingPeriod>
-	<AllocationMethod>0</AllocationMethod>
-	<AutomaticBuffer>0</AutomaticBuffer>
+	<ActiveTrackingPeriod>-1</ActiveTrackingPeriod>
+	<AllocationMethod>1</AllocationMethod>
+	<AutomaticBuffer>1</AutomaticBuffer>
 	<ConnectResourceBars>0</ConnectResourceBars>
 	<ConstraintHardness>3</ConstraintHardness>
 	<CurrencyPrecision>2</CurrencyPrecision>
 	<CurrencySymbol>€</CurrencySymbol>
 	<CurrencySymbolPosition>1</CurrencySymbolPosition>
-	<DateTimeFormat>d/MM/yyyy h:mm</DateTimeFormat>
+	<DateTimeFormat>d/MM/yyyy h:mm</DateTimeFormat> 		--datetime format
 	<DefaultRowBuffer>50</DefaultRowBuffer>
 	<DrawRelations>1</DrawRelations>
 	<DrawShadow>1</DrawShadow>
-	<DurationFormat>1</DurationFormat>
+	<DurationFormat>2</DurationFormat>
 	<DurationLevels>2</DurationLevels>
-	<ESSLSSFloat>0</ESSLSSFloat>
-	<GanttStartDate>080220070800</GanttStartDate>
-	<GanttZoomLevel>0.0127138157894736</GanttZoomLevel>
+	<ESSLSSFloat>12</ESSLSSFloat>
+	<GanttStartDate>080220070800</GanttStartDate> 			-- gant start date -> set this to starting date of the project
+	<GanttZoomLevel>0.5</GanttZoomLevel>
 	<GroupFilter>0</GroupFilter>
 	<HideGraphMarks>0</HideGraphMarks>
 	<Name>Settings</Name>
@@ -46,8 +47,8 @@
 	<ResAllocation1Color>12632256</ResAllocation1Color>
 	<ResAllocation2Color>8421504</ResAllocation2Color>
 	<ResAvailableColor>15780518</ResAvailableColor>
-	<ResourceChartEndDate>220520071000</ResourceChartEndDate>
-	<ResourceChartStartDate>060320060000</ResourceChartStartDate>
+	<ResourceChartEndDate>220520071000</ResourceChartEndDate>  		-- resource chart end date -> set this to end date of project baseline schedule
+	<ResourceChartStartDate>060320060000</ResourceChartStartDate> 	-- resource chart start date -> set this to start date of project baseline schedule
 	<ResOverAllocationColor>255</ResOverAllocationColor>
 	<ShowCanEditResultsInHelp>1</ShowCanEditResultsInHelp>
 	<ShowCriticalPath>1</ShowCriticalPath>
@@ -113,7 +114,10 @@
 		<Day>5</Day>
 		<Day>6</Day>
 	</NonWorkingDays>
-	<Holidays/>
+	<Holidays>
+        <Holiday>030420150000</Holiday>
+        ...
+    </Holidays>
 </Agenda>
 
 
@@ -121,39 +125,41 @@
 
 
 ----Activity ----
-
-<Activity>
-	<BaselineCostByUnit>0</BaselineCostByUnit> 					
-	<BaseLineDuration>480</BaseLineDuration>        	 	-- Duration in hours (8h/workday)--
-	<BaseLineStart>170420060800</BaseLineStart> 			-- Baseline Start: 17/04/2006 08:00
-	<Constraints>
-		<Direction>0</Direction>                            -- Always 0
-		<DueDateEnd>010101000000</DueDateEnd>   			--  Intern?
-		<DueDateStart>010101000000</DueDateStart>           --  Intern?
-		<LockedTimeEnd>010101000000</LockedTimeEnd>         --  Intern?
-		<LockedTimeStart>170420060800</LockedTimeStart>     --  Intern?
-		<Name> </Name>
-		<ReadyTimeEnd>010101000000</ReadyTimeEnd>           --  Intern?
-		<ReadyTimeStart>010101000000</ReadyTimeStart>       --  Intern?
-		<UniqueID>-1</UniqueID>                             -- Always 1
-		<UserID>0</UserID> 									-- Always 0
-	</Constraints>
-	<Distribution>5</Distribution> 							-- see --Distributions-- 
-	<DurationCPMUnits>480</DurationCPMUnits>                -- = BaselineDuration?
-	<FixedBaselineCost>75</FixedBaselineCost>               -- Fixed Cost
-	<IsMilestone>0</IsMilestone>                            
-	<Name>building permit</Name>  							-- Name --
-	<StartCPMUnits>0</StartCPMUnits>
-	<UniqueID>2</UniqueID>                                  -- ID
-	<UserID>0</UserID>
-</Activity>
-
+Note: Not all given activities are included in the outline list => filter
+<Activities>
+	<Activity>
+		<BaselineCostByUnit>0</BaselineCostByUnit> 				-- activity baseline cost by workinghour
+		<BaseLineDuration>480</BaseLineDuration>        	 	-- Duration in workinghours--
+		<BaseLineStart>170420060800</BaseLineStart> 			-- Baseline Start: 17/04/2006 08:00
+		<Constraints> 										 	-- activity constraints [not used in PMConverter]
+			<Direction>0</Direction>                            
+			<DueDateEnd>010101000000</DueDateEnd>   			
+			<DueDateStart>010101000000</DueDateStart>           
+			<LockedTimeEnd>010101000000</LockedTimeEnd>         
+			<LockedTimeStart>170420060800</LockedTimeStart>     
+			<Name> </Name>
+			<ReadyTimeEnd>010101000000</ReadyTimeEnd>           
+			<ReadyTimeStart>010101000000</ReadyTimeStart>       
+			<UniqueID>-1</UniqueID>                             
+			<UserID>0</UserID> 									
+		</Constraints>
+		<Distribution>5</Distribution> 							-- distribution ID, see --Distributions-- 
+		<DurationCPMUnits>480</DurationCPMUnits>                -- = BaselineDuration?
+		<FixedBaselineCost>75</FixedBaselineCost>               -- Fixed Cost
+		<IsMilestone>0</IsMilestone>                            
+		<Name>building permit</Name>  							-- Name --
+		<StartCPMUnits>0</StartCPMUnits>
+		<UniqueID>2</UniqueID>                                  -- activity ID
+		<UserID>0</UserID>
+	</Activity>
+	...
+</Activities>
 ----- Activity Group --------
-</ActivityGroups>
+<ActivityGroups>
 	<ActivityGroup>
 		<Expanded>1</Expanded>
 		<Name>construction leave</Name>                         -- Grouping of Activities
-		<UniqueID>66</UniqueID>
+		<UniqueID>66</UniqueID>  								-- activityGroup ID -> wbs tree
 		<UserID>0</UserID>
 	</ActivityGroup>
 …
@@ -164,17 +170,17 @@
 Distribution 1 = Standard no risk (99-100-101)
 Distribution 2 = Standard symetric (80-100-120)
 Distribution 3 = Standard skewed left (80-110-120)
-??? Distribution 4 = Standard skewed right (80-90-120) ??? (Educated guess)
+Distribution 4 = Standard skewed right (80-90-120)
 
 Non-general Distributions are defined:
 <SensitivityDistributions>
 	<TProTrackSensitivityDistribution5>
-		<UniqueID>5</UniqueID>
-		<Name>Task building permit distribution</Name>
-		<StartDuration>383</StartDuration>
-		<EndDuration>812</EndDuration>
-		<Style>0</Style>
-		<Distribution>
+		<UniqueID>5</UniqueID> 								-- distribution ID
+		<Name>Task building permit distribution</Name> 		-- overwritten by PMConverter to "Absolute" or "Relative" + listing of the 3 points
+		<StartDuration>383</StartDuration> 					-- ProTrack viewing window start in workinghours
+		<EndDuration>812</EndDuration> 						-- ProTrack viewing window end in workinghours
+		<Style>0</Style> 									-- Relative distribution if 1 else Absolute 0
+		<Distribution> 										-- ProTrack saved distribution points [PMConverter currently only supports 3 point distributions else 100 100 100 is given]
 			<X>402</X>
 			<Y>0</Y>
 			<X>480</X>
@@ -194,15 +200,23 @@ Non-general Distributions are defined:
 
  
 ----- Relation --------
+Note: Not all given relations are only related to activities included in the outline list => filter
+
+-LagType-
+0 = SS
+1 = SF
+2 = FS
+3 = FF
+
 <Relations>
 	<Relation>
-		<FromTask>3</FromTask>                                 -- Activity 16 is Succesor of 3
-		<Lag>0</Lag> 										   -- ==> Activity 3 is predeccesor of 16
-		<LagKind>0</LagKind> 								--
+		<FromTask>3</FromTask>                              -- Activity 3 is predeccesor of 16
+		<Lag>0</Lag> 										-- lag time in workinghours
+		<LagKind>0</LagKind> 	-- [default ProTrack value]
 		<LagType>2</LagType> 								-- Indicates Finish Start (FS)
-		<Name>Relation</Name>
-		<ToTask>16</ToTask>
-		<UniqueID>5</UniqueID>
+		<Name>Relation</Name>  	-- [default ProTrack value]
+		<ToTask>16</ToTask> 								-- Activity 16 is Succesor of 3
+		<UniqueID>5</UniqueID> 								-- ID relation
 		<UserID>0</UserID>
 	</Relation>
 </Relations>
@@ -211,6 +225,10 @@ Non-general Distributions are defined:
 
 
 ----- OutlineList ---- 						--- WBS-column --> Excell layout
+
+Type 1 = activityGroup
+Type 2 = activity
+
 <OutlineList>
 		<List>
 			<Child>
@@ -238,18 +256,45 @@ Non-general Distributions are defined:
 						<Type>2</Type>
 						<Data>16</Data>
 					</Child>
-						<Child>
-							<Type>2</Type>
-							<Data>6</Data>
-						</Child>
-					</List>
-				</Child>
+					<Child>
+						<Type>2</Type>
+						<Data>6</Data>
+					</Child>
+				</List>
+			</Child>
+			<Child>
+                <Type>1</Type>
+                <Data>9</Data>
+                <Expanded>1</Expanded>
+                <List>
+                    <Child>
+                        <Type>2</Type>
+                        <Data>5</Data>
+                    </Child>
+                    <Child>
+                        <Type>1</Type>
+                        <Data>8</Data>
+                        <Expanded>1</Expanded>
+                        <List>
+                            <Child>
+                                <Type>2</Type>
+                                <Data>6</Data>
+                            </Child>
+                            <Child>
+                                <Type>2</Type>
+                                <Data>7</Data>
+                            </Child>
+                        </List>
+                    </Child>
+                </List>
+            </Child>
+            <Child>
+                <Type>0</Type>
+            </Child>
 				
 				... 
 
 	</OutlineList>
-
-
 
 	---  Resources ---
     --- Definition
@@ -257,43 +302,46 @@ Non-general Distributions are defined:
 	<Resource>
 		<FIELD0>1</FIELD0>            --- ID
 		<FIELD1>plumber</FIELD1>      ---  Name
-		<FIELD768></FIELD768>
-		<FIELD778>#4</FIELD778>       --- Availability
-		<FIELD769>1</FIELD769>        --- Renewable boolean?
+		<FIELD768></FIELD768> 		  --- resource Initials in Protrack [not used in PMConverter]
+		<FIELD778>#4</FIELD778>       --- unit label in protrack [PMConverter sets this to #maximumAvailability]
+		<FIELD769>1</FIELD769>        --- Renewable boolean, else consumable
 		<FIELD770>0</FIELD770>        --- Cost/use
 		<FIELD771>36</FIELD771>       --- Cost/Unit
 		<FIELD776>8640</FIELD776>     --- Total Cost
-		<FIELD780>4</FIELD780>        --- Availability
-		<FIELD779>-1</FIELD779>       --- ?
-		<FIELD781>0</FIELD781>        --- ?
-		<FIELD782>0.5</FIELD782>      --- ?
-		<FIELD783>1</FIELD783>        --- ?
+		<FIELD780>4</FIELD780>        --- default Availability: int if in units, float [0.0 - 1.0] if percentage, else infinite = -1
+		<FIELD779>-1</FIELD779>       --- ? [default ProTrack value]
+		<FIELD781>-99999999</FIELD781>        --- Resource sensitivity cruciality1 [not used in PMConverter] [default ProTrack value]
+		<FIELD782>-99999999</FIELD782>      --- Resource sensitivity cruciality2 [not used in PMConverter] [default ProTrack value]
+		<FIELD783>-99999999</FIELD783>        --- Resource sensitivity cruciality3 [not used in PMConverter] [default ProTrack value]
 	</Resource>
 	<DATEPERCSERIE>
-		<DEFAULTAVAILABILITY>4</DEFAULTAVAILABILITY>
-		<DATEPERCBREAKPOINTS/>
+		<DEFAULTAVAILABILITY>4</DEFAULTAVAILABILITY>  -- default availability
+		<DATEPERCBREAKPOINTS/> 							-- list of availabilities of this resource defined by dates [not used in PMConverter]
 	</DATEPERCSERIE>
 
 -- extra example
 	<Resource>
-		<FIELD0>3</FIELD0>
-		<FIELD1>team VDW</FIELD1>
-		<FIELD768></FIELD768>
-		<FIELD778>#8</FIELD778>
-		<FIELD769>1</FIELD769>
-		<FIELD770>0</FIELD770>
-		<FIELD771>38.56</FIELD771>
-		<FIELD776>173057.28125</FIELD776>
-		<FIELD780>8</FIELD780>
-		<FIELD779>-1</FIELD779>
-		<FIELD781>0.390830606222153</FIELD781>
-		<FIELD782>0.35456046462059</FIELD782>
-		<FIELD783>0.244444444775581</FIELD783>
-	</Resource>
-	<DATEPERCSERIE>
-		<DEFAULTAVAILABILITY>8</DEFAULTAVAILABILITY>
-		<DATEPERCBREAKPOINTS/>
-	</DATEPERCSERIE>
+        <FIELD0>5</FIELD0>
+        <FIELD1>Resource5</FIELD1>
+        <FIELD768/>
+        <FIELD778/>
+        <FIELD769>1</FIELD769>
+        <FIELD770>0</FIELD770>
+        <FIELD771>0</FIELD771>
+        <FIELD776>0</FIELD776>
+        <FIELD780>0.899999976158142</FIELD780>
+        <FIELD779>-1</FIELD779>
+        <FIELD781>0</FIELD781>
+        <FIELD782>0.5000119805336</FIELD782>
+        <FIELD783>1</FIELD783>
+    </Resource>
+    <DATEPERCSERIE>
+        <DEFAULTAVAILABILITY>0.899999976158142</DEFAULTAVAILABILITY>
+        <DATEPERCBREAKPOINTS>
+            <PERCENTAGE>290420150000</PERCENTAGE>
+            <AVAILABILITY>0.100000001490116</AVAILABILITY>
+        </DATEPERCBREAKPOINTS>
+    </DATEPERCSERIE>
 
 
 
@@ -301,8 +349,8 @@ Non-general Distributions are defined:
 
 <ResourceAssignments>
 		<ResourceAssignment>
-			<FIELD1026>4</FIELD1026>  --- # Resources needed (!= Resources available)
-			<FIELD1027>0</FIELD1027>  --- ?
+			<FIELD1026>4</FIELD1026>  --- # Resources needed (in integers when by unit or as a percentage)(!= Resources available)
+			<FIELD1027>0</FIELD1027>  --- 0 if not "fixed" else "-1": this option is only for consumable resources
 			<FIELD1024>6</FIELD1024>  ---  activity ID (i.e. Activity 6 needs 4 resources of resource 3)
 			<FIELD1025>3</FIELD1025>  --- resource ID
 		</ResourceAssignment>
@@ -331,13 +379,13 @@ Non-general Distributions are defined:
 		</TrackingPeriod>
 
 		<TProTrackActivities-1>
-			<Activity>2</Activity>
+			<Activity>2</Activity> 							-- activity ID
 			<TProTrackActivityTracking-1>
 				<ActualStart>170420060800</ActualStart>    -- Actual Start
-				<ActualDuration>800</ActualDuration>       -- Actual Duration in hours
-				<ActualCostDev>0</ActualCostDev>           -- Deviation from actual cost?
-				<RemainingDuration>8</RemainingDuration>
-				<RemainingCostDev>0</RemainingCostDev>
+				<ActualDuration>800</ActualDuration>       -- Actual Duration in workinghours
+				<ActualCostDev>0</ActualCostDev>           -- PAC dev
+				<RemainingDuration>8</RemainingDuration> 	-- remainging duration in workinghours
+				<RemainingCostDev>0</RemainingCostDev>     -- PRC dev
 				<PercentageComplete>0.990099012851715</PercentageComplete>  -- percentage completion
 			</TProTrackActivityTracking-1>
 
