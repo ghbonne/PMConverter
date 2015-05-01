@@ -109,6 +109,43 @@ class Activity(object):
                         return True
             return False
 
+    @staticmethod
+    def generate_activityGroups_to_childActivities_dict(activitiesOnly, activityGroups):
+        """This function links activityGroup id's to activity id's
+        :returns: dict with each activityGroup_id as key and a list of all sub acitivityId's as value
+        """
+        activityGroup_to_childActivities_dict = {}
+        
+        for activityGroup in activityGroups:
+            activityGroupId = activityGroup.activity_id
+            activityGroup_wbs_level = len(activityGroup.wbs_id)
+            activityGroup_to_childActivities_dict[activityGroupId] = [x[1].activity_id for x in activitiesOnly if x[0].wbs_id > activityGroup.wbs_id and x[0].wbs_id[:activityGroup_wbs_level] == activityGroup.wbs_id]
+        return activityGroup_to_childActivities_dict
+
+    @staticmethod
+    def update_activityGroups_aggregated_values(activityGroups_list, activity_dict, activityGroup_to_childActivities_dict, agenda):
+        "This function calculates the aggregated values of activityGroups"
+
+        for activityGroup in activityGroups_list:
+            childActivityIds = activityGroup_to_childActivities_dict[activityGroup.activity_id]
+
+            earliestStart = datetime.max
+            latestFinish = datetime.min
+
+            for childActivityId in childActivityIds:
+                childActivity = activity_dict[childActivityId]
+
+                if childActivity.baseline_schedule.start < earliestStart:
+                    earliestStart = childActivity.baseline_schedule.start
+                if childActivity.baseline_schedule.end > latestFinish:
+                    latestFinish = childActivity.baseline_schedule.end
+
+                activityGroup.baseline_schedule.fixed_cost += childActivity.baseline_schedule.fixed_cost
+                activityGroup.baseline_schedule.total_cost += childActivity.baseline_schedule.total_cost
+
+            # calculate activityGroup duration:
+            activityGroup.baseline_schedule.duration = agenda.get_time_between(earliestStart, latestFinish)
+
     def __eq__(self, other):
         if isinstance(other, self.__class__):
             return self.__dict__ == other.__dict__
