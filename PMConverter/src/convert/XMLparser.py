@@ -42,7 +42,7 @@ class XMLParser(FileParser):
                     year=int(datestring[4:8])
                     return datetime(year, month, day)
                 else:
-                    #raise XMLParseError("getdate: datestring length {0} is not equal to 8 or 12. datestring = {1}".format(len(datestring), datestring))  #TODO: datestring="0" gets here
+                    #raise XMLParseError("getdate: datestring length {0} is not equal to 8 or 12. datestring = {1}".format(len(datestring), datestring))
                     return datetime.max
             elif dateformat == "MM/d/yyyy h:mm":
                 if len(datestring) == 12:
@@ -273,6 +273,7 @@ class XMLParser(FileParser):
 
         ###### Resources ######
         ## Resources (Definition): create dict of all resources in project:
+        resourceNone_nr = 0
         for resourcesNode in root.findall('Resources'):
             for resourceNode in resourcesNode.findall('Resource'):
                 res_ID = int(resourceNode.find('FIELD0').text)
@@ -282,6 +283,12 @@ class XMLParser(FileParser):
                 cost_per_unit = float(resourceNode.find('FIELD771').text)
                 total_resource_cost = ast.literal_eval(resourceNode.find('FIELD776').text)
                 availability_default = ast.literal_eval(resourceNode.find('FIELD780').text)
+
+                if name is None:
+                    print("XMLparser:To_schedule_object: Resource id {0} has no name".format(res_ID))
+                    name = "None resource" + str(resourceNone_nr)
+                    resourceNone_nr += 1
+
                 res_dict[res_ID] = Resource(res_ID, name, res_type, availability_default, cost_per_use, cost_per_unit, total_resource_cost, type_check = True)
                 
 
@@ -316,20 +323,30 @@ class XMLParser(FileParser):
                     for yPoint in distributionYPoints:
                         distributionYPointsList.append(int(yPoint.text))
 
-                    if len(distributionXPointsList) != 3 or len(distributionYPointsList) != 3 or not (distributionYPointsList == [0, 100, 0]):
+                    if len(distributionXPointsList) != 3 or len(distributionYPointsList) != 3:
                         # unsupported distribution type: don't fail conversion by this
                         print("XMLparser:to_schedule_object: Only sensitivity distributions defined by 3 points are supported!\n Not with {0} points.".format(len(distributionXPoints)))
                         continue
+                    elif not (distributionYPointsList == [0, 100, 0]):
+                         # unsupported distribution type: don't fail conversion by this
+                        print("XMLparser:to_schedule_object:Risk distributions: Expects Y points [0,100,0] but received X={0}, Y={1}.\n NOTE: Y points will be resetted to [0,100,0]".format(distributionXPointsList, distributionYPointsList))
+                        continue
+
                     # valid 3 point distribution here:
                     distribution_dict[distributionID] = RiskAnalysisDistribution(distribution_type=DistributionType.MANUAL, distribution_units=distribution_units,
                                                                   optimistic_duration=distributionXPointsList[0],probable_duration=distributionXPointsList[1], pessimistic_duration=distributionXPointsList[2])
 
-
+        activityNone_nr = 0
         ### Read all activities and store them in list ###
         for activitiesNode in root.findall('Activities'):  # findall because ProTrack constains 1 dummy "activities" node
             for activityNode in activitiesNode.findall('Activity'):
                 activityID = int(activityNode.find('UniqueID').text)
                 activityName = activityNode.find("Name").text
+                if activityName is None:
+                    print("XMLparser:To_schedule_object: Read an activity with id {0} and no name".format(activityID))
+                    activityName = "None activity" + str(activityNone_nr)
+                    activityNone_nr += 1
+
                 usedDistributionId = int(activityNode.find("Distribution").text)
                 # Note: the same distribution object is used for different activities pointing to the same sensitivity distribution
                 activity_distribution = RiskAnalysisDistribution(DistributionType.MANUAL, ManualDistributionUnit.RELATIVE, 99,100,101,False) if usedDistributionId not in distribution_dict \
@@ -354,7 +371,7 @@ class XMLParser(FileParser):
                 # add new activity to the dict of all read activities
                 activity_dict[activityID] = Activity(activity_id= activityID, name= activityName, baseline_schedule= activity_baselineScheduleRecord, risk_analysis= activity_distribution, type_check= True)
 
-
+        activityNone_nr = 0
         ### Read activitygroups and store them: ###
         for activityGroupsNode in root.findall("ActivityGroups"):
             for activityGroupNode in activityGroupsNode.findall("ActivityGroup"):
@@ -362,6 +379,11 @@ class XMLParser(FileParser):
                 activityID = int(activityGroupNode.find('UniqueID').text)
                 #Name
                 activityName = activityGroupNode.find('Name').text
+                if activityName is None:
+                    print("XMLparser:To_schedule_object: Read a group activity with id {0} and no name.".format(activityID))
+                    activityName = "None Group"
+                    activityName = "None Group activity" + str(activityNone_nr)
+                    activityNone_nr += 1
                 # add activity group to dict:
                 activityGroup_dict[activityID] = Activity(activity_id= activityID, name= activityName)
 
@@ -1164,7 +1186,7 @@ class XMLParser(FileParser):
 			<ActualStart>0</ActualStart>
 			<ActualDuration>0</ActualDuration>
 			<ActualCostDev>0</ActualCostDev>
-			<RemainingDuration/>
+			<RemainingDuration>0</RemainingDuration>
 			<RemainingCostDev>0</RemainingCostDev>
 			<PercentageComplete>0</PercentageComplete>
 		</TProTrackActivityTracking-1>"""
@@ -1174,7 +1196,7 @@ class XMLParser(FileParser):
         preheaderNode.text = str(activityTrackingRecord.activity.activity_id)
 
         customValues_dict = {}
-        if activityTrackingRecord.actual_start < datetime.max:
+        if activityTrackingRecord.actual_start is not None and activityTrackingRecord.actual_start < datetime.max:
             customValues_dict["ActualStart"] = self.get_date_string(activityTrackingRecord.actual_start, datetimeFormat)
         if activityTrackingRecord.actual_duration:
             # actual duration > 0
@@ -1182,7 +1204,8 @@ class XMLParser(FileParser):
         if activityTrackingRecord.deviation_pac:
             # PACdev != 0
             customValues_dict["ActualCostDev"] = str(activityTrackingRecord.deviation_pac)
-        customValues_dict["RemainingDuration"] = str(activityTrackingRecord.remaining_duration.days * agenda.get_working_hours_in_a_day() + int(round(activityTrackingRecord.remaining_duration.seconds / 3600))) 
+        if activityTrackingRecord.remaining_duration:
+            customValues_dict["RemainingDuration"] = str(activityTrackingRecord.remaining_duration.days * agenda.get_working_hours_in_a_day() + int(round(activityTrackingRecord.remaining_duration.seconds / 3600))) 
         if activityTrackingRecord.deviation_prc:
             # PRCdev != 0
             customValues_dict["RemainingCostDev"] = str(activityTrackingRecord.deviation_prc)

@@ -4,6 +4,7 @@ __author__ = 'PM Group 8'
 
 from objects.baselineschedule import BaselineScheduleRecord
 from objects.riskanalysisdistribution import RiskAnalysisDistribution
+from datetime import datetime
 
 
 class Activity(object):
@@ -119,7 +120,7 @@ class Activity(object):
         for activityGroup in activityGroups:
             activityGroupId = activityGroup.activity_id
             activityGroup_wbs_level = len(activityGroup.wbs_id)
-            activityGroup_to_childActivities_dict[activityGroupId] = [x[1].activity_id for x in activitiesOnly if x[0].wbs_id > activityGroup.wbs_id and x[0].wbs_id[:activityGroup_wbs_level] == activityGroup.wbs_id]
+            activityGroup_to_childActivities_dict[activityGroupId] = [x.activity_id for x in activitiesOnly if x.wbs_id > activityGroup.wbs_id and x.wbs_id[:activityGroup_wbs_level] == activityGroup.wbs_id]
         return activityGroup_to_childActivities_dict
 
     @staticmethod
@@ -144,7 +145,10 @@ class Activity(object):
                 activityGroup.baseline_schedule.total_cost += childActivity.baseline_schedule.total_cost
 
             # calculate activityGroup duration:
-            activityGroup.baseline_schedule.duration = agenda.get_time_between(earliestStart, latestFinish)
+            if earliestStart < datetime.max and latestFinish > datetime.min:
+                activityGroup.baseline_schedule.duration = agenda.get_time_between(earliestStart, latestFinish)
+                activityGroup.baseline_schedule.start = earliestStart
+                activityGroup.baseline_schedule.end = latestFinish
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):

@@ -2,6 +2,7 @@ __author__ = 'Eveline'
 from visual.visualization import Visualization
 from visual.enums import DataType, LevelOfDetail, ExcelVersion
 from visual.charts.barchart import BarChart
+from objects.activity import Activity
 
 
 class ActualCost(Visualization):
@@ -49,14 +50,15 @@ class ActualCost(Visualization):
         i = 0
         start = 5
         while i < len(activities):
-            if (len(activities[i].wbs_id) == 2 and self.level_of_detail == LevelOfDetail.WORK_PACKAGES) or (len(activities[i].wbs_id) == 3 and self.level_of_detail == LevelOfDetail.ACTIVITIES):
+            isActivityGroup = Activity.is_not_lowest_level_activity(activities[i], activities)
+            if (isActivityGroup and self.level_of_detail == LevelOfDetail.WORK_PACKAGES) or ((not isActivityGroup) and self.level_of_detail == LevelOfDetail.ACTIVITIES):
                 names += "'" + sh_name + "'!$B$" + str(start+i) + ","
                 baseline_cost += "'" + sh_name + "'!$AD$" + str(start+i) + ","
                 actual_cost += "'" + sh_name + "'!$AE$" + str(start+i) + ","
                 percentage_completed += "'" + sh_name + "'!$AF$" + str(start+i) + ","
                 height += 20
                 i += 1
-            else:  # 1 = project level, >3 not supported yet
+            else:
                 i += 1
 
         # remove last ';' and add ')'

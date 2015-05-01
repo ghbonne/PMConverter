@@ -24,6 +24,7 @@ from visual.spi_t_p_factor import SpiTvsPfactor
 from visual.performance import Performance
 from visual.budget import CV
 from visual.enums import ExcelVersion
+import traceback
 
 
 
@@ -63,7 +64,8 @@ class Processor(QThread):
                 xml_parser = XMLParser()
                 project_object = xml_parser.to_schedule_object(self.file_path_from)
             except:
-                self.emit(self.conversionFailedErrorMessage, "Failed to parse {0}\nException of type {1} occurred.\nValue of exception = {2}".format(inputfilename, sys.exc_info()[0], sys.exc_info()[1] if sys.exc_info()[1] is not None else ""))
+                self.emit(self.conversionFailedErrorMessage, "Failed to parse {0}\nException of type {1} occurred.\nValue of exception = {2}\n\n {3}".format(inputfilename, 
+                                                                            sys.exc_info()[0], sys.exc_info()[1] if sys.exc_info()[1] is not None else "", traceback.format_exc()))
                 return
             
         elif self.parser_from == "Excel":
@@ -71,7 +73,8 @@ class Processor(QThread):
                 xlsx_parser = XLSXParser()
                 project_object = xlsx_parser.to_schedule_object(self.file_path_from)
             except:
-                self.emit(self.conversionFailedErrorMessage, "Failed to parse {0}\nException of type {1} occurred.\nValue of exception = {2}".format(inputfilename, sys.exc_info()[0], sys.exc_info()[1] if sys.exc_info()[1] is not None else ""))
+                self.emit(self.conversionFailedErrorMessage, "Failed to parse {0}\nException of type {1} occurred.\nValue of exception = {2}\n\n {3}".format(inputfilename, 
+                                                                                            sys.exc_info()[0], sys.exc_info()[1] if sys.exc_info()[1] is not None else "", traceback.format_exc()))
                 return
 
         # Parse from project object
@@ -81,6 +84,7 @@ class Processor(QThread):
                 xlsx_parser = XLSXParser()
                 workbook = xlsx_parser.from_schedule_object(project_object, file_path_to, self.excel_version)
                 if self.wantedVisualisations:
+                    current_tp = 0
                     for worksheet in workbook.worksheets():
                         if worksheet.get_name() == "Baseline Schedule":
                             for visualisation in self.wantedVisualisations["Baseline schedule's visualisations"]:
@@ -92,10 +96,11 @@ class Processor(QThread):
                             for visualisation in self.wantedVisualisations["Risk analysis' visualisations"]:
                                 visualisation.draw(workbook, worksheet, project_object, self.excel_version)
                         if "TP" in worksheet.get_name():
-                            tp = int(re.search(r'\d+', worksheet.get_name()).group())
+                            #tp = int(re.search(r'\d+', worksheet.get_name()).group())
                             for visualisation in self.wantedVisualisations["Tracking periods' visualisations"]:
-                                visualisation.tp = tp
+                                visualisation.tp = current_tp
                                 visualisation.draw(workbook, worksheet, project_object, self.excel_version)
+                            current_tp += 1
                         if worksheet.get_name() == "Tracking Overview":
                             for visualisation in self.wantedVisualisations["Tracking overview's visualisations"]:
                                 visualisation.draw(workbook, worksheet, project_object, self.excel_version)
@@ -106,14 +111,16 @@ class Processor(QThread):
                 #    pass
                 #os.system("start excel.exe output/test2.xlsx")#todo: works only on windows, maybe not neccesary?
             except:
-                self.emit(self.conversionFailedErrorMessage, "Failed to convert {0} to Excel\nException of type {1} occurred.\nValue of exception = {2}".format(inputfilename, sys.exc_info()[0], sys.exc_info()[1] if sys.exc_info()[1] is not None else ""))
+                self.emit(self.conversionFailedErrorMessage, "Failed to convert {0} to Excel\nException of type {1} occurred.\nValue of exception = {2}\n {3}".format(inputfilename, 
+                                                    sys.exc_info()[0], sys.exc_info()[1] if sys.exc_info()[1] is not None else "", traceback.format_exc()))
                 return
         elif self.parser_to == "ProTrack":
             try:
                 xml_parser = XMLParser()
                 parsingSuccessful = xml_parser.from_schedule_object(project_object, file_path_to)
             except:
-                self.emit(self.conversionFailedErrorMessage, "Failed to convert {0} to ProTrack\nException of type {1} occurred.\nValue of exception = {2}".format(inputfilename, sys.exc_info()[0], sys.exc_info()[1] if sys.exc_info()[1] is not None else ""))
+                self.emit(self.conversionFailedErrorMessage, "Failed to convert {0} to ProTrack\nException of type {1} occurred.\nValue of exception = {2}\n\n {3}".format(inputfilename, 
+                                                                                            sys.exc_info()[0], sys.exc_info()[1] if sys.exc_info()[1] is not None else "", traceback.format_exc()))
                 return
             
         # conversion successful:

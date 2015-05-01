@@ -174,7 +174,7 @@ class UIView(QDialog, ui_UIView.Ui_UIView):
         else:
             self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageConverting))
             self.loadingAnimation.start()
-            #TODO: start conversion to ProTrack!
+            # start conversion to ProTrack!
             self.processor.setConversionSettings(self.ddlStep1_InputFormat.currentText(), self.ddlStep1_OutputFormat.currentText(), self.inputFilename)
             self.processor.start()
 

@@ -1,12 +1,13 @@
 __author__ = 'PM Group 8'
 import datetime
+from objects.resource import ResourceType
 
 class ActivityTrackingRecord(object):
     """
     Update about the status of an Activity concerning its actual start, actual duration, actual cost, percentage completed, etc."
 
     :var activity: Activity, pointer to the concerning Activity
-    :var actual_start: datetime  # if not started yet, is set to datetime.max #TODO
+    :var actual_start: datetime  # if not started yet, is set to datetime.max
     :var actual_duration: timedelta
     :var planned_actual_cost: float
     :var planned_remaining_cost: float
@@ -174,13 +175,15 @@ class ActivityTrackingRecord(object):
                     earliest_start = childActivityTrackingRecord.actual_start
                 if childActivityTrackingRecord.percentage_completed < 100:
                     childActivity_latestDate = current_status_date
-                else:
+                elif childActivityTrackingRecord.actual_start < datetime.datetime.max:
                     childActivity_latestDate = agenda.get_end_date(childActivityTrackingRecord.actual_start, childActivityTrackingRecord.actual_duration.days, childActivityTrackingRecord.actual_duration.seconds / 3600)
+                else:
+                    childActivity_latestDate = current_status_date
 
                 if childActivity_latestDate > latest_finish:
                     latest_finish = childActivity_latestDate
         
-        if earliest_start < datetime.datetime.max:
+        if earliest_start < datetime.datetime.max and latest_finish > datetime.datetime.min:
             total_actual_duration = agenda.get_time_between(earliest_start, latest_finish)
         else:
             total_actual_duration = datetime.timedelta(0)

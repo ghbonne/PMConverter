@@ -85,7 +85,7 @@ class SpiT(Visualization):
         worksheet.write('AN2', 'SPI(t) threshold', header)
 
         start = 2
-        if self.thresholdValues[0] == self.thresholdValues[1]:
+        if self.thresholdValues[0] == self.thresholdValues[1] or tp_size <= 1:
             for i in range(0, tp_size):
                 worksheet.write(start + i, 39, self.thresholdValues[0], calculation)
         else:

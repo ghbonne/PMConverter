@@ -84,7 +84,7 @@ class CPI(Visualization):
         worksheet.write('AL2', 'CPI threshold', header)
 
         start = 2
-        if self.thresholdValues[0] == self.thresholdValues[1]:
+        if self.thresholdValues[0] == self.thresholdValues[1] or tp_size <= 1:
             for i in range(0, tp_size):
                 worksheet.write(start + i, 37, self.thresholdValues[0], calculation)
         else:

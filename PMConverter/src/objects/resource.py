@@ -18,7 +18,7 @@ class Resource(object):
     :var availability: int, number of units available OR float, percentage of resource available ELSE -1 = infinity for consumable resource 
     :var cost_use: float, one-time cost that is incurred every time that the resource is used by an activity
     :var cost_unit: float, cost per unit
-    :var total_resource_cost: float or int, total value spent at this resource in the project  # TODO: implement 
+    :var total_resource_cost: float or int, total value spent at this resource in the project
     """
 
     def __init__(self, resource_id, name="", resource_type=ResourceType.RENEWABLE, availability=0, cost_use=0.0,
