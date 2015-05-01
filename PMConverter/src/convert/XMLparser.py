@@ -193,30 +193,7 @@ class XMLParser(FileParser):
 
             # calculate total activity cost:
             activity.baseline_schedule.total_cost = float(activity.resource_cost + activity.baseline_schedule.fixed_cost + activity.baseline_schedule.hourly_cost * activityDuration_hours)
-
-    def update_activityGroups_aggregated_values(self, activityGroups_list, activity_dict, activityGroup_to_childActivities_dict, agenda):
-        "This function calculates the aggregated values of activityGroups"
-
-        for activityGroup in activityGroups_list:
-            childActivityIds = activityGroup_to_childActivities_dict[activityGroup.activity_id]
-
-            earliestStart = datetime.max
-            latestFinish = datetime.min
-
-            for childActivityId in childActivityIds:
-                childActivity = activity_dict[childActivityId]
-
-                if childActivity.baseline_schedule.start < earliestStart:
-                    earliestStart = childActivity.baseline_schedule.start
-                if childActivity.baseline_schedule.end > latestFinish:
-                    latestFinish = childActivity.baseline_schedule.end
-
-                activityGroup.baseline_schedule.fixed_cost += childActivity.baseline_schedule.fixed_cost
-                activityGroup.baseline_schedule.total_cost += childActivity.baseline_schedule.total_cost
-
-            # calculate activityGroup duration:
-            activityGroup.baseline_schedule.duration = agenda.get_time_between(earliestStart, latestFinish)
-                    
+            
 
     def process_activityTrackingRecord_Node(self, activity, activityTrackingRecord_node, statusdate_datetime, agenda, datetimeFormat):
         """"
@@ -248,105 +225,13 @@ class XMLParser(FileParser):
         #earned_value = 0.
         #planned_value = 0.
 
-        # Calculate PAC and PRC:
-        if actualDuration_hours > 0:
-            # activity started or already finished: PAC depends on real actual duration!
-            planned_actual_cost = activity.baseline_schedule.fixed_cost + actualDuration_hours * activity.baseline_schedule.hourly_cost
-            # no fixed starting costs anymore for PRC:
-            planned_remaining_cost = remainingDuration_hours * activity.baseline_schedule.hourly_cost
-            # add costs of used resources:
-            for resourceTuple in activity.resources:
-                resource = resourceTuple[0]
-                if resource.resource_type == ResourceType.CONSUMABLE:
-                    ## only add once the cost for its use!
-                    # check if fixed resource assignment:
-                    if resourceTuple[2]:
-                        # fixed resource assignment => variable cost is not multiplied by activity duration:
-                        planned_actual_cost += resource.cost_use + resourceTuple[1] * resource.cost_unit
-                        # NOTE: expects fixed resource assignment to take place at start of the activity => no contribution to PRC
-                    else:
-                        # non fixed resource assignment:
-                        planned_actual_cost += resource.cost_use + resourceTuple[1] * resource.cost_unit * actualDuration_hours
-                        planned_remaining_cost += resourceTuple[1] * resource.cost_unit * remainingDuration_hours
-                else:
-                    #resource type is renewable:
-                    #add cost_use and variable cost:
-                    planned_actual_cost += resourceTuple[1] * (resource.cost_use + resource.cost_unit * actualDuration_hours)
-                    planned_remaining_cost += resourceTuple[1] * resource.cost_unit * remainingDuration_hours
-            #endFor adding resource costs
-
-        else:
-            # activity not yet started:
-            planned_actual_cost = 0.
-            planned_remaining_cost = activity.baseline_schedule.total_cost
-
-        actual_cost = planned_actual_cost + actualCostDev
-        remaining_cost = planned_remaining_cost + remainingCostDev
-
-        # Calculate EV:
-        if remainingDuration_hours == 0:
-            # activity finished
-            earned_value = activity.baseline_schedule.total_cost
-        elif actualDuration_hours == 0:
-            # activity not yet started:
-            earned_value = 0.
-        else:
-            # activity running:
-            earned_value = activity.baseline_schedule.fixed_cost + percentageComplete * (activity.baseline_schedule.var_cost + activity.resource_cost)
-
-        # Calculate PV:
-        if statusdate_datetime >= activity.baseline_schedule.end:
-            # activity should be finished according to baselinschedule
-            planned_value = activity.baseline_schedule.total_cost
-        elif statusdate_datetime < activity.baseline_schedule.start:
-            # activity is not yet started according to baselineschedule
-            planned_value = 0.
-        else:
-            # activity is running
-            activityRunningDuration = agenda.get_time_between(activity.baseline_schedule.start, statusdate_datetime)
-            activityRunningDuration_workingHours = activityRunningDuration.days * agenda.get_working_hours_in_a_day() + activityRunningDuration.seconds / 3600
-
-            planned_value = activity.baseline_schedule.fixed_cost + activityRunningDuration_workingHours * activity.baseline_schedule.hourly_cost
-                    
-            # add costs of resources until now:
-            for resourceTuple in activity.resources:
-                resource = resourceTuple[0]
-                if resource.resource_type == ResourceType.CONSUMABLE:
-                    ## only add once the cost for its use!
-                    # check if fixed resource assignment:
-                    if resourceTuple[2]:
-                        # fixed resource assignment => variable cost is not multiplied by activity duration:
-                        planned_value += resource.cost_use + resourceTuple[1] * resource.cost_unit
-                    else:
-                        # non fixed resource assignment:
-                        planned_value += resource.cost_use + resourceTuple[1] * resource.cost_unit * activityRunningDuration_workingHours
-                else:
-                    #resource type is renewable:
-                    #add cost_use and variable cost:
-                    planned_value += resourceTuple[1] * (resource.cost_use + resource.cost_unit * activityRunningDuration_workingHours)
-            #endFor adding resource costs
-        #endIf calculating PV
+        actual_cost, earned_value, planned_actual_cost, planned_remaining_cost, planned_value, remaining_cost = ActivityTrackingRecord.calculate_activityTrackingRecord_derived_values(activity,
+                                                                                actualCostDev, actualDuration_hours, agenda, percentageComplete, remainingCostDev, remainingDuration_hours, statusdate_datetime, actualStart)
+            
         
         return ActivityTrackingRecord(activity, actualStart, actualDuration, planned_actual_cost, float(planned_remaining_cost), remainingDuration, actualCostDev,
                                                         remainingCostDev, actual_cost, remaining_cost, int(round(percentageComplete)), trackingStatus, float(earned_value), float(planned_value), True)
 
-    def construct_activityGroup_trackingRecord(self, activityGroup, childActivityIds, currentTrackingPeriod_records_dict):
-        """This function constructs an aggregated trackingRecord of an activityGroup
-        :returns: ActivityTrackingRecord of aggregated activityGroup
-        """
-
-        total_earned_value = 0.
-        total_planned_value = 0.
-
-        if childActivityIds:
-            for childActivityId in childActivityIds:
-                childActivityTrackingRecord = currentTrackingPeriod_records_dict[childActivityId]
-                total_earned_value += childActivityTrackingRecord.earned_value
-                total_planned_value += childActivityTrackingRecord.planned_value
-        
-
-        percentage_completed = int(round(total_earned_value / activityGroup.baseline_schedule.total_cost)) if activityGroup.baseline_schedule.total_cost else 0
-        return ActivityTrackingRecord(activity= activityGroup, percentage_completed= percentage_completed, earned_value= total_earned_value, planned_value= total_planned_value)
 
     def to_schedule_object(self, file_path_input):
         tree = ET.parse(file_path_input)
@@ -553,7 +438,7 @@ class XMLParser(FileParser):
 
         # calculate and add total cost for each activity, resource_cost of activity
         self.update_activities_aggregated_costs(list(activity_dict.values()), project_agenda)
-        self.update_activityGroups_aggregated_values(list(activityGroup_dict.values()), activity_dict, activityGroup_to_childActivities_dict, project_agenda)
+        Activity.update_activityGroups_aggregated_values(list(activityGroup_dict.values()), activity_dict, activityGroup_to_childActivities_dict, project_agenda)
 
         # check total resource cost with read value
         #DEBUG: #TODO
@@ -612,7 +497,7 @@ class XMLParser(FileParser):
                 for activityGroupId in activityGroup_dict.keys():
                     childActivityIds = activityGroup_to_childActivities_dict[activityGroupId]
                     # construct the activityGroup trackingRecord:
-                    activityGroup_trackingRecord = self.construct_activityGroup_trackingRecord(activityGroup_dict[activityGroupId], childActivityIds, currentTrackingPeriod_records_dict)
+                    activityGroup_trackingRecord = ActivityTrackingRecord.construct_activityGroup_trackingRecord(activityGroup_dict[activityGroupId], childActivityIds, currentTrackingPeriod_records_dict, statusdate_datetime, project_agenda)
                     currentTrackingPeriod.tracking_period_records.append(activityGroup_trackingRecord)
 
                 # add all activity records to trackingPeriod:
