@@ -52,6 +52,28 @@ class Resource(object):
         self.cost_unit = cost_unit
         self.total_resource_cost = total_resource_cost
 
+    @staticmethod
+    def calculate_resource_assignment_cost(resource, demand, isFixed, duration_hours):
+        """This function calculates the cost of a resource assignment for a given demand and duration in workinghours.
+        :returns: float, resource assignment cost
+        """
+        cost = 0.0
+        if resource.resource_type == ResourceType.CONSUMABLE:
+            ## only add once the cost for its use!
+            # check if fixed resource assignment:
+            if isFixed:
+                # fixed resource assignment => variable cost is not multiplied by activity duration:
+                cost += resource.cost_use + demand * resource.cost_unit
+            else:
+                # non fixed resource assignment:
+                cost += resource.cost_use + demand * resource.cost_unit * duration_hours
+        else:
+            #resource type is renewable:
+            #add cost_use and variable cost:
+            cost += demand * (resource.cost_use + resource.cost_unit * duration_hours)
+
+        return cost
+
     def __eq__(self, other):
         if isinstance(other, self.__class__):
             return self.__dict__ == other.__dict__
