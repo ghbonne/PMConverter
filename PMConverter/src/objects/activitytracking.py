@@ -5,7 +5,6 @@ class ActivityTrackingRecord(object):
     """
     Update about the status of an Activity concerning its actual start, actual duration, actual cost, percentage completed, etc."
 
-    :var tracking_period: tracking_period, pointer to tracking_period objects where this ActivityTrackingRecord is part of #TODO: not used: remove?
     :var activity: Activity, pointer to the concerning Activity
     :var actual_start: datetime  # if not started yet, is set to datetime.max #TODO
     :var actual_duration: timedelta

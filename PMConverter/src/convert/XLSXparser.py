@@ -63,14 +63,14 @@ class XLSXParser(FileParser):
             # Next we process the resources sheet, we store them in a dict, with index the resource name, to access them
             # easily later when we are processing the activities.
             resources_dict = self.process_resources(resource_sheet)
-            print(resources_dict)
+            #print(resources_dict)
             # Then we process the risk analysis sheet, again everything is stored in a dict, now index is activity_id.
             risk_analysis_dict = self.process_risk_analysis(risk_analysis_sheet, ExcelVersion.EXTENDED)
             print(risk_analysis_dict)
             # Finally, the sheet with activities is processed, using the dicts we created above.
             # Again, a new dict is created, to process all tracking periods more easily
             activities_dict = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict, ExcelVersion.EXTENDED, agenda)
-            print(activities_dict)
+            #print(activities_dict)
             tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, ExcelVersion.EXTENDED)
             #print(tracking_periods)
             # TODO: extract project name from root activityGroup with id = 0
@@ -309,12 +309,10 @@ class XLSXParser(FileParser):
                                                                         25569)*86400))  # Convert to correct date
                 else:
                     baseline_end = activities_sheet.cell(row=curr_row, column=7).value
-                baseline_duration_split = activities_sheet.cell(row=curr_row, column=8).value.split("d")
-                baseline_duration_days = int(baseline_duration_split[0])
-                baseline_duration_hours = 0  # We need to set this default value for the next loop
-                if len(baseline_duration_split) > 1 and baseline_duration_split[1] != '':
-                    baseline_duration_hours = int(baseline_duration_split[1][1:-1])  # first char = " "; last char = "h"
-                baseline_duration = datetime.timedelta(days=baseline_duration_days, hours=baseline_duration_hours)
+                # read duration:
+                baseline_duration_workingHours = agenda.convert_durationString_to_workingHours(activities_sheet.cell(row=curr_row, column=8).value)
+                baseline_duration = agenda.get_workingDuration_timedelta(baseline_duration_workingHours)
+                
                 baseline_fixed_cost = 0.0
                 if activities_sheet.cell(row=curr_row, column=11).value:
                     baseline_fixed_cost = float(activities_sheet.cell(row=curr_row, column=11).value)
@@ -339,11 +337,23 @@ class XLSXParser(FileParser):
                 activity_resources = []
                 if activities_sheet.cell(row=curr_row, column=9).value:
                     for activity_resource in activities_sheet.cell(row=curr_row, column=9).value.split(';'):
+                        if not activity_resource: continue # if empty string => continue
                         activity_resource_name = resources_dict[activity_resource.split("[")[0]]
                         activity_resource_demand = 1
+                        activity_resource_demand_fixed = False # for consumable resources only
                         if len(activity_resource.split("[")) > 1:
-                            activity_resource_demand = int(float(activity_resource.split("[")[1].split(" ")[0].translate(str.maketrans(",", "."))))
-                        activity_resources.append((activity_resource_name, activity_resource_demand))
+                            activity_resource_demand_str = activity_resource.split("[")[1].split(" ")[0]
+                            activity_resource_demand_fixed = activity_resource_demand_str.endswith("F")
+                            if activity_resource_demand_fixed: 
+                                activity_resource_demand_str = activity_resource_demand_str[:-1]
+                                # check if resource is consumable:
+                                if activity_resource_name.resource_type != ResourceType.CONSUMABLE:
+                                    print("XLSXParser:process_baseline_schedule:Found a fixed resource assignment to {0}, which is a non-consumable resource type!".format(activity_resource_name.name))
+                                    activity_resource_demand_fixed = False
+
+                            activity_resource_demand = int(float(activity_resource_demand_str.translate(str.maketrans(",", "."))))
+
+                        activity_resources.append((activity_resource_name, activity_resource_demand, activity_resource_demand_fixed))
                 activities_dict[activity_id] = (curr_row, Activity(activity_id, name=activity_name, wbs_id=activity_wbs,
                                                    predecessors=activity_predecessors, successors=activity_successors,
                                                    baseline_schedule=activity_baseline_schedule,
@@ -365,12 +375,10 @@ class XLSXParser(FileParser):
                                                                         25569)*86400))  # Convert to correct date
                 else:
                     baseline_end = activities_sheet.cell(row=curr_row, column=6).value
-                baseline_duration_split = activities_sheet.cell(row=curr_row, column=7).value.split("d")
-                baseline_duration_days = int(baseline_duration_split[0])
-                baseline_duration_hours = 0  # We need to set this default value for the next loop
-                if len(baseline_duration_split) > 1 and baseline_duration_split[1] != '':
-                    baseline_duration_hours = int(baseline_duration_split[1][1:-1])  # first char = " "; last char = "h"
-                baseline_duration = datetime.timedelta(days=baseline_duration_days, hours=baseline_duration_hours)
+                # read duration:
+                baseline_duration_workingHours = agenda.convert_durationString_to_workingHours(activities_sheet.cell(row=curr_row, column=7).value)
+                baseline_duration = agenda.get_workingDuration_timedelta(baseline_duration_workingHours)
+
                 baseline_fixed_cost = 0.0
                 if activities_sheet.cell(row=curr_row, column=9).value:
                     baseline_fixed_cost = float(activities_sheet.cell(row=curr_row, column=9).value)
@@ -391,11 +399,24 @@ class XLSXParser(FileParser):
                 activity_resources = []
                 if activities_sheet.cell(row=curr_row, column=8).value:
                     for activity_resource in activities_sheet.cell(row=curr_row, column=8).value.split(';'):
+                        if not activity_resource: continue # if empty string => continue
                         activity_resource_name = resources_dict[activity_resource.split("[")[0]]
                         activity_resource_demand = 1
+                        activity_resource_demand_fixed = False # for consumable resources only
                         if len(activity_resource.split("[")) > 1:
-                            activity_resource_demand = int(float(activity_resource.split("[")[1].split(" ")[0].translate(str.maketrans(",", "."))))
-                        activity_resources.append((activity_resource_name, activity_resource_demand))
+                            activity_resource_demand_str = activity_resource.split("[")[1].split(" ")[0]
+                            activity_resource_demand_fixed = activity_resource_demand_str.endswith("F")
+                            if activity_resource_demand_fixed: 
+                                activity_resource_demand_str = activity_resource_demand_str[:-1]
+                                # check if resource is consumable:
+                                if activity_resource_name.resource_type != ResourceType.CONSUMABLE:
+                                    print("XLSXParser:process_baseline_schedule:Found a fixed resource assignment to {0}, which is a non-consumable resource type!".format(activity_resource_name.name))
+                                    activity_resource_demand_fixed = False
+
+                            activity_resource_demand = int(float(activity_resource_demand_str.translate(str.maketrans(",", "."))))
+
+                        activity_resources.append((activity_resource_name, activity_resource_demand, activity_resource_demand_fixed))
+
                 activities_dict[activity_id] = (curr_row, Activity(activity_id, name=activity_name,
                                                    predecessors=activity_predecessors, successors=activity_successors,
                                                    baseline_schedule=activity_baseline_schedule,
@@ -922,7 +943,7 @@ class XLSXParser(FileParser):
                     bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.start, date_cyan_cell)
                     bsch_worksheet.write_datetime(counter, 6, activity.baseline_schedule.end, date_cyan_cell)
                     bsch_worksheet.write(counter, 7, self.get_duration_str(activity.baseline_schedule.duration), cyan_cell)
-                    self.write_resources(bsch_worksheet, counter, 8, activity.resources, cyan_cell)
+                    self.write_resources(bsch_worksheet, counter, 8, activity.resources, cyan_cell)  # desired to write all resources of an activityGroup?
                     bsch_worksheet.write(counter, 9, "", money_cyan_cell)
                     bsch_worksheet.write_number(counter, 10, activity.baseline_schedule.fixed_cost, money_cyan_cell)
                     bsch_worksheet.write(counter, 11, "", money_cyan_cell)
@@ -936,7 +957,7 @@ class XLSXParser(FileParser):
                     bsch_worksheet.write_datetime(counter, 4, activity.baseline_schedule.start, date_cyan_cell)
                     bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.end, date_cyan_cell)
                     bsch_worksheet.write(counter, 6, self.get_duration_str(activity.baseline_schedule.duration), cyan_cell)
-                    self.write_resources(bsch_worksheet, counter, 7, activity.resources, cyan_cell)
+                    self.write_resources(bsch_worksheet, counter, 7, activity.resources, cyan_cell)  # desired to write all resources of an activityGroup?
                     bsch_worksheet.write_number(counter, 8, activity.baseline_schedule.fixed_cost, money_cyan_cell)
                     bsch_worksheet.write(counter, 9, "", money_cyan_cell)
                     bsch_worksheet.write(counter, 10, "", money_cyan_cell)
@@ -1148,7 +1169,7 @@ class XLSXParser(FileParser):
                         tracking_period_worksheet.write_datetime(counter, 2, atr.activity.baseline_schedule.start, date_cyan_cell)
                         tracking_period_worksheet.write_datetime(counter, 3, atr.activity.baseline_schedule.end, date_cyan_cell)
                         tracking_period_worksheet.write(counter, 4, self.get_duration_str(atr.activity.baseline_schedule.duration), cyan_cell)
-                        self.write_resources(tracking_period_worksheet, counter, 5, atr.activity.resources, cyan_cell)
+                        self.write_resources(tracking_period_worksheet, counter, 5, atr.activity.resources, cyan_cell)  # desired to write all resources of an activityGroup?
                         tracking_period_worksheet.write_number(counter, 6, atr.activity.resource_cost, money_cyan_cell)
                         tracking_period_worksheet.write_number(counter, 7, atr.activity.baseline_schedule.fixed_cost, money_cyan_cell)
                         tracking_period_worksheet.write_number(counter, 8, atr.activity.baseline_schedule.hourly_cost, money_cyan_cell)
@@ -1550,13 +1571,19 @@ class XLSXParser(FileParser):
         if len(resources) > 0:
             for i in range(0, len(resources)-1):
                 to_write += resources[i][0].name
-                if resources[i][1] > 1:
-                    to_write += "[" + str(float(resources[i][1])) + " #" + str(resources[i][0].availability) + "]; "
+                if resources[i][1] != 1 or resources[i][2]:  
+                    # if not a unit 1 demand or if fixed assignment: 
+                    to_write += "[" + str(float(resources[i][1]))
+                    if resources[i][2]: to_write += "F" # fixed resource assignment
+                    to_write += " #" + str(resources[i][0].availability) + "];"
                 else:
-                    to_write += "; "
+                    to_write += ";"
             to_write += resources[-1][0].name
-            if resources[-1][1] > 1:
-                to_write += "[" + str(float(resources[-1][1])) + " #" + str(resources[-1][0].availability) + "]"
+            if resources[-1][1] != 1 or resources[-1][2]:  
+                # if not a unit 1 demand or if fixed assignment: 
+                to_write += "[" + str(float(resources[-1][1]))
+                if resources[-1][2]: to_write += "F" # fixed resource assignment
+                to_write += " #" + str(resources[-1][0].availability) + "]"
         worksheet.write(row, column, to_write, format)
 
     @staticmethod
@@ -1565,15 +1592,18 @@ class XLSXParser(FileParser):
         to_write = ''
         cost = 0
         for activity in activities:
-            for _resource in activity.resources:
+            for _resource in activity.resources:  
                 if resource == _resource[0]:
-                    if _resource[1] == 1:
+                    if _resource[1] == 1 and not _resource[2]:
                         to_write += str(activity.activity_id) + ';'
                     else:
-                        to_write += str(activity.activity_id) + '[' + str(_resource[1]) + ' #' \
-                                    + str(resource.availability) + '];'
-                    cost += (activity.baseline_schedule.duration.days*project_object.agenda.get_working_hours_in_a_day() +
-                             activity.baseline_schedule.duration.seconds/3600)*(_resource[1]*resource.cost_unit)
+                        to_write += str(activity.activity_id) + '[' + str(_resource[1])
+                        if _resource[2]: to_write += "F" # fixed resource assignment
+                        to_write += ' #' + str(resource.availability) + '];'
+
+                    ## calculate cost of the given resource assignment and add it to the total resource cost: # is present in project_object
+                    #cost += (activity.baseline_schedule.duration.days*project_object.agenda.get_working_hours_in_a_day() + 
+                    #         activity.baseline_schedule.duration.seconds/3600)*(_resource[1]*resource.cost_unit)
         worksheet.write(row, column, to_write, format)
-        worksheet.write_number(row, column+1, cost, moneyformat)
+        worksheet.write_number(row, column+1, resource.total_resource_cost, moneyformat)
 
