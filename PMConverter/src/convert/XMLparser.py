@@ -117,7 +117,8 @@ class XMLParser(FileParser):
         :returns: list of all low-level activity id's below the parent_wbs
         """
         # make starting wbs from parent
-        current_wbs_list = list(parent_wbs).append(1)
+        current_wbs_list = list(parent_wbs)
+        current_wbs_list.append(1)
         current_child_activityIds = []
         for child_node in children_nodes:
             # determine type of child:
@@ -131,7 +132,8 @@ class XMLParser(FileParser):
                     grandChildrenNode = child_node.find("List")
                     if grandChildrenNode is not None:
                         # call recursive function to add its children:
-                        grandchild_activityIds = self.set_wbs_read_activities_and_groups(tuple(current_wbs_list), list(grandChildrenNode), activity_dict, activityGroup_dict)
+                        grandchild_activityIds = self.set_wbs_read_activities_and_groups(tuple(current_wbs_list), list(grandChildrenNode), activity_dict, activityGroup_dict, 
+                                                                                         activityGroupId, activityGroup_to_childActivities_dict)
                         # save children ids of this activityGroup:
                         activityGroup_to_childActivities_dict[activityGroupId] = grandchild_activityIds
 
@@ -166,6 +168,7 @@ class XMLParser(FileParser):
     def update_activities_aggregated_costs(self, activities_list, agenda):
         "This function updates the given activities their total_cost and resource_cost fields"
         for activity in activities_list:
+            activityDuration_hours = activity.baseline_schedule.duration.days * agenda.get_working_hours_in_a_day() + activity.baseline_schedule.duration.seconds / 3600
             resource_cost = 0
             for resourceTuple in activity.resources:
                 resource = resourceTuple[0]
@@ -177,11 +180,11 @@ class XMLParser(FileParser):
                         resource_cost += resource.cost_use + resourceTuple[1] * resource.cost_unit
                     else:
                         # non fixed resource assignment:
-                        resource_cost += resource.cost_use + resourceTuple[1] * resource.cost_unit * actualDuration_hours
+                        resource_cost += resource.cost_use + resourceTuple[1] * resource.cost_unit * activityDuration_hours
                 else:
                     #resource type is renewable:
                     #add cost_use and variable cost:
-                    resource_cost += resourceTuple[1] * (resource.cost_use + resource.cost_unit * actualDuration_hours)
+                    resource_cost += resourceTuple[1] * (resource.cost_use + resource.cost_unit * activityDuration_hours)
             #endFor adding resource costs
 
             activity.resource_cost = resource_cost
@@ -189,7 +192,7 @@ class XMLParser(FileParser):
             activityDuration_hours = activity.baseline_schedule.duration.days * agenda.get_working_hours_in_a_day() + round(activity.baseline_schedule.duration.seconds / 3600)
 
             # calculate total activity cost:
-            activity.baseline_schedule.total_cost = activity.resource_cost + activity.baseline_schedule.fixed_cost + activity.baseline_schedule.hourly_cost * activityDuration_hours
+            activity.baseline_schedule.total_cost = float(activity.resource_cost + activity.baseline_schedule.fixed_cost + activity.baseline_schedule.hourly_cost * activityDuration_hours)
 
     def update_activityGroups_aggregated_values(self, activityGroups_list, activity_dict, activityGroup_to_childActivities_dict, agenda):
         "This function calculates the aggregated values of activityGroups"
@@ -215,20 +218,21 @@ class XMLParser(FileParser):
             activityGroup.baseline_schedule.duration = agenda.get_time_between(earliestStart, latestFinish)
                     
 
-    def process_activityTrackingRecord_Node(self, activity, activityTrackingRecord_node, statusdate_datetime, agenda):
+    def process_activityTrackingRecord_Node(self, activity, activityTrackingRecord_node, statusdate_datetime, agenda, datetimeFormat):
         """"
         This function processes an acitivityTrackingRecord node from ProTrack p2x file.
         :returns: ActivityTrackingRecord
         """
         # Read Data
-        actualStart = self.getdate(tracking_activity.find('ActualStart').text, dateformat)
-        actualDuration_hours = int(tracking_activity.find('ActualDuration').text)
+        actualStart_field = activityTrackingRecord_node.find('ActualStart').text
+        actualStart = self.getdate(actualStart_field, datetimeFormat) if actualStart_field != "0" else datetime.max
+        actualDuration_hours = int(activityTrackingRecord_node.find('ActualDuration').text)
         actualDuration = agenda.get_workingDuration_timedelta(duration_hours=actualDuration_hours)
-        actualCostDev = float(tracking_activity.find('ActualCostDev').text)
-        remainingDuration_hours = int(tracking_activity.find('RemainingDuration').text)
+        actualCostDev = float(activityTrackingRecord_node.find('ActualCostDev').text)
+        remainingDuration_hours = int(activityTrackingRecord_node.find('RemainingDuration').text)
         remainingDuration = agenda.get_workingDuration_timedelta(duration_hours=remainingDuration_hours)
-        remainingCostDev = float(tracking_activity.find('RemainingCostDev').text)
-        percentageComplete = float(tracking_activity.find('PercentageComplete').text)*100
+        remainingCostDev = float(activityTrackingRecord_node.find('RemainingCostDev').text)
+        percentageComplete = float(activityTrackingRecord_node.find('PercentageComplete').text)*100
         if percentageComplete >= 100:
             trackingStatus='Finished'
         elif abs(percentageComplete) < 1e-5: # compare float with 0
@@ -237,12 +241,12 @@ class XMLParser(FileParser):
             trackingStatus='Started'
 
         # derive remaining data fields:
-        #planned_actual_cost = 0
-        #planned_remaining_cost = 0
-        #actual_cost = 0
-        #remaining_cost = 0
-        #earned_value = 0
-        #planned_value = 0
+        #planned_actual_cost = 0.
+        #planned_remaining_cost = 0.
+        #actual_cost = 0.
+        #remaining_cost = 0.
+        #earned_value = 0.
+        #planned_value = 0.
 
         # Calculate PAC and PRC:
         if actualDuration_hours > 0:
@@ -273,7 +277,7 @@ class XMLParser(FileParser):
 
         else:
             # activity not yet started:
-            planned_actual_cost = 0
+            planned_actual_cost = 0.
             planned_remaining_cost = activity.baseline_schedule.total_cost
 
         actual_cost = planned_actual_cost + actualCostDev
@@ -285,7 +289,7 @@ class XMLParser(FileParser):
             earned_value = activity.baseline_schedule.total_cost
         elif actualDuration_hours == 0:
             # activity not yet started:
-            earned_value = 0
+            earned_value = 0.
         else:
             # activity running:
             earned_value = activity.baseline_schedule.fixed_cost + percentageComplete * (activity.baseline_schedule.var_cost + activity.resource_cost)
@@ -296,7 +300,7 @@ class XMLParser(FileParser):
             planned_value = activity.baseline_schedule.total_cost
         elif statusdate_datetime < activity.baseline_schedule.start:
             # activity is not yet started according to baselineschedule
-            planned_value = 0
+            planned_value = 0.
         else:
             # activity is running
             activityRunningDuration = agenda.get_time_between(activity.baseline_schedule.start, statusdate_datetime)
@@ -305,7 +309,7 @@ class XMLParser(FileParser):
             planned_value = activity.baseline_schedule.fixed_cost + activityRunningDuration_workingHours * activity.baseline_schedule.hourly_cost
                     
             # add costs of resources until now:
-            for resourceTuple in activityTrackingRecord.activity.resources:
+            for resourceTuple in activity.resources:
                 resource = resourceTuple[0]
                 if resource.resource_type == ResourceType.CONSUMABLE:
                     ## only add once the cost for its use!
@@ -323,8 +327,8 @@ class XMLParser(FileParser):
             #endFor adding resource costs
         #endIf calculating PV
         
-        return ActivityTrackingRecord(activity, actualStart, actualDuration, planned_actual_cost, planned_remaining_cost, remainingDuration, actualCostDev,
-                                                        remainingCostDev, actual_cost, remaining_cost, int(round(percentageComplete)), trackingStatus, earned_value, planned_value, True)
+        return ActivityTrackingRecord(activity, actualStart, actualDuration, planned_actual_cost, float(planned_remaining_cost), remainingDuration, actualCostDev,
+                                                        remainingCostDev, actual_cost, remaining_cost, int(round(percentageComplete)), trackingStatus, float(earned_value), float(planned_value), True)
 
     def construct_activityGroup_trackingRecord(self, activityGroup, childActivityIds, currentTrackingPeriod_records_dict):
         """This function constructs an aggregated trackingRecord of an activityGroup
@@ -339,8 +343,9 @@ class XMLParser(FileParser):
                 childActivityTrackingRecord = currentTrackingPeriod_records_dict[childActivityId]
                 total_earned_value += childActivityTrackingRecord.earned_value
                 total_planned_value += childActivityTrackingRecord.planned_value
+        
 
-        percentage_completed = int(round(total_earned_value / activityGroup.baseline_schedule.total_cost))
+        percentage_completed = int(round(total_earned_value / activityGroup.baseline_schedule.total_cost)) if activityGroup.baseline_schedule.total_cost else 0
         return ActivityTrackingRecord(activity= activityGroup, percentage_completed= percentage_completed, earned_value= total_earned_value, planned_value= total_planned_value)
 
     def to_schedule_object(self, file_path_input):
@@ -348,7 +353,7 @@ class XMLParser(FileParser):
         root = tree.getroot()
 
         # read dicts from ProTrack file:
-        activity_dict = []
+        activity_dict = {}
         activityGroup_dict = {}
         activityGroup_to_childActivities_dict = {} # links activityGroup ids to all child low-level activity id's
         res_dict = {}  # resources dict
@@ -418,13 +423,21 @@ class XMLParser(FileParser):
                     # extract X and Y points:
                     distributionXPoints = distributionPointsNode.findall("X")
                     distributionYPoints = distributionPointsNode.findall("Y")
-                    if len(distributionXPoints) != 3 or len(distributionYPoints) != 3 or not (distributionYPoints == [0, 100, 0]):
+
+                    distributionXPointsList = []
+                    distributionYPointsList = []
+                    for xPoint in distributionXPoints:
+                        distributionXPointsList.append(int(xPoint.text))
+                    for yPoint in distributionYPoints:
+                        distributionYPointsList.append(int(yPoint.text))
+
+                    if len(distributionXPointsList) != 3 or len(distributionYPointsList) != 3 or not (distributionYPointsList == [0, 100, 0]):
                         # unsupported distribution type: don't fail conversion by this
                         print("XMLparser:to_schedule_object: Only sensitivity distributions defined by 3 points are supported!\n Not with {0} points.".format(len(distributionXPoints)))
                         continue
                     # valid 3 point distribution here:
                     distribution_dict[distributionID] = RiskAnalysisDistribution(distribution_type=DistributionType.MANUAL, distribution_units=distribution_units,
-                                                                  optimistic_duration=distributionXPoints[0],probable_duration=distributionXPoints[1], pessimistic_duration=distributionXPoints[2])
+                                                                  optimistic_duration=distributionXPointsList[0],probable_duration=distributionXPointsList[1], pessimistic_duration=distributionXPointsList[2])
 
 
         ### Read all activities and store them in list ###
@@ -440,7 +453,7 @@ class XMLParser(FileParser):
                 ##BaseLineSchedule
                 #Baseline duration (workinghours)
                 baselineDuration_hours = int(activityNode.find('BaseLineDuration').text)
-                baselineDuration = project_agenda.get_workingDuration_timedelta(duration_hours=BaselineDuration_hours)
+                baselineDuration = project_agenda.get_workingDuration_timedelta(duration_hours=baselineDuration_hours)
                 #BaseLineStart
                 baseLineStart = self.getdate(activityNode.find('BaseLineStart').text, dateformat)
                 #FixedBaselineCost
@@ -449,12 +462,12 @@ class XMLParser(FileParser):
                 baselineCostByUnit = float(activityNode.find('BaselineCostByUnit').text)
 
                 # calculate derived fields:
-                baseline_enddate = project_agenda.get_end_date(BaseLineStart, baselineDuration.days, round(baselineDuration.seconds / 3600))
+                baseline_enddate = project_agenda.get_end_date(baseLineStart, baselineDuration.days, round(baselineDuration.seconds / 3600))
                 baseline_var_cost = baselineDuration_hours * baselineCostByUnit
                 # activity_total_cost != baselineFixedCost + baseline_var_cost, because resource cost should be incorporated! => calculate it afterwards
-                activity_baselineScheduleRecord = BaselineScheduleRecord(baseLineStart, baseline_enddate, baselineDuration, baselineFixedCost, baselineCostByUnit, baseline_var_cost, 0, True)
+                activity_baselineScheduleRecord = BaselineScheduleRecord(baseLineStart, baseline_enddate, baselineDuration, baselineFixedCost, baselineCostByUnit, baseline_var_cost, 0., True)
                 # add new activity to the dict of all read activities
-                activity_dict[activity_ID] = Activity(activity_id= activity_ID, name= activityName, baseline_schedule= activity_baselineScheduleRecord, risk_analysis= activity_distribution, type_check= True)
+                activity_dict[activityID] = Activity(activity_id= activityID, name= activityName, baseline_schedule= activity_baselineScheduleRecord, risk_analysis= activity_distribution, type_check= True)
 
 
         ### Read activitygroups and store them: ###
@@ -474,12 +487,12 @@ class XMLParser(FileParser):
             # add project activityGroup root:
             activityGroup_dict[0] = Activity(activity_id= 0, name= project_name, wbs_id= (1,))
             # Call recursive function here to process the children of an activityGroup:
-            child_activity_Ids = self.set_wbs_read_activities_and_groups((1,), list(grandChildrenNode), activity_dict, activityGroup_dict, 0, activityGroup_to_childActivities_dict)
+            child_activity_Ids = self.set_wbs_read_activities_and_groups((1,), outlineListChildren, activity_dict, activityGroup_dict, 0, activityGroup_to_childActivities_dict)
             activityGroup_to_childActivities_dict[0] = child_activity_Ids
             
 
         else:
-            print("XMLparser:to_schedule_�object: Activity outline list is empty!")
+            print("XMLparser:to_schedule_object: Activity outline list is empty!")
             activity_dict = {}
             activityGroup_dict = {}
 
@@ -582,7 +595,7 @@ class XMLParser(FileParser):
 
                     if activityID in activity_dict:
                         # valid activity to track:
-                        activity_record = self.process_activityTrackingRecord_Node(activity_dict[activityID], activityTrackingRecord_nodes[j], statusdate_datetime, project_agenda)
+                        activity_record = self.process_activityTrackingRecord_Node(activity_dict[activityID], activityTrackingRecord_nodes[j], statusdate_datetime, project_agenda, dateformat)
                         currentTrackingPeriod_records_dict[activityID] = activity_record
 
                     elif activityID in activityGroup_dict:
@@ -635,444 +648,857 @@ class XMLParser(FileParser):
         xml_escape_table = {"&": "&amp;"}
         return "".join(xml_escape_table.get(c,c) for c in text)
 
+    def generate_ProTrack_projectInfo(self):
+        """
+        This function generates the default projectInfo node for p2x.
+        :returns: xml Elementnode
+        """
+        defaultFormat = """<ProjectInfo>
+	        <LastSavedBy>PMConverter</LastSavedBy>
+	        <Name>ProjectInfo</Name> 									
+	        <SavedWithMayorBuild>3</SavedWithMayorBuild>
+	        <SavedWithMinorBuild>0</SavedWithMinorBuild>
+	        <SavedWithVersion>0</SavedWithVersion>
+	        <UniqueID>-1</UniqueID>
+	        <UserID>0</UserID>
+        </ProjectInfo>"""
+        return ET.fromstring(defaultFormat)
+
+    def generate_ProTrack_settings(self, projectStartDatetime, projectBaselineEndDatetime, datetimeFormat):
+        """
+        This function generates the default settings node for p2x.
+        :returns: xml Elementnode
+        """
+        defaultFormat = """<Settings>
+            <AbsProjectBuffer>290420150000</AbsProjectBuffer>
+            <ActionEndThreshold>100</ActionEndThreshold>
+            <ActionStartThreshold>60</ActionStartThreshold>
+            <ActiveSensResult>12</ActiveSensResult>
+            <ActiveTrackingPeriod>-1</ActiveTrackingPeriod>
+            <AllocationMethod>1</AllocationMethod>
+            <AutomaticBuffer>1</AutomaticBuffer>
+            <ConnectResourceBars>0</ConnectResourceBars>
+            <ConstraintHardness>3</ConstraintHardness>
+            <CurrencyPrecision>2</CurrencyPrecision>
+            <CurrencySymbol>{0}</CurrencySymbol>
+            <CurrencySymbolPosition>2</CurrencySymbolPosition>
+            <DateTimeFormat>d/MM/yyyy h:mm</DateTimeFormat>
+            <DefaultRowBuffer>50</DefaultRowBuffer>
+            <DrawRelations>1</DrawRelations>
+            <DrawShadow>1</DrawShadow>
+            <DurationFormat>2</DurationFormat>
+            <DurationLevels>2</DurationLevels>
+            <ESSLSSFloat>-99999999</ESSLSSFloat>
+            <GanttStartDate>290420150000</GanttStartDate>
+            <GanttZoomLevel>1.0</GanttZoomLevel>
+            <GroupFilter>0</GroupFilter>
+            <HideGraphMarks>0</HideGraphMarks>
+            <Name>Settings</Name>
+            <PlanningEndThreshold>60</PlanningEndThreshold>
+            <PlanningStartThreshold>20</PlanningStartThreshold>
+            <PlanningUnit>1</PlanningUnit>
+            <ResAllocation1Color>12632256</ResAllocation1Color>
+            <ResAllocation2Color>8421504</ResAllocation2Color>
+            <ResAvailableColor>15780518</ResAvailableColor>
+            <ResourceChartEndDate>060520150000</ResourceChartEndDate>
+            <ResourceChartStartDate>290420150000</ResourceChartStartDate>
+            <ResOverAllocationColor>255</ResOverAllocationColor>
+            <ShowCanEditResultsInHelp>1</ShowCanEditResultsInHelp>
+            <ShowCriticalPath>1</ShowCriticalPath>
+            <ShowInputModelInfoInHelp>1</ShowInputModelInfoInHelp>
+            <SyncGanttAndResourceChart>0</SyncGanttAndResourceChart>
+            <UniqueID>-1</UniqueID>
+            <UseResourceScheduling>0</UseResourceScheduling>
+            <UserID>0</UserID>
+            <ViewDateTimeAsUnits>0</ViewDateTimeAsUnits>
+        </Settings>""".format(u"\u20AC")  # euro sign in unicode
+        settingsNode = ET.fromstring(defaultFormat)
+
+        # perform customizations:
+        startDate = self.get_date_string(projectStartDatetime, datetimeFormat) if projectStartDatetime < datetime.max else self.get_date_string(datetime.now(), datetimeFormat)
+        endDate = self.get_date_string(projectBaselineEndDatetime, datetimeFormat) if projectBaselineEndDatetime > datetime.min else self.get_date_string(datetime.now(), datetimeFormat)
+
+        XMLParser.find_xmlNode_and_set_text(settingsNode, "DateTimeFormat", datetimeFormat)
+
+        # set some nodes to start date:
+        startDateTags_list = ["AbsProjectBuffer", "GanttStartDate", "ResourceChartStartDate"]
+        for nodeTag in startDateTags_list:
+            XMLParser.find_xmlNode_and_set_text(settingsNode, nodeTag, startDate)
+        # set some nodes to end date:
+        XMLParser.find_xmlNode_and_set_text(settingsNode, "ResourceChartEndDate", endDate)
+        return settingsNode
+
+    def generate_ProTrack_defaults(self):
+        """
+        This function generates the default Defaults node for p2x.
+        :returns: xml Elementnode
+        """
+        defaultFormat = """<Defaults>
+            <DefaultCostPerUnit>50</DefaultCostPerUnit>
+            <DefaultDisplayDurationType>0</DefaultDisplayDurationType>
+            <DefaultDistributionType>-1</DefaultDistributionType>
+            <DefaultDurationInput>0</DefaultDurationInput>
+            <DefaultLagTime>0</DefaultLagTime>
+            <DefaultNumberOfSimulationRuns>100</DefaultNumberOfSimulationRuns>
+            <DefaultNumberOfTrackingPeriodsGeneration>20</DefaultNumberOfTrackingPeriodsGeneration>
+            <DefaultNumberOfTrackingPeriodsSimulation>50</DefaultNumberOfTrackingPeriodsSimulation>
+            <DefaultRelationType>2</DefaultRelationType>
+            <DefaultResourceRenewable>1</DefaultResourceRenewable>
+            <DefaultSimulationType>0</DefaultSimulationType>
+            <DefaultStartPage>start.html</DefaultStartPage>
+            <DefaultTaskDuration>10</DefaultTaskDuration>
+            <DefaultTrackingPeriodOffset>50</DefaultTrackingPeriodOffset>
+            <DefaultWorkingDaysPerWeek>5</DefaultWorkingDaysPerWeek>
+            <DefaultWorkingHoursPerDay>8</DefaultWorkingHoursPerDay>
+            <Name>Defaults</Name>
+            <UniqueID>-1</UniqueID>
+            <UserID>0</UserID>
+        </Defaults>"""
+        return ET.fromstring(defaultFormat)
+
+    def generate_ProTrack_agenda(self, projectStartdatetime, datetimeFormat, agenda):
+        """
+        This function generates the default Agenda node for p2x.
+        :returns: xml Elementnode
+        """
+        defaultFormat = """<Agenda>
+            <StartDate/>
+            <NonWorkingHours/>
+            <NonWorkingDays/>
+            <Holidays/>
+        </Agenda>"""
+        agendaNode = ET.fromstring(defaultFormat)
+
+        startDate = self.get_date_string(projectStartdatetime, datetimeFormat) if projectStartdatetime < datetime.max else self.get_date_string(datetime.now(), datetimeFormat)
+        XMLParser.find_xmlNode_and_set_text(agendaNode, "StartDate", startDate)
+        # Non workinghours:
+        for i in range(0,24):
+            if agenda.working_hours[i] == False:
+                XMLParser.find_xmlNode_and_append_childNode(agendaNode, "NonWorkingHours", "Hour", str(i))
+        # non working days:
+        for i in range(0,7):
+            if agenda.working_days[i] == False:
+                XMLParser.find_xmlNode_and_append_childNode(agendaNode, "NonWorkingDays", "Day", str(i))
+        # holidays:
+        for holiday in agenda.holidays:
+            XMLParser.find_xmlNode_and_append_childNode(agendaNode, "Holidays", "Holiday", holiday + "0000")
+
+        return agendaNode
+
+    def generate_ProTrack_activities_and_riskDistributions(self, activities, agenda, datetimeFormat):
+        """
+        This function generates the default Activities node and the corresponding riskDistributionsNode for p2x.
+        NOTE: Only give low-level activities to this function, no activityGroups!
+        :returns: tuple of 4 xml Elementnodes: (activitiesPreformatNode, activitiesNode, riskDistributionsPreformatNode, riskDistributionsNode)
+        """
+        preFormatActivities = """<Activities>
+            <Name>Activities</Name>
+            <UniqueID>-1</UniqueID>
+            <UserID>0</UserID>
+        </Activities>"""
+        defaultFormatActivities = "<Activities/>"
+        activitiesNode = ET.fromstring(defaultFormatActivities)
+
+        preFormatDistributions = """<SensitivityDistributions>
+            <Name>SensitivityDistributions</Name>
+            <UniqueID>-1</UniqueID>
+            <UserID>0</UserID>
+        </SensitivityDistributions>"""
+        defaultFormatDistributions = "<SensitivityDistributions/>"
+        riskDistributionsNode = ET.fromstring(defaultFormatDistributions)
+
+        nextCustomRiskDistribution_id = 5
+        standard_riskDistributions_dict = {StandardDistributionUnit.NO_RISK: "1", StandardDistributionUnit.SYMMETRIC: "2", StandardDistributionUnit.SKEWED_LEFT: "3", StandardDistributionUnit.SKEWED_RIGHT: "4"}
+
+        for activity in activities:
+            activityDistribution_id = standard_riskDistributions_dict[activity.risk_analysis.distribution_units]  if activity.risk_analysis.distribution_type == DistributionType.STANDARD else nextCustomRiskDistribution_id
+
+            # append new activity to activitiesNode:
+            self.generate_ProTrack_activityNode(activitiesNode, activity, activityDistribution_id, agenda, datetimeFormat)
+
+            if activity.risk_analysis.distribution_type == DistributionType.MANUAL:
+                # create custom risk distribution:
+                self.generate_ProTrack_sensitivityDistribution(riskDistributionsNode, activity, activityDistribution_id)
+
+                # increment risk distribution id for next activities
+                nextCustomRiskDistribution_id += 1
+
+        return ET.fromstring(preFormatActivities), activitiesNode, ET.fromstring(preFormatDistributions), riskDistributionsNode
+
+    def generate_ProTrack_activityNode(self, activitiesNode, activity, activityDistribution_id, agenda, datetimeFormat):
+        """
+        This function generates the default Activity node for p2x and appends it to the given activitiesNode.
+        """
+        defaultFormat = """<Activity>
+	        <BaselineCostByUnit/> 				
+	        <BaseLineDuration/>        	 
+	        <BaseLineStart/> 			
+	        <Constraints> 										 
+	            <Direction>0</Direction>                          
+	            <DueDateEnd>010101000000</DueDateEnd>   			
+	            <DueDateStart>010101000000</DueDateStart>         
+	            <LockedTimeEnd>010101000000</LockedTimeEnd>       
+	            <LockedTimeStart>010101000000</LockedTimeStart>   
+	            <Name/>
+	            <ReadyTimeEnd>010101000000</ReadyTimeEnd>         
+	            <ReadyTimeStart>010101000000</ReadyTimeStart>     
+	            <UniqueID>-1</UniqueID>                           
+	            <UserID>0</UserID> 									
+	        </Constraints>
+	        <Distribution/>							
+	        <DurationCPMUnits/>              
+	        <FixedBaselineCost/>             
+	        <IsMilestone>0</IsMilestone>                          
+	        <Name/> 							
+	        <StartCPMUnits>0</StartCPMUnits>
+	        <UniqueID/>                             
+	        <UserID>0</UserID>
+        </Activity>"""
+        activityNode = ET.fromstring(defaultFormat)
+
+        customValues_dict = {}
+        customValues_dict["BaselineCostByUnit"] = str(activity.baseline_schedule.hourly_cost)
+        baselineDuration_hours = activity.baseline_schedule.duration.days * agenda.get_working_hours_in_a_day() + int(round(activity.baseline_schedule.duration.seconds / 3600))
+        customValues_dict["BaseLineDuration"] = str(baselineDuration_hours)
+        customValues_dict["BaseLineStart"] = self.get_date_string(activity.baseline_schedule.start, datetimeFormat)
+        customValues_dict["Distribution"] = str(activityDistribution_id)
+        customValues_dict["DurationCPMUnits"] = str(baselineDuration_hours)
+        customValues_dict["FixedBaselineCost"] =str(activity.baseline_schedule.fixed_cost)
+        customValues_dict["Name"] = self.xml_escape(activity.name)
+        customValues_dict["UniqueID"] = str(activity.activity_id)
+
+        # set the custom values:
+        for key, value in customValues_dict.items():
+            XMLParser.find_xmlNode_and_set_text(activityNode, key, value)
+
+        activitiesNode.append(activityNode)  # implicit return
+
+    def generate_ProTrack_sensitivityDistribution(self, riskDistributionsNode, activity, distribution_id):
+        """
+        This function generates the default TrackSensitivityDistribution node for p2x and appends it to the given riskDistributionsNode.
+        """
+        defaultFormat = """<TProTrackSensitivityDistribution>
+	        <UniqueID/>							
+	        <Name/>
+	        <StartDuration/>			
+	        <EndDuration/> 					
+	        <Style>0</Style> 								
+	        <Distribution/>
+        </TProTrackSensitivityDistribution>"""
+        distributionNode = ET.fromstring(defaultFormat)
+        # change tag name:
+        distributionNode.tag += str(distribution_id)
+
+        customValues_dict = {}
+        customValues_dict["UniqueID"] = str(distribution_id)
+        customValues_dict["Name"] = "Task " +  self.xml_escape(activity.name) + " distribution"
+        customValues_dict["StartDuration"] = str(activity.risk_analysis.optimistic_duration)
+        customValues_dict["EndDuration"] = str(activity.risk_analysis.pessimistic_duration)
+
+        # set the custom values:
+        for key, value in customValues_dict.items():
+            XMLParser.find_xmlNode_and_set_text(distributionNode, key, value)
+
+        # append the 3 point distribution points:
+        distributionPoints_node = distributionNode.find("Distribution")
+        tagList = ["X", "Y"]
+        valueList = [activity.risk_analysis.optimistic_duration, 0, activity.risk_analysis.probable_duration, 100, activity.risk_analysis.pessimistic_duration, 0]
+        for i in range(0, len(valueList)):
+            distributionPointNode = ET.Element(tagList[i % 2])
+            distributionPointNode.text = str(valueList[i])
+            distributionPoints_node.append(distributionPointNode)
+
+        riskDistributionsNode.append(distributionNode)  # implicit return
+
+    def generate_ProTrack_activityGroups(self, activityGroups):
+        """
+        This function generates the default ActivityGroups node for p2x.
+        NOTE: Only give activityGroups to this function, no activities!
+        :returns: tuple of 2 xml Elementnodes: (activityGroupsPreformatNode, activityGroupsNode)
+        """
+        preFormatActivities = """<ActivityGroups>
+            <Name>ActivityGroups</Name>
+            <UniqueID>-1</UniqueID>
+            <UserID>0</UserID>
+        </ActivityGroups>"""
+        defaultFormatActivities = "<ActivityGroups/>"
+        activityGroupsNode = ET.fromstring(defaultFormatActivities)
+
+        for activityGroup in activityGroups:
+            self.generate_ProTrack_activityGroupNode(activityGroupsNode, activityGroup)
+
+        return ET.fromstring(preFormatActivities), activityGroupsNode
+
+    def generate_ProTrack_activityGroupNode(self, activityGroupsNode, activityGroup):
+        """
+        This function generates the default ActivityGroup node for p2x and appends it to the given activityGroupsNode.
+        """
+        defaultFormat = """<ActivityGroup>
+	        <Expanded>1</Expanded>
+	        <Name/>
+	        <UniqueID/>	
+	        <UserID>0</UserID>
+        </ActivityGroup>"""
+        activityGroupNode = ET.fromstring(defaultFormat)
+
+        customValues_dict = {}
+        customValues_dict["Name"] = self.xml_escape(activityGroup.name)
+        customValues_dict["UniqueID"] = str(activityGroup.activity_id)
+
+        # set the custom values:
+        for key, value in customValues_dict.items():
+            XMLParser.find_xmlNode_and_set_text(activityGroupNode, key, value)
+
+        activityGroupsNode.append(activityGroupNode) # implicit return
+
+    def generate_ProTrack_relations(self, activities):
+        """
+        This function generates the default Relations node for p2x.
+        NOTE: Only give low-level activities to this function, no activityGroups!
+        :returns: tuple of 2 xml Elementnodes: (relationsPreformatNode, relationsNode)
+        """
+        preFormatRelations = """<Relations>
+            <Name>Relations</Name>
+            <UniqueID>-1</UniqueID>
+            <UserID>0</UserID>
+        </Relations>"""
+        defaultFormatRelations = "<Relations/>"
+        relationsNode = ET.fromstring(defaultFormatRelations)
+
+        relation_id = 1
+        for activity in activities:
+            for successor in activity.successors:
+                self.generate_ProTrack_relation(relationsNode, activity.activity_id ,successor, relation_id)
+                relation_id += 1
+
+        return ET.fromstring(preFormatRelations), relationsNode
+
+    def generate_ProTrack_relation(self, relationsNode, predecessor_id, successor, relation_id):
+        """
+        This function generates the default ActivityGroup node for p2x and appends it to the given relationsNode.
+        """
+        defaultFormat = """<Relation>
+	        <FromTask/>
+	        <Lag/> 			
+	        <LagKind>0</LagKind> 
+	        <LagType/> 
+	        <Name>Relation</Name> 
+	        <ToTask/> 	
+	        <UniqueID/>
+	        <UserID>0</UserID>
+        </Relation>"""
+        relationNode = ET.fromstring(defaultFormat)
+        lagType_translation = {"SS": "0", "SF": "1", "FS": "2", "FF": "3"}
+
+        customValues_dict = {}
+        customValues_dict["FromTask"] = str(predecessor_id)
+        customValues_dict["Lag"] = str(successor[2])
+        customValues_dict["LagType"] = lagType_translation[successor[1]]
+        customValues_dict["ToTask"] = str(successor[0])
+        customValues_dict["UniqueID"] = str(relation_id)
+
+        # set the custom values:
+        for key, value in customValues_dict.items():
+            XMLParser.find_xmlNode_and_set_text(relationNode, key, value)
+
+        relationsNode.append(relationNode) # implicit return
+
+    def generate_ProTrack_outlineList(self, activitiesOnly, activityGroupsOnly):
+        """
+        This function generates the default OutlineList node for p2x.
+        NOTE: Only give activities and activityGroups and not the projectRoot activityGroup with id = 0
+        :returns: xml Elementnode: outlineListNode
+        """
+        defaultFormatOutlineList = """<OutlineList>
+            <List/>
+        </OutlineList>"""
+        outlineListNode = ET.fromstring(defaultFormatOutlineList)
+        listNode = outlineListNode.find("List")
+
+        # call recursive function to add all subactivities and subactivityGroups to this list, which is the root list
+        self.generate_ProTrack_outlineList_sublist((1,), listNode, activitiesOnly, activityGroupsOnly)
+
+        return outlineListNode
+
+    def generate_ProTrack_outlineList_sublist(self, parent_wbs, parent_listNode, activitiesOnly, activityGroupsOnly):
+        """
+        This function constructs 1 level of the wbs outline list
+        :param parent_wbs: tuple, wbs of parent node:
+        :param parent_listNode: xml Element of the parent node
+        :param activitiesOnly: list of all activities which are below the parent_wbs
+        :param activityGroupsOnly: list of all activityGroups which are below the parent_wbs
+        """
+
+        current_wbs_level = len(parent_wbs) + 1
+        # extract all activities and activityGroups from this level in the three:
+        activities_current_wbs_level = [x for x in activitiesOnly if len(x.wbs_id) == current_wbs_level]
+        activityGroups_current_wbs_level = [x for x in activityGroupsOnly if len(x.wbs_id) == current_wbs_level]
+
+        # make 1 list of nodes to add on this wbs level: NOTE: activities_current_wbs_level now also contains the activityGroups!
+        activities_current_wbs_level.extend(activityGroups_current_wbs_level)
+        currentLevel_activitiesAndGroups_SortedOn_wbs = sorted(activities_current_wbs_level, key= lambda x: x.wbs_id)
+
+        # loop over elements to add:
+        for currentChild in currentLevel_activitiesAndGroups_SortedOn_wbs:
+            if currentChild in activityGroups_current_wbs_level:
+                # current child is an activityGroup
+                # create an activityGroup node in the parent_listNode:
+                currentNode = self.generate_ProTrack_outlineList_child(1, currentChild.activity_id)
+                # extract the list for the subnodes:
+                currentNodeList = currentNode.find("List")
+                
+                # extract all activities and activityGroups with a wbs_id larger than this groupActivity => wbs_id is deeper in tree as groupActivity:
+
+                subActivities = [x for x in activitiesOnly if x.wbs_id > currentChild.wbs_id and x.wbs_id[:current_wbs_level] == currentChild.wbs_id]
+                subActivityGroups = [x for x in activityGroupsOnly if x.wbs_id > currentChild.wbs_id and x.wbs_id[:current_wbs_level] == currentChild.wbs_id]
+
+                self.generate_ProTrack_outlineList_sublist(currentChild.wbs_id, currentNodeList, subActivities, subActivityGroups)
+
+            else:
+                # current child is an activity:
+                currentNode = self.generate_ProTrack_outlineList_child(2, currentChild.activity_id)
+
+            # append currentNode to parent_listNode:
+            parent_listNode.append(currentNode)
+
+    def generate_ProTrack_outlineList_child(self, childType, child_id):
+        """
+        This function generates a child node for the wbs outline list.
+        :returns: xml ElementNode, the child node created
+        """
+
+        if childType == 1:
+            defaultFormat = """<Child>
+	            <Type/>
+	            <Data/>
+                <Expanded>1</Expanded>
+                <List/>
+            </Child>"""
+        else:
+            defaultFormat = """<Child>
+	            <Type/>
+	            <Data/>
+            </Child>"""
+
+        childNode = ET.fromstring(defaultFormat)
+
+        customValues_dict = {}
+        customValues_dict["Type"] = str(childType)
+        customValues_dict["Data"] = str(child_id)
+
+        # set the custom values:
+        for key, value in customValues_dict.items():
+            XMLParser.find_xmlNode_and_set_text(childNode, key, value)
+
+        return childNode
+
+    def generate_ProTrack_resources(self, resources):
+        """
+        This function generates the default Resources node for p2x.
+        :returns: tuple of 2 xml Elementnodes: (resourcesPreformatNode, resourcesNode)
+        """
+        preFormatResources = """<Resources>
+            <Name>Resources</Name>
+            <UniqueID>-1</UniqueID>
+            <UserID>0</UserID>
+        </Resources>"""
+        defaultFormatResources = "<Resources/>"
+        resourcesNode = ET.fromstring(defaultFormatResources)
+
+        for resource in resources:
+            self.generate_ProTrack_resourceNode(resourcesNode, resource)
+
+        return ET.fromstring(preFormatResources), resourcesNode
+
+    def generate_ProTrack_resourceNode(self, resourcesNode, resource):
+        """
+        This function generates the default resource node for p2x and appends it to the given resourcesNode.
+        """
+        defaultFormat = """<Resource>
+	        <FIELD0/>            
+	        <FIELD1/>     
+	        <FIELD768></FIELD768> 		  
+	        <FIELD778/>
+	        <FIELD769/>        
+	        <FIELD770/>        
+	        <FIELD771/>     
+	        <FIELD776/>     
+	        <FIELD780/>   
+	        <FIELD779>-1</FIELD779>       
+	        <FIELD781>-99999999</FIELD781>
+	        <FIELD782>-99999999</FIELD782>
+	        <FIELD783>-99999999</FIELD783>
+        </Resource>"""
+        datapercserieFormat = """<DATEPERCSERIE>
+	        <DEFAULTAVAILABILITY/>
+	        <DATEPERCBREAKPOINTS/> 						
+        </DATEPERCSERIE>"""
+        resourceNode = ET.fromstring(defaultFormat)
+        availabilityNode = ET.fromstring(datapercserieFormat)
+
+        customValues_dict = {}
+        customValues_dict["FIELD0"] = str(resource.resource_id)
+        customValues_dict["FIELD1"] = self.xml_escape(resource.name)
+        customValues_dict["FIELD778"] = "#{0}".format(resource.availability) if resource.resource_type == ResourceType.RENEWABLE else "#Inf"
+        customValues_dict["FIELD769"] = "1" if resource.resource_type == ResourceType.RENEWABLE else "0"
+        customValues_dict["FIELD770"] = str(resource.cost_use)
+        customValues_dict["FIELD771"] = str(resource.cost_unit)
+        customValues_dict["FIELD776"] = str(resource.total_resource_cost)
+        customValues_dict["FIELD780"] = str(resource.availability) if resource.resource_type == ResourceType.RENEWABLE else "-1"
+
+        # set the custom values:
+        for key, value in customValues_dict.items():
+            XMLParser.find_xmlNode_and_set_text(resourceNode, key, value)
+
+        # set availability node:
+        XMLParser.find_xmlNode_and_set_text(availabilityNode, "DEFAULTAVAILABILITY", str(resource.availability) if resource.resource_type == ResourceType.RENEWABLE else "-1")
+
+        resourcesNode.append(resourceNode) # implicit return
+        resourcesNode.append(availabilityNode) # implicit return
+
+    def generate_ProTrack_resourceAssignments(self, activitiesOnly):
+        """
+        This function generates the default ResourceAssignments node for p2x.
+        NOTE: Only give low-level activities to this function, no activityGroups!
+        :returns: tuple of 2 xml Elementnodes: (resourceAssignmentsPreformatNode, resourceAssignmentsNode)
+        """
+        preFormatResourceAssignments = """<ResourceAssignments>
+            <Name>ResourceAssignments</Name>
+            <UniqueID>-1</UniqueID>
+            <UserID>0</UserID>
+        </ResourceAssignments>"""
+        defaultFormatResourceAssignments = "<ResourceAssignments/>"
+        resourceAssignmentsNode = ET.fromstring(defaultFormatResourceAssignments)
+
+        for activity in activitiesOnly:
+            for resourceAssignment in activity.resources:
+                self.generate_ProTrack_resourceAssignmentNode(resourceAssignmentsNode, resourceAssignment, activity.activity_id)
+
+        return ET.fromstring(preFormatResourceAssignments), resourceAssignmentsNode
+
+    def generate_ProTrack_resourceAssignmentNode(self, resourceAssignmentsNode, resourceAssignment, activity_id):
+        """
+        This function generates the default resourceAssignment node for p2x and appends it to the given resourceAssignmentsNode.
+        """
+        defaultFormat = """<ResourceAssignment>
+	        <FIELD1026/>
+	        <FIELD1027/>
+	        <FIELD1024/>
+	        <FIELD1025/>
+        </ResourceAssignment>"""
+        resourceAssignmentNode = ET.fromstring(defaultFormat)
+
+        customValues_dict = {}
+        customValues_dict["FIELD1026"] = str(resourceAssignment[1])
+        customValues_dict["FIELD1027"] = "1" if resourceAssignment[2] else "0"  # fixed assignment or not
+        customValues_dict["FIELD1024"] = str(activity_id)
+        customValues_dict["FIELD1025"] = str(resourceAssignment[0].resource_id)
+        
+        # set the custom values:
+        for key, value in customValues_dict.items():
+            XMLParser.find_xmlNode_and_set_text(resourceAssignmentNode, key, value)
+
+        resourceAssignmentsNode.append(resourceAssignmentNode) # implicit return
+
+    def generate_ProTrack_trackingList(self, tracking_periods, datetimeFormat, agenda, activitiesAndGroups):
+        """
+        This function generates the default TrackingList node for p2x.
+        :returns: tuple of 2 xml Elementnodes: (trackingListPreformatNode, trackingListNode)
+        """
+        preFormatTrackingList = """<TrackingList>
+            <Name>TrackingList</Name>
+            <UniqueID>-1</UniqueID>
+            <UserID>0</UserID>
+        </TrackingList>"""
+        defaultFormatTrackingList = "<TrackingList/>"
+        trackingListNode = ET.fromstring(defaultFormatTrackingList)
+
+        trackingPeriod_id = 1
+        for trackingPeriod in tracking_periods:
+            self.generate_ProTrack_trackingPeriodNode(trackingListNode, trackingPeriod, trackingPeriod_id, datetimeFormat, agenda, activitiesAndGroups)
+            trackingPeriod_id += 1
+
+        return ET.fromstring(preFormatTrackingList), trackingListNode
+
+    def generate_ProTrack_trackingPeriodNode(self, trackingListNode, trackingPeriod, trackingPeriod_id, datetimeFormat, agenda, activitiesAndGroups):
+        """
+        This function generates the default trackingPeriod node for p2x and appends it to the given trackingListNode.
+        """
+        defaultFormat = """<TrackingPeriod> 						
+	        <Abreviation/>
+	        <Description/>
+	        <EndDate/>	
+	        <Name/>      
+	        <PredictiveLogic>0</PredictiveLogic>
+	        <UniqueID/>
+	        <UserID>0</UserID>
+        </TrackingPeriod>"""
+        trackingPeriodNode = ET.fromstring(defaultFormat)
+
+        customValues_dict = {}
+        customValues_dict["EndDate"] = self.get_date_string(trackingPeriod.tracking_period_statusdate, datetimeFormat)
+        customValues_dict["Name"] = self.xml_escape(trackingPeriod.tracking_period_name)
+        customValues_dict["UniqueID"] = str(trackingPeriod_id)
+        
+        # set the custom values:
+        for key, value in customValues_dict.items():
+            XMLParser.find_xmlNode_and_set_text(trackingPeriodNode, key, value)
+
+        # filter: keep only low-level activities:
+        trackingPeriod_records = [x for x in trackingPeriod.tracking_period_records if not Activity.is_not_lowest_level_activity(x.activity, activitiesAndGroups)]
+
+        # sort the tracking_period_records on activity_id:
+        trackingPeriod_records_sorted = sorted(trackingPeriod_records, key= lambda x: x.activity.activity_id)
+
+        # generate the tracking period activity records
+        trackingPeriod_activityRecords = self.generate_ProTrack_trackingPeriod_activityRecords(trackingPeriod_records_sorted, datetimeFormat, agenda)
+
+        trackingListNode.append(trackingPeriodNode) # implicit return
+        trackingListNode.append(trackingPeriod_activityRecords) # implicit return
+
+    def generate_ProTrack_trackingPeriod_activityRecords(self, trackingPeriod_records_sorted, datetimeFormat, agenda):
+        """
+        This function generates a trackingPeriodRecord node for p2x and returns it.
+        :returns: xml Element node, "TProTrackActivities-1" node
+        """
+        defaultFormat = """<TProTrackActivities-1/>"""
+        trackingPeriodRecordNode = ET.fromstring(defaultFormat)
+
+        for activityTrackingRecord in trackingPeriod_records_sorted:
+            # generate a tracking period activity record node = an activity node + TProTrackActivityTracking-1 node
+            self.generate_ProTrack_trackingPeriod_activityRecord_node(trackingPeriodRecordNode, activityTrackingRecord, datetimeFormat, agenda)
+
+        return trackingPeriodRecordNode
+
+    def generate_ProTrack_trackingPeriod_activityRecord_node(self, trackingPeriodRecordNode, activityTrackingRecord, datetimeFormat, agenda):
+        """
+        This function generates the default trackingPeriodActivityRecord node for p2x and appends it to the given trackingListNode.
+        """
+        preheaderFormat = "<Activity/>"
+        defaultFormat = """<TProTrackActivityTracking-1>
+			<ActualStart>0</ActualStart>
+			<ActualDuration>0</ActualDuration>
+			<ActualCostDev>0</ActualCostDev>
+			<RemainingDuration/>
+			<RemainingCostDev>0</RemainingCostDev>
+			<PercentageComplete>0</PercentageComplete>
+		</TProTrackActivityTracking-1>"""
+        preheaderNode = ET.fromstring(preheaderFormat)
+        trackingPeriodActivityRecordNode = ET.fromstring(defaultFormat)
+
+        preheaderNode.text = str(activityTrackingRecord.activity.activity_id)
+
+        customValues_dict = {}
+        if activityTrackingRecord.actual_start < datetime.max:
+            customValues_dict["ActualStart"] = self.get_date_string(activityTrackingRecord.actual_start, datetimeFormat)
+        if activityTrackingRecord.actual_duration:
+            # actual duration > 0
+            customValues_dict["ActualDuration"] = str(activityTrackingRecord.actual_duration.days * agenda.get_working_hours_in_a_day() + int(round(activityTrackingRecord.actual_duration.seconds / 3600)))
+        if activityTrackingRecord.deviation_pac:
+            # PACdev != 0
+            customValues_dict["ActualCostDev"] = str(activityTrackingRecord.deviation_pac)
+        customValues_dict["RemainingDuration"] = str(activityTrackingRecord.remaining_duration.days * agenda.get_working_hours_in_a_day() + int(round(activityTrackingRecord.remaining_duration.seconds / 3600))) 
+        if activityTrackingRecord.deviation_prc:
+            # PRCdev != 0
+            customValues_dict["RemainingCostDev"] = str(activityTrackingRecord.deviation_prc)
+        if activityTrackingRecord.percentage_completed:
+            customValues_dict["PercentageComplete"] = str(activityTrackingRecord.percentage_completed / 100)
+        
+        # set the custom values:
+        for key, value in customValues_dict.items():
+            XMLParser.find_xmlNode_and_set_text(trackingPeriodActivityRecordNode, key, value)
+
+        trackingPeriodRecordNode.append(preheaderNode) # implicit return
+        trackingPeriodRecordNode.append(trackingPeriodActivityRecordNode) # implicit return
+
+    def generate_ProTrack_simulation(self):
+        """
+        This function generates the default Defaults node for p2x.
+        :returns: xml Elementnode
+        """
+        defaultFormat = """<Simulation>
+            <NumberOfRuns>100</NumberOfRuns>
+            <SimulationType>1</SimulationType>
+            <ScenarioSimulationSettings>
+                <AccrueType>0</AccrueType>
+                <AllocationMethod>1</AllocationMethod>
+                <EndAtStage>100</EndAtStage>
+                <EVMAnalyse>1</EVMAnalyse>
+                <MaxAccrue>50</MaxAccrue>
+                <Measures>[sensCI,sensSI,sensSSI,sensCRIr,sensCRIrho,sensCRItau,sensCRIr_Cost,sensCRIrho_Cost,sensCRItau_Cost,sensCRIr_Res,sensCRIrho_Res,sensCRItau_Res]</Measures>
+                <Name>ScenarioSimulationSettings</Name>
+                <PercAccrue>100</PercAccrue>
+                <Random_Maximum_Deviation>50</Random_Maximum_Deviation>
+                <Random_Percentage_Early>50</Random_Percentage_Early>
+                <Scenario>1</Scenario>
+                <SensitivityAnalyse>1</SensitivityAnalyse>
+                <StartAtStage>0</StartAtStage>
+                <UniqueID>-1</UniqueID>
+                <UseResourceScheduling>0</UseResourceScheduling>
+                <UserID>0</UserID>
+            </ScenarioSimulationSettings>
+            <Res/>
+            <Results/>
+        </Simulation>"""
+        return ET.fromstring(defaultFormat)
+
+    def generate_ProTrack_PSGGame(self, projectEndDate, datetimeFormat, activities_total_number):
+        """
+        This function generates the PSGGame node for p2x and returns it.
+        :returns: xml Element node, "PSGGame" node
+        """
+        psgActivityFormat = """<PSGActivity>
+            <TimeCostTradeOffs>
+                <TradeOff>
+                    <Duration>10</Duration>
+                    <Cost>0</Cost>
+                </TradeOff>
+            </TimeCostTradeOffs>
+            <FIELD82>0</FIELD82>
+            <FIELD83>0</FIELD83>
+            <FIELD84/>
+            <FIELD85>-1</FIELD85>
+            <FIELD86>0</FIELD86>
+            <FIELD87>0</FIELD87>
+            <FIELD88>0</FIELD88>
+            <FIELD89>0</FIELD89>
+        </PSGActivity>"""
+        defaultFormat = """<PSGGame>
+            <TargetEnd/>
+            <Fine>150</Fine>
+            <UncertaintyLevel>0</UncertaintyLevel>
+            <NumberOfPeriods>7</NumberOfPeriods>
+            <AutoDescisions>0</AutoDescisions>
+            <ModifyCostsWhenDelay>0</ModifyCostsWhenDelay>
+            <PSGPeriods>
+                <Name>PSGPeriods</Name>
+                <UniqueID>-1</UniqueID>
+                <UserID>0</UserID>
+            </PSGPeriods>
+            <PSGPeriods/>
+            <Activities/>
+        </PSGGame>"""
+        psgGameNode = ET.fromstring(defaultFormat)
+        activitiesNode = psgGameNode.find("Activities")
+
+        projectEndDate_str =  self.get_date_string(projectEndDate, datetimeFormat) if projectEndDate > datetime.min else self.get_date_string(datetime.now(), datetimeFormat)
+
+        XMLParser.find_xmlNode_and_set_text(psgGameNode, "TargetEnd", projectEndDate_str)
+
+        psgActivityNode = ET.fromstring(psgActivityFormat)
+        for i in range(0, activities_total_number):
+            activitiesNode.append(psgActivityNode)            
+
+        return psgGameNode
+
+    @staticmethod
+    def find_xmlNode_and_set_text(parentNode, childTag, value_str):
+        "This function searches the parentNode for the childTag and sets its text to value_str"
+
+        childNode = parentNode.find(childTag)
+        if childNode is not None:
+            childNode.text = value_str
+        # return is implicit because parentNode is passed by reference
+
+    @staticmethod
+    def find_xmlNode_and_append_childNode(rootNode, parentTag, childTag, child_value_str):
+        "This function searches in the rootNode its direct children for the parentTag and appends a new childNode to it."
+        parentNode = rootNode.find(parentTag)
+        if parentNode is not None:
+            childNode = ET.Element(childTag)
+            childNode.text = child_value_str
+            parentNode.append(childNode)
+        # return is implicit because rootNode is passed by reference
+
     def from_schedule_object(self, project_object, file_path_output="output.xml"):
 
-        ### Sort activities based on WBS
-        activity_list_wbs=sorted(project_object.activities, key=lambda x: x.wbs_id)
-        project_object.activities=activity_list_wbs
+        projectRootNode = ET.Element("Project")
 
-        file = open(file_path_output, 'w')
+        nameNode = ET.Element("NAME")
+        nameNode.text = XMLParser.xml_escape(project_object.name)
 
-        file.write('<Project>')
+        projectInfoNode = self.generate_ProTrack_projectInfo()
 
-        ### Project name ###
-        file.write('<NAME>')
-        project_name=project_object.activities[0].name
-        file.write(project_name)
-        file.write('</NAME>')
-
-        ### Projectinfo (unimportant) ###
-        file.write("<ProjectInfo><LastSavedBy>PMConverter</LastSavedBy><Name>ProjectInfo</Name><SavedWithMayorBuild>3</SavedWithMayorBuild><SavedWithMinorBuild>0</SavedWithMinorBuild>")
-        file.write("<SavedWithVersion>0</SavedWithVersion><UniqueID>-1</UniqueID><UserID>0</UserID></ProjectInfo>")
-
-        ### Settings (Somewhat important) ###
-        ## A lot of this info can (and should probably) deleted
-        file.write("<Settings><AbsProjectBuffer>311220071300</AbsProjectBuffer><ActionEndThreshold>100</ActionEndThreshold><ActionStartThreshold>60</ActionStartThreshold>")
-        file.write("<ActiveSensResult>1</ActiveSensResult><ActiveTrackingPeriod>8</ActiveTrackingPeriod><AllocationMethod>0</AllocationMethod><AutomaticBuffer>0</AutomaticBuffer>")
-        file.write("<ConnectResourceBars>0</ConnectResourceBars><ConstraintHardness>3</ConstraintHardness><CurrencyPrecision>2</CurrencyPrecision><CurrencySymbol></CurrencySymbol>")
-        file.write("<CurrencySymbolPosition>1</CurrencySymbolPosition>")
-        ### Dateformat ###
         ## TODO; Read Datetimeformat
-        dateformat="d/MM/yyyy h:mm"
-        file.write('<DateTimeFormat>')
-        file.write(dateformat)
-        file.write("</DateTimeFormat>")
+        datetimeFormat="d/MM/yyyy h:mm"
 
-        file.write("<DefaultRowBuffer>50</DefaultRowBuffer><DrawRelations>1</DrawRelations><DrawShadow>1</DrawShadow><DurationFormat>1</DurationFormat><DurationLevels>2</DurationLevels>")
-        file.write("<ESSLSSFloat>0</ESSLSSFloat><GanttStartDate>080220070800</GanttStartDate><GanttZoomLevel>0.0127138157894736</GanttZoomLevel><GroupFilter>0</GroupFilter><HideGraphMarks>0</HideGraphMarks>")
-        file.write("<Name>Settings</Name><PlanningEndThreshold>60</PlanningEndThreshold><PlanningStartThreshold>20</PlanningStartThreshold><PlanningUnit>1</PlanningUnit>")
-        file.write("<ResAllocation1Color>12632256</ResAllocation1Color><ResAllocation2Color>8421504</ResAllocation2Color><ResAvailableColor>15780518</ResAvailableColor>")
-        file.write("<ResourceChartEndDate>220520071000</ResourceChartEndDate><ResourceChartStartDate>060320060000</ResourceChartStartDate><ResOverAllocationColor>255</ResOverAllocationColor>")
-        file.write("<ShowCanEditResultsInHelp>1</ShowCanEditResultsInHelp><ShowCriticalPath>1</ShowCriticalPath><ShowInputModelInfoInHelp>1</ShowInputModelInfoInHelp>")
-        file.write("<SyncGanttAndResourceChart>0</SyncGanttAndResourceChart><UniqueID>-1</UniqueID><UseResourceScheduling>0</UseResourceScheduling><UserID>0</UserID><ViewDateTimeAsUnits>0</ViewDateTimeAsUnits>")
-        file.write('</Settings>')
-
-        ## Defaults: Obsolete? ###
-        file.write("<Defaults><DefaultCostPerUnit>50</DefaultCostPerUnit><DefaultDisplayDurationType>0</DefaultDisplayDurationType><DefaultDistributionType>2</DefaultDistributionType>")
-        file.write("<DefaultDurationInput>0</DefaultDurationInput><DefaultLagTime>0</DefaultLagTime><DefaultNumberOfSimulationRuns>100</DefaultNumberOfSimulationRuns>")
-        file.write("<DefaultNumberOfTrackingPeriodsGeneration>20</DefaultNumberOfTrackingPeriodsGeneration><DefaultNumberOfTrackingPeriodsSimulation>50</DefaultNumberOfTrackingPeriodsSimulation>")
-        file.write("<DefaultRelationType>2</DefaultRelationType><DefaultResourceRenewable>1</DefaultResourceRenewable><DefaultSimulationType>0</DefaultSimulationType><DefaultStartPage>start.html</DefaultStartPage>")
-        file.write("<DefaultTaskDuration>10</DefaultTaskDuration><DefaultTrackingPeriodOffset>50</DefaultTrackingPeriodOffset><DefaultWorkingDaysPerWeek>5</DefaultWorkingDaysPerWeek>")
-        file.write("<DefaultWorkingHoursPerDay>8</DefaultWorkingHoursPerDay><Name>Defaults</Name><UniqueID>-1</UniqueID><UserID>0</UserID></Defaults>")
-
-        ### Agenda ###
-        #Startdate
-        file.write("<Agenda>")
-        file.write("<StartDate>")
-        startdate=self.get_date_string(project_object.activities[0].baseline_schedule.start, dateformat)
-        file.write(startdate)
-        file.write("</StartDate>")
-        #Non workinghours
-        file.write("<NonWorkingHours>")
-        for i in range(0,24):
-            if project_object.agenda.working_hours[i] == False:
-                file.write("<Hour>"+str(i)+"</Hour>")
-        file.write("</NonWorkingHours>")
-        #Non working days
-        file.write("<NonWorkingDays>")
-        for i in range(0,7):
-            if project_object.agenda.working_days[i] == False:
-                file.write("<Day>"+str(i)+"</Day>")
-        file.write("</NonWorkingDays>")
-        #Holidays
-        for holiday in project_object.agenda.holidays:
-            file.write("<Holidays>")
-            file.write(str(holiday)+"0000")
-            file.write("</Holidays>")
-        file.write("</Agenda>")
-
-        ### Activities ###
-        file.write("""<Activities><Name>Activities</Name><UniqueID>-1</UniqueID><UserID>0</UserID></Activities><Activities>""")
-
+        # determine project start datetime and end datetime:
+        projectStartDatetime = datetime.max
+        projectBaselineEndDatetime = datetime.min
 
         for activity in project_object.activities:
-            if len(activity.wbs_id) == 3:
-                # No Activity groups
-                file.write("<Activity>")
-                # hourly cost
-                file.write("<BaselineCostByUnit>")
-                hourly_cost=activity.baseline_schedule.hourly_cost
-                file.write(str(hourly_cost))
-                file.write("</BaselineCostByUnit>")
-                # Duration (hours)
-                file.write("<BaseLineDuration>")
-                duration=str(activity.baseline_schedule.duration.days*8)
-                file.write(duration)
-                file.write("</BaseLineDuration>")
-                # BaselineStart
-                file.write("<BaseLineStart>")
-                BaselineStartString=self.get_date_string(activity.baseline_schedule.start,dateformat)
-                file.write(BaselineStartString)
-                file.write("</BaseLineStart>")
-                # Constraints (Unimportant)
-                file.write("""<Constraints><Direction>0</Direction><DueDateEnd>010101000000</DueDateEnd><DueDateStart>010101000000</DueDateStart><LockedTimeEnd>010101000000</LockedTimeEnd>""")
-                file.write("<LockedTimeStart>010101000000</LockedTimeStart><Name/><ReadyTimeEnd>010101000000</ReadyTimeEnd><ReadyTimeStart>010101000000</ReadyTimeStart>")
-                file.write("<UniqueID>-1</UniqueID><UserID>0</UserID></Constraints>")
-                # Distribution
-                file.write("<Distribution>")
-                distr=str(activity.risk_analysis.distr_id)
-                file.write(distr)
-                file.write("</Distribution>")
-                # DurationCPMunits = Baselineduration?
-                file.write("<DurationCPMUnits>")
-                file.write(duration)
-                file.write("</DurationCPMUnits>")
-                # Fixed Cost
-                file.write("<FixedBaselineCost>")
-                fixed_cost=str(activity.baseline_schedule.fixed_cost)
-                file.write(fixed_cost)
-                file.write("</FixedBaselineCost>")
-                # Milestone (Unimportant)
-                file.write("<IsMilestone>0</IsMilestone>")
-                # Activity name
-                file.write("<Name>")
-                name=str(XMLParser.xml_escape(activity.name)).lstrip(' ')
-                file.write(name)
-                file.write("</Name>")
-                # ?
-                file.write("<StartCPMUnits>0</StartCPMUnits>")
-                # Activity ID
-                file.write("<UniqueID>")
-                activity_id=str(activity.activity_id)
-                file.write(activity_id)
-                file.write("</UniqueID>")
-                # Unimportant
-                file.write("<UserID>0</UserID>")
-                file.write("</Activity>")
-        file.write("</Activities>")
+            if activity.baseline_schedule.start < projectStartDatetime:
+                projectStartDatetime = activity.baseline_schedule.start
+            if activity.baseline_schedule.end > projectBaselineEndDatetime:
+                projectBaselineEndDatetime = activity.baseline_schedule.end
+        
+        settingsNode = self.generate_ProTrack_settings(projectStartDatetime, projectBaselineEndDatetime, datetimeFormat)
+        defaultsNode = self.generate_ProTrack_defaults()
+        agendaNode = self.generate_ProTrack_agenda(projectStartDatetime, datetimeFormat, project_object.agenda)
 
+        # get only low-level activities:
+        activitiesOnly = [x for x in project_object.activities if not Activity.is_not_lowest_level_activity(x, project_object.activities)]
+        activitiesOnly_sortedOn_id = sorted(activitiesOnly, key= lambda x: x.activity_id)
 
+        # extract activityGroups and remove the ProjectRoot activityGroup with id = 0:
+        activityGroupsOnly = [x for x in project_object.activities if Activity.is_not_lowest_level_activity(x, project_object.activities) and x.activity_id != 0]
+        activityGroupsOnly_sortedOn_id = sorted(activityGroupsOnly, key= lambda x: x.activity_id)
 
-        ### Relations ###
-        file.write("""<Relations><Name>Relations</Name><UniqueID>-1</UniqueID><UserID>0</UserID></Relations><Relations>""")
-        # Start with ID = 5? (Shouldn't matter anyway)
-        unique_resource_id_counter=4
-        for activity in project_object.activities:
-            if len(activity.successors) !=0:
-                for successor in activity.successors:
-                    unique_resource_id_counter+=1
-                    file.write("<Relation>")
-                    # From
-                    file.write("<FromTask>")
-                    fromtask_id=str(activity.activity_id)
-                    file.write(fromtask_id)
-                    file.write("</FromTask>")
-                    # Lag
-                    file.write("<Lag>")
-                    lag=str(successor[2])
-                    file.write(lag)
-                    file.write("</Lag>")
-                    # LagKind/Type
-                    if successor[1] == "FS":
-                        lagKind="0"
-                        lagType="2"
-                    elif successor[1] == "FF":
-                        lagKind="0"
-                        lagType="3"
-                    elif successor[1] == "SS":
-                        lagKind="0"
-                        lagType="0"
-                    elif successor[1] == "SF":
-                        lagKind="0"
-                        lagType="1"
-                    else:
-                        raise "Lag Undefined"
-                    file.write("<LagKind>")
-                    file.write(lagKind)
-                    file.write("</LagKind><LagType>")
-                    file.write(lagType)
-                    file.write("</LagType>")
-                    # Name (Unimportant)
-                    file.write("<Name>Relation</Name>")
-                    # To
-                    file.write("<ToTask>")
-                    totask_id=str(successor[0])
-                    file.write(totask_id)
-                    file.write("</ToTask>")
-                    # Unique Relation ID
-                    file.write("<UniqueID>")
-                    file.write(str(unique_resource_id_counter))
-                    file.write("</UniqueID>")
-                    # UserID (Unimportant)
-                    file.write("<UserID>0</UserID>")
-                    file.write("</Relation>")
-        file.write("</Relations>")
+        activitiesPreformatNode, activitiesNode, riskDistributionsPreformatNode, riskDistributionsNode = self.generate_ProTrack_activities_and_riskDistributions(activitiesOnly_sortedOn_id, project_object.agenda, datetimeFormat)
 
-        ### Activity Groups ###
-        file.write("""<ActivityGroups><Name>ActivityGroups</Name><UniqueID>-1</UniqueID><UserID>0</UserID></ActivityGroups><ActivityGroups>""")
-        for activitygroup in project_object.activities:
-            if len(activitygroup.wbs_id) == 2:
-                # Only Activity groups
-                file.write("<ActivityGroup>")
-                # Unimportant
-                file.write("<Expanded>1</Expanded>")
-                # Name
-                file.write("<Name>")
-                name=str(XMLParser.xml_escape(activitygroup.name)).lstrip(' ')
-                file.write(name)
-                file.write("</Name>")
-                # ID
-                file.write("<UniqueID>")
-                activity_id=str(activitygroup.activity_id)
-                file.write(activity_id)
-                file.write("</UniqueID>")
-                # Unimportant
-                file.write("<UserID>0</UserID>")
-                file.write("</ActivityGroup>")
-        file.write("</ActivityGroups>")
+        activityGroupsPreformatNode, activityGroupsNode = self.generate_ProTrack_activityGroups(activityGroupsOnly_sortedOn_id)
 
-        ### Outline list ###
-        file.write("<OutlineList><List>")
-        for i in range(1,len(project_object.activities)):
-            # Activity group
-            if len(project_object.activities[i].wbs_id) == 2:
-                k=1
-                file.write("<Child><Type>1</Type><Data>")
-                # ID
-                id = str(project_object.activities[i].activity_id)
-                file.write(id)
-                file.write("</Data>")
-                file.write("<Expanded>1</Expanded><List>")
-                # Activities belonging to Activity group
-                while i+k < len(project_object.activities) and len(project_object.activities[i+k].wbs_id) == 3:
-                        file.write("<Child><Type>2</Type><Data>")
-                        id = str(project_object.activities[i+k].activity_id)
-                        file.write(id)
-                        file.write("</Data></Child>")
-                        k+=1
-                file.write("</List>")
-                file.write("</Child>")
-        file.write("</List>")
-        file.write("</OutlineList>")
+        relationsPreformatNode, relationsNode = self.generate_ProTrack_relations(activitiesOnly_sortedOn_id)
 
-        ### Resources ###
-        file.write("""<Resources><Name>Resources</Name><UniqueID>-1</UniqueID><UserID>0</UserID></Resources>""")
-        file.write("<Resources>")
-        for resource in project_object.resources:
-            file.write("<Resource>")
-            # resource ID
-            file.write("<FIELD0>")
-            res_id=str(resource.resource_id)
-            file.write(res_id)
-            file.write("</FIELD0>")
-            #
-            file.write("<FIELD1>")
-            res_name=str(XMLParser.xml_escape(resource.name))
-            file.write(res_name)
-            file.write("</FIELD1>")
-            file.write("<FIELD768></FIELD768>")
-            # Availability
-            file.write("<FIELD778>")
-            availability_string="#"
-            availability_string+=str(resource.availability)
-            file.write(availability_string)
-            file.write("</FIELD778>")
-            # Renewable
-            file.write("<FIELD769>")
-            if resource.resource_type == ResourceType.RENEWABLE:
-                ren_string="1"
-            else:
-                ren_string="0"
-            file.write(ren_string)
-            file.write("</FIELD769>")
-            # Cost per use
-            file.write("<FIELD770>")
-            costperuse_string= str(resource.cost_use)
-            file.write(costperuse_string)
-            file.write("</FIELD770>")
-            # Cost per unit
-            file.write("<FIELD771>")
-            costperunit_string=str(resource.cost_unit)
-            file.write(costperunit_string)
-            file.write("</FIELD771>")
-            # Total cost ? not in resource information
-            #file.write("<FIELD776></FIELD776>")
-            # Availability
-            file.write("<FIELD780>")
-            file.write(str(resource.availability))
-            file.write("</FIELD780>")
-            # ?
-            file.write("""<FIELD779>-1</FIELD779>""")
-            #<FIELD781></FIELD781><FIELD782></FIELD782><FIELD783></FIELD783>""")
-            file.write("</Resource>")
-            file.write("<DATEPERCSERIE><DEFAULTAVAILABILITY>")
-            file.write(str(resource.availability))
-            file.write("</DEFAULTAVAILABILITY><DATEPERCBREAKPOINTS/></DATEPERCSERIE>")
-        file.write("</Resources>")
+        # generate outline list:
+        outlineListNode = self.generate_ProTrack_outlineList(activitiesOnly_sortedOn_id, activityGroupsOnly_sortedOn_id)
 
+        # generate resources node:
+        resourcesPreformatNode, resourcesNode = self.generate_ProTrack_resources(project_object.resources)
 
-        ### Resource Assignment ###
-        file.write("""<ResourceAssignments><Name>ResourceAssignments</Name><UniqueID>-1</UniqueID><UserID>0</UserID></ResourceAssignments><ResourceAssignments>""")
-        for activity in project_object.activities:
-            if len(activity.resources) !=0:
-                for resourceTuple in activity.resources:
-                    file.write("<ResourceAssignment>")
-                    # Resources needed
-                    file.write("<FIELD1026>")
-                    res_needed=str(resourceTuple[1])
-                    file.write(res_needed)
-                    file.write("</FIELD1026>")
-                    # Unimportant
-                    file.write("<FIELD1027>0</FIELD1027>")
-                    # Activity ID
-                    file.write("<FIELD1024>")
-                    activity_id=str(activity.activity_id)
-                    file.write(activity_id)
-                    file.write("</FIELD1024>")
-                    # Resource ID
-                    file.write("<FIELD1025>")
-                    res_id=str(resourceTuple[0].resource_id)
-                    file.write(res_id)
-                    file.write("</FIELD1025>")
-                    file.write("</ResourceAssignment>")
-        file.write("</ResourceAssignments>")
+        # generate resource assignments node:
+        resourceAssignmentsPreformatNode, resourceAssignmentsNode = self.generate_ProTrack_resourceAssignments(activitiesOnly_sortedOn_id)
 
+        # generate tracking list node:
+        # sort tracking periods first on statusdate:
+        tracking_periods_sorted = sorted(project_object.tracking_periods, key= lambda x: x.tracking_period_statusdate)
 
+        trackingListPreformatNode, trackingListNode = self.generate_ProTrack_trackingList(tracking_periods_sorted, datetimeFormat, project_object.agenda, project_object.activities)
 
-        ### Sort activities based on ID
-        activity_list_id=list2=sorted(project_object.activities, key=lambda x: x.activity_id)
-        project_object.activities=activity_list_id
+        # generate default: simulation node:
+        defaultSimulationNode = self.generate_ProTrack_simulation()
 
-        ### TrackingPeriods ####
-        file.write("""<TrackingList><Name>TrackingList</Name><UniqueID>-1</UniqueID><UserID>0</UserID></TrackingList>""")
-        file.write("<TrackingList>")
-        TP_count=0
-        for TP in project_object.tracking_periods:
-            ## Tracking Period Info
-            TP_count+=1
-            file.write("""<TrackingPeriod><Abreviation></Abreviation><Description/>""")
-            # Enddate
-            file.write("<EndDate>")
-            enddate_string=self.get_date_string(TP.tracking_period_statusdate,dateformat)
-            file.write(enddate_string)
-            file.write("</EndDate>")
-            # Name
-            file.write("<Name>")
-            # Weird bug, XML won't be correctly formatted if TP name is written => replace unwanted characters!
-            TP_name=str(TP.tracking_period_name)
-            file.write(XMLParser.xml_escape(TP_name))
-            file.write("</Name>")
-            file.write("<PredictiveLogic>0</PredictiveLogic>")
-            # Unique ID
-            file.write("<UniqueID>")
-            file.write(str(TP_count))
-            file.write("</UniqueID>")
-            file.write("<UserID>0</UserID>")
-            file.write("</TrackingPeriod>")
-            file.write("<TProTrackActivities-1>")
-            # Activity Tracking
-            # Needs to be sorted on ID?
-            for activity in project_object.activities:
+        # generate default PSGgame nodes:
 
-                # No Activity groups
-                if len(activity.wbs_id) == 3:
+        defaultPSGGameNode = self.generate_ProTrack_PSGGame(projectBaselineEndDatetime, datetimeFormat, len(activitiesOnly)) # necessary for valid ProTrackFile
 
-                    # Activity ID
-                    file.write("<Activity>")
-                    file.write(str(activity.activity_id))
-                    file.write("</Activity>")
-                    file.write("<TProTrackActivityTracking-1>")
-                    for ATR in TP.tracking_period_records:
-                        if activity.activity_id == ATR.activity.activity_id:
-                            #Actual Start
-                            file.write("<ActualStart>")
+        ### append all generated xml nodes in right order to the rootNode:
+        projectRootNode.append(nameNode)
+        projectRootNode.append(projectInfoNode)
+        projectRootNode.append(settingsNode)
+        projectRootNode.append(defaultsNode)
+        projectRootNode.append(agendaNode)
+        projectRootNode.append(activitiesPreformatNode)
+        projectRootNode.append(activitiesNode)
+        projectRootNode.append(relationsPreformatNode)
+        projectRootNode.append(relationsNode)
+        projectRootNode.append(activityGroupsPreformatNode)
+        projectRootNode.append(activityGroupsNode)
+        projectRootNode.append(outlineListNode)
+        projectRootNode.append(resourcesPreformatNode)
+        projectRootNode.append(resourcesNode)
+        projectRootNode.append(resourceAssignmentsPreformatNode)
+        projectRootNode.append(resourceAssignmentsNode)
+        projectRootNode.append(trackingListPreformatNode)
+        projectRootNode.append(trackingListNode)
+        projectRootNode.append(defaultSimulationNode)
+        projectRootNode.append(riskDistributionsPreformatNode)
+        projectRootNode.append(riskDistributionsNode)
+        projectRootNode.append(defaultPSGGameNode)
 
-                            if ATR.actual_start != None:
-                                actual_start_str=self.get_date_string(ATR.actual_start,dateformat)
-                                file.write(actual_start_str)
-                            else:
-                                file.write("0")
+        # convert rootNode to tree:
+        xmlTree = ET.ElementTree(projectRootNode)
+        xmlTree.write(file_path_output, encoding="UTF-8" ,xml_declaration=False)
 
-                            file.write("</ActualStart>")
-                            #Actual Duration
-                            file.write("<ActualDuration>")
-                            file.write(str(ATR.actual_duration.days*8))
-                            file.write("</ActualDuration>")
-                            #Actual Cost Dev
-                            file.write("<ActualCostDev>")
-                            file.write(str(ATR.deviation_pac))
-                            file.write("</ActualCostDev>")
-                            # Remaining Duration
-                            file.write("<RemainingDuration>")
-                            if ATR.remaining_duration != None:
-                                file.write(str(ATR.remaining_duration.days*8))
-                            else:
-                                file.write("0")
-                            file.write("</RemainingDuration>")
-                            # Remaining cost dev
-                            file.write("<RemainingCostDev>")
-                            file.write(str(ATR.deviation_prc))
-                            file.write("</RemainingCostDev>")
-                            #Percentage Complete
-                            file.write("<PercentageComplete>")
-                            file.write(str(ATR.percentage_completed/100))
-                            file.write("</PercentageComplete>")
-                    file.write("</TProTrackActivityTracking-1>")
-            file.write("</TProTrackActivities-1>")
-        file.write("</TrackingList>")
-
-
-        ### Distributions ### # TODO Does not work correctly
-        # file.write("""<SensitivityDistributions><Name>SensitivityDistributions</Name><UniqueID>-1</UniqueID>
-        # <UserID>0</UserID></SensitivityDistributions><SensitivityDistributions>""")
-        #
-        # ## To many distributions will be created (Standard distrbutions will be recreated)
-        # counter=5
-        # for counter in range(5,len(project_object.activities)):
-        #     notdone=1
-        #     for activity in project_object.activities:
-        #         distr=activity.risk_analysis
-        #         if distr.distr_id == counter and notdone:
-        #             #counter+=1
-        #             file.write("<TProTrackSensitivityDistribution"+str(counter)+">")
-        #             file.write("<UniqueID>"+str(counter)+"</UniqueID>")
-        #             file.write("<Name>"+distr.distr_name+"</Name>")
-        #             file.write("<StartDuration>"+str(int(distr.optimistic_duration-1))+"</StartDuration>")
-        #             file.write("<EndDuration>"+str(int(distr.pessimistic_duration+1))+"</EndDuration>")
-        #             file.write("<Style>0</Style>")
-        #             file.write("<Distribution>")
-        #             file.write("<X>"+str(distr.optimistic_duration)+"</X><Y>0</Y>")
-        #             file.write("<X>"+str(distr.probable_duration)+"</X><Y>100</Y>")
-        #             file.write("<X>"+str(distr.pessimistic_duration)+"</X><Y>0</Y>")
-        #             file.write("</Distribution>")
-        #             file.write("</TProTrackSensitivityDistribution"+str(counter)+">")
-        #             notdone=0
-        # file.write("</SensitivityDistributions>")
-        file.write('</Project>')
-        file.close()
-
-
-
-        return True #print("Write Succesful!")
-
+        return True # writing to p2x was successful
 

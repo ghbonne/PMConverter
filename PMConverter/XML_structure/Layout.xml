@@ -2,7 +2,7 @@
 --- Project Info ----
 <NAME>ProjectName</NAME> 			--- Projectnaam
 <ProjectInfo>
-	<LastSavedBy>jbatseli</LastSavedBy>
+	<LastSavedBy>PMConverter</LastSavedBy>
 	<Name>ProjectInfo</Name> 									
 	<SavedWithMayorBuild>3</SavedWithMayorBuild>
 	<SavedWithMinorBuild>0</SavedWithMinorBuild>
@@ -17,7 +17,7 @@
 ----- ProTrack Settings -----
 
 <Settings>
-	<AbsProjectBuffer>311220071300</AbsProjectBuffer>
+	<AbsProjectBuffer>311220071300</AbsProjectBuffer>  -- datetime
 	<ActionEndThreshold>100</ActionEndThreshold>
 	<ActionStartThreshold>60</ActionStartThreshold>
 	<ActiveSensResult>1</ActiveSensResult>
@@ -136,7 +136,7 @@ Note: Not all given activities are included in the outline list => filter
 			<DueDateEnd>010101000000</DueDateEnd>   			
 			<DueDateStart>010101000000</DueDateStart>           
 			<LockedTimeEnd>010101000000</LockedTimeEnd>         
-			<LockedTimeStart>170420060800</LockedTimeStart>     
+			<LockedTimeStart>010101000000</LockedTimeStart>     
 			<Name> </Name>
 			<ReadyTimeEnd>010101000000</ReadyTimeEnd>           
 			<ReadyTimeStart>010101000000</ReadyTimeStart>       
@@ -168,7 +168,7 @@ Note: Not all given activities are included in the outline list => filter
 
 --- Distributions ----
 Distribution 1 = Standard no risk (99-100-101)
-Distribution 2 = Standard symetric (80-100-120)
+Distribution 2 = Standard symmetric (80-100-120)
 Distribution 3 = Standard skewed left (80-110-120)
 Distribution 4 = Standard skewed right (80-90-120)
 
@@ -374,7 +374,7 @@ Type 2 = activity
 			<EndDate>070720060800</EndDate> 		-- TP Status Date
 			<Name>Preparation1</Name>               -- TP Name
 			<PredictiveLogic>0</PredictiveLogic>
-			<UniqueID>1</UniqueID>
+			<UniqueID>1</UniqueID> 					-- TP id
 			<UserID>0</UserID>
 		</TrackingPeriod>
 
