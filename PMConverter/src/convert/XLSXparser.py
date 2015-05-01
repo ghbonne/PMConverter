@@ -73,7 +73,7 @@ class XLSXParser(FileParser):
             print(activities_dict)
             tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, ExcelVersion.EXTENDED)
             #print(tracking_periods)
-
+            # TODO: extract project name from root activityGroup with id = 0
             #print("check")
             return ProjectObject(activities=[i[1] for i in sorted(activities_dict.values(), key=lambda x: x[1].wbs_id)],
                                  resources=sorted(resources_dict.values(), key=lambda x: x.resource_id),
@@ -464,25 +464,25 @@ class XLSXParser(FileParser):
                 break
         return header_lines
 
-    def calculate_aggregated_ac_per_wp(self, tracking_period):
+    def calculate_aggregated_ac_per_wp(self, tracking_period):  # TODO: update wp check + if wp is parent
         for item in tracking_period.tracking_period_records:
-            if len(item.activity.wbs_id) == 2: #workpackage
+            if len(item.activity.wbs_id) == 2: #workpackage # static wbs check
                 parent = item.activity
                 sum_ac = 0
                 for atr in tracking_period.tracking_period_records:
-                    if len(atr.activity.wbs_id) == 3 and (atr.activity.wbs_id[0], atr.activity.wbs_id[1]) == parent.wbs_id:
+                    if len(atr.activity.wbs_id) == 3 and (atr.activity.wbs_id[0], atr.activity.wbs_id[1]) == parent.wbs_id: # static wbs check
                         sum_ac += atr.actual_cost
                 item.actual_cost = round(sum_ac,2)
 
-    def calculate_aggregated_ad_per_wp(self, tracking_period, agenda):
+    def calculate_aggregated_ad_per_wp(self, tracking_period, agenda): # TODO: update wp check + if wp is parent
         for item in tracking_period.tracking_period_records:
-            if len(item.activity.wbs_id) == 2: #workpackage
+            if len(item.activity.wbs_id) == 2: #workpackage  # static wbs check
                 parent = item.activity
                 latest_end = None
                 earliest_start = None
                 completed = True
                 for atr in tracking_period.tracking_period_records:
-                    if len(atr.activity.wbs_id) == 3 and (atr.activity.wbs_id[0], atr.activity.wbs_id[1]) == parent.wbs_id:
+                    if len(atr.activity.wbs_id) == 3 and (atr.activity.wbs_id[0], atr.activity.wbs_id[1]) == parent.wbs_id: # static wbs check
                         if atr.actual_start:
                             if not earliest_start or earliest_start > atr.actual_start:
                                 earliest_start = atr.actual_start
@@ -506,41 +506,30 @@ class XLSXParser(FileParser):
     def calculate_aggregated_ac(self, tracking_period):
         sum_ac = 0
         for atr in tracking_period.tracking_period_records:
-            if not self.is_not_lowest_level_activity(atr.activity, self.get_all_activities(tracking_period)):
+            if not Activity.is_not_lowest_level_activity(atr.activity, self.get_all_activities(tracking_period)):
                 sum_ac += atr.actual_cost
         return sum_ac
 
     def calculate_aggregated_pv(self, tracking_period):
         sum_pv = 0
         for atr in tracking_period.tracking_period_records:
-            if not self.is_not_lowest_level_activity(atr.activity, self.get_all_activities(tracking_period)):
+            if not Activity.is_not_lowest_level_activity(atr.activity, self.get_all_activities(tracking_period)):
                 sum_pv += atr.planned_value
         return sum_pv
 
     def calculate_aggregated_ev(self, tracking_period):
         sum_ev = 0
         for atr in tracking_period.tracking_period_records:
-            if not self.is_not_lowest_level_activity(atr.activity, self.get_all_activities(tracking_period)):
+            if not Activity.is_not_lowest_level_activity(atr.activity, self.get_all_activities(tracking_period)):
                 sum_ev += atr.earned_value
         return sum_ev
 
     def calculate_aggregated_rc(self, tracking_period):
         sum_rc = 0
         for atr in tracking_period.tracking_period_records:
-            if not self.is_not_lowest_level_activity(atr.activity, self.get_all_activities(tracking_period)):
+            if not Activity.is_not_lowest_level_activity(atr.activity, self.get_all_activities(tracking_period)):
                 sum_rc += atr.remaining_cost
         return sum_rc
-
-    def get_bac(self, tracking_period):
-        pv = None
-        for atr in tracking_period.tracking_period_records:
-            if len(atr.activity.wbs_id) == 1:
-                pv = atr.planned_value
-                break
-        if pv:
-            return pv + self.calculate_aggregated_rc(tracking_period)
-        else:
-            return 0
 
     def calculate_eac(self, ac, bac, ev, pf):
         if pf == 0:
@@ -552,20 +541,6 @@ class XLSXParser(FileParser):
             if len(atr.activity.wbs_id) == 1:
                 return atr.planned_value
         return None
-
-    #def get_pvs(self, tracking_periods):
-    #    pvs = []
-    #    for tracking_period in tracking_periods:
-    #        pvs.append(self.get_pv(tracking_period))
-    #    return pvs
-
-    #def calculate_es(self, tracking_period, tracking_periods):
-    #    #TODO: reimplement
-    #    ev = self.calculate_aggregated_ev(tracking_period)
-    #    pvs = self.get_pvs(tracking_periods)
-    #    for i in range(0, len(pvs)-1):
-    #        if pvs[i] <= ev < pvs[i+1]:
-    #            x = pvs[i+1] - ev
 
     def calculate_es(self, project_object, PVcurve, current_EV, currentTime):
         """
@@ -612,7 +587,7 @@ class XLSXParser(FileParser):
         "This function generates the PV curve of the baseline schedule of the given project."
 
         # retrieve only lowest level activities and sort them on their baseline start date and end date
-        lowestLevelActivities = [activity for activity in project_object.activities if not XLSXParser.is_not_lowest_level_activity(activity, project_object.activities)]
+        lowestLevelActivities = [activity for activity in project_object.activities if not Activity.is_not_lowest_level_activity(activity, project_object.activities)]
         lowestLevelActivitiesSorted = sorted(lowestLevelActivities, key=attrgetter('baseline_schedule.start', 'baseline_schedule.end'))
 
         projectBaselineStartDate = min([activity.baseline_schedule.start for activity in project_object.activities])
@@ -725,7 +700,7 @@ class XLSXParser(FileParser):
         # sort the tracking_period_records according to its activity baseline schedule start and end date => can figure out which activity uses first a consumable resource
 
         # retrieve only lowest level activities and sort them on their baseline start date and end date
-        lowestLevelActivitiesTrackingRecords = [atr for atr in tracking_period.tracking_period_records if not XLSXParser.is_not_lowest_level_activity(atr.activity, self.get_all_activities(tracking_period))]
+        lowestLevelActivitiesTrackingRecords = [atr for atr in tracking_period.tracking_period_records if not Activity.is_not_lowest_level_activity(atr.activity, self.get_all_activities(tracking_period))]
         lowestLevelActivitiesTrackingRecordsSorted = sorted(lowestLevelActivitiesTrackingRecords, key=attrgetter('activity.baseline_schedule.start', 'activity.baseline_schedule.end'))
 
         numerator = 0
@@ -901,7 +876,7 @@ class XLSXParser(FileParser):
         # Now we run through all activities to get the required information
         counter = 2
         for activity in project_object.activities:
-            if not self.is_not_lowest_level_activity(activity, project_object.activities):
+            if not Activity.is_not_lowest_level_activity(activity, project_object.activities):
                 # Write activity of lowest level
                 if excel_version == ExcelVersion.EXTENDED:
                     bsch_worksheet.write_number(counter, 0, activity.activity_id, green_cell)
@@ -1043,7 +1018,7 @@ class XLSXParser(FileParser):
         # Write the rows by iterating through the activities (since they are linked to it)
         counter = 2
         for activity in project_object.activities:
-            if self.is_not_lowest_level_activity(activity, project_object.activities):
+            if Activity.is_not_lowest_level_activity(activity, project_object.activities):
                 if excel_version == ExcelVersion.EXTENDED:
                     ra_worksheet.write_number(counter, 0, activity.activity_id, cyan_cell)
                     ra_worksheet.write(counter, 1, str(activity.name), cyan_cell)
@@ -1167,7 +1142,7 @@ class XLSXParser(FileParser):
                 self.calculate_aggregated_ac_per_wp(project_object.tracking_periods[i])
                 self.calculate_aggregated_ad_per_wp(project_object.tracking_periods[i], project_object.agenda)
                 for atr in project_object.tracking_periods[i].tracking_period_records:  # atr = ActivityTrackingRecord
-                    if self.is_not_lowest_level_activity(atr.activity, project_object.activities):
+                    if Activity.is_not_lowest_level_activity(atr.activity, project_object.activities):
                         tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, cyan_cell)
                         tracking_period_worksheet.write(counter, 1, atr.activity.name, cyan_cell)
                         tracking_period_worksheet.write_datetime(counter, 2, atr.activity.baseline_schedule.start, date_cyan_cell)
@@ -1238,7 +1213,7 @@ class XLSXParser(FileParser):
                 self.calculate_aggregated_ac_per_wp(project_object.tracking_periods[i])
                 self.calculate_aggregated_ad_per_wp(project_object.tracking_periods[i], project_object.agenda)
                 for atr in project_object.tracking_periods[i].tracking_period_records:  # atr = ActivityTrackingRecord
-                    if self.is_not_lowest_level_activity(atr.activity, project_object.activities):
+                    if Activity.is_not_lowest_level_activity(atr.activity, project_object.activities):
                         tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, cyan_cell)
                         tracking_period_worksheet.write(counter, 1, atr.activity.name, cyan_cell)
                         if atr.actual_start and atr.actual_start.year < 2500:
@@ -1567,21 +1542,6 @@ class XLSXParser(FileParser):
             if predecessors[-1][2] != 0:
                 to_write += ("+" if predecessors[-1][2] > 0 else "-") + agenda.convert_workingHours_to_durationString(abs(predecessors[-1][2])) # convert workinghours to formatted string
         worksheet.write(row, column, to_write, format)
-
-    @staticmethod
-    def is_not_lowest_level_activity(activity, activities):
-        # Decide whether an activity is not of the lowest level or not.
-        if activity.wbs_id is None:
-            if activity.baseline_schedule.var_cost is not None:
-                return False
-            else:
-                return True
-        else:
-            for _activity in activities:
-                if _activity is not activity and len(activity.wbs_id) < len(_activity.wbs_id):
-                    if activity.wbs_id[:] == _activity.wbs_id[:len(activity.wbs_id)]:
-                        return True
-            return False
 
     @staticmethod
     def write_resources(worksheet, row, column, resources, format):

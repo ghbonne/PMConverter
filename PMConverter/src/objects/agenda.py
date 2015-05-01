@@ -70,7 +70,7 @@ class Agenda(object):
         :param hour: integer value between 0 and 23
         """
         self.working_hours[hour] = False
-        if 1 not in working_hours:
+        if 1 not in self.working_hours:
             raise Exception("Agenda:set_non_working_hour({0}): No workinghours in a day!".format(hour))
 
     def is_working_day(self, day):
@@ -85,7 +85,7 @@ class Agenda(object):
         :param day: integer value between 0 and 6
         """
         self.working_days[day] = False
-        if 1 not in working_days:
+        if 1 not in self.working_days:
             raise Exception("Agenda:set_non_working_day({0}): No workingdays in a week!".format(day))
 
     def is_holiday(self, holiday):

@@ -92,6 +92,23 @@ class Activity(object):
         self.baseline_schedule = baseline_schedule
         self.risk_analysis = risk_analysis
 
+    @staticmethod
+    def is_not_lowest_level_activity(activity, activities):
+        # Decide whether an activity is not of the lowest level or not.
+        if not activity.wbs_id:
+            # wbs_id is None or empty
+            if activity.baseline_schedule.var_cost is not None:
+                return False
+            else:
+                return True
+        else:
+            for _activity in activities:
+                if _activity is not activity and len(activity.wbs_id) < len(_activity.wbs_id):
+                    if activity.wbs_id[:] == _activity.wbs_id[:len(activity.wbs_id)]:
+                        # _activity found with a wbs below activity => activity is an activityGroup
+                        return True
+            return False
+
     def __eq__(self, other):
         if isinstance(other, self.__class__):
             return self.__dict__ == other.__dict__
