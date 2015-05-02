@@ -996,6 +996,7 @@ class XLSXParser(FileParser):
         yellow_cell = workbook.add_format({'bg_color': 'yellow', 'text_wrap': True, 'border': 1, 'font_size': 8})
         cyan_cell = workbook.add_format({'bg_color': '#D9EAF7', 'text_wrap': True, 'border': 1, 'font_size': 8})
         green_cell = workbook.add_format({'bg_color': '#9BBB59', 'text_wrap': True, 'border': 1, 'font_size': 8})
+        soft_green_cell = workbook.add_format({'bg_color': '#C4D79B', 'text_wrap': True, 'border': 1, 'font_size': 8})
         red_cell = workbook.add_format({'bg_color': 'red', 'text_wrap': True, 'border': 1, 'font_size': 8})
         gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1, 'font_size': 8})
         date_cyan_cell = workbook.add_format({'bg_color': '#D9EAF7', 'text_wrap': True, 'border': 1,
@@ -1414,11 +1415,11 @@ class XLSXParser(FileParser):
                         tracking_period_worksheet.write_number(counter, 14, atr.planned_remaining_cost, money_gray_cell)
                         tracking_period_worksheet.write(counter, 15, self.get_duration_str(atr.remaining_duration), gray_cell)
                         tracking_period_worksheet.write_number(counter, 16, atr.deviation_pac, money_gray_cell)
-                        tracking_period_worksheet.write_number(counter, 17, atr.deviation_prc, money_gray_cell)
+                        tracking_period_worksheet.write_number(counter, 17, atr.deviation_prc, money_green_cell)
                         tracking_period_worksheet.write_number(counter, 18, atr.actual_cost, money_lime_cell)
                         tracking_period_worksheet.write_number(counter, 19, atr.remaining_cost, money_gray_cell)
                         #percentage_completed = str(atr.percentage_completed) + "%"
-                        tracking_period_worksheet.write(counter, 20, atr.percentage_completed / 100.0, percent_green_cell)
+                        tracking_period_worksheet.write(counter, 20, atr.percentage_completed / 100.0, percent_lime_cell)
                         tracking_period_worksheet.write(counter, 21, atr.tracking_status, gray_cell)
                         tracking_period_worksheet.write_number(counter, 22, atr.earned_value, money_gray_cell)
                         tracking_period_worksheet.write_number(counter, 23, atr.planned_value, money_gray_cell)
@@ -1454,7 +1455,7 @@ class XLSXParser(FileParser):
                         tracking_period_worksheet.write(counter, 3, self.get_duration_str(atr.actual_duration), green_cell)
                         tracking_period_worksheet.write_number(counter, 4, atr.actual_cost, money_lime_cell)
                         #percentage_completed = str(atr.percentage_completed) + "%"
-                        tracking_period_worksheet.write(counter, 5, atr.percentage_completed / 100.0, percent_green_cell)
+                        tracking_period_worksheet.write(counter, 5, atr.percentage_completed / 100.0, percent_lime_cell)
                     counter += 1
 
         # Write the agenda
@@ -1488,6 +1489,7 @@ class XLSXParser(FileParser):
         overview_worksheet = workbook.add_worksheet("Tracking Overview")
         overview_worksheet.set_column(0, 13, 15)
         overview_worksheet.set_column(14, 30, 15)
+        overview_worksheet.set_column(14, 30, 17)
         overview_worksheet.set_row(1, 30)
         overview_worksheet.merge_range('A1:C1', 'General', header)
         overview_worksheet.merge_range('D1:G1', 'EVM Performance Measures', header)
@@ -1582,7 +1584,7 @@ class XLSXParser(FileParser):
             sv_t, sv_t_str = self.calculate_SVt(project_object, ES, tracking_period.tracking_period_statusdate)
             # save SV(t) value also in tracking_period for visualisations:
             tracking_period.sv_t = sv_t
-            overview_worksheet.write(counter, 11, sv_t_str, green_cell)
+            overview_worksheet.write(counter, 11, sv_t_str, soft_green_cell)
 
             # calculate SPI(t)
             spi_t = self.calculate_SPIt(project_object, ES, tracking_period.tracking_period_statusdate)
