@@ -12,7 +12,7 @@ class Agenda(object):
                                                                                    False = no working hour
     :var working_days: list of booleans with length 7 (index 0 = Monday): True = working day
                                                                           False = no working day
-    :var holidays: list of holidays: holiday = string in format "ddmmyyyy"
+    :var holidays: list of holidays: holiday = datetime
     """
 
     def __init__(self, working_hours=None, working_days=None, holidays=None):
@@ -93,7 +93,7 @@ class Agenda(object):
 
     def set_holiday(self, holiday):
         """
-        :param holiday: string; format: 27122010 (=27/12/2010)
+        :param holiday: datetime
         :return:
         """
         self.holidays.append(holiday)
@@ -126,12 +126,12 @@ class Agenda(object):
         next_date = copy.deepcopy(begin_date)  # ensures that a new datetime object is returned
 
         # first go to first working hour >= begin_date
-        if self.is_holiday(begin_date.strftime('%d%m%Y')) or not self.is_working_day(begin_date.weekday()):
+        if self.is_holiday(begin_date) or not self.is_working_day(begin_date.weekday()):
             # begin_date is not a valid workingday => set time to first working hour of day and move day to first next valid workingday:
             next_date = next_date.replace(hour=self.get_first_working_hour())
 
             # move day to a valid non-holiday workingday:
-            while self.is_holiday(next_date.strftime('%d%m%Y')) or not self.is_working_day(next_date.weekday()):
+            while self.is_holiday(next_date) or not self.is_working_day(next_date.weekday()):
                 next_date += timedelta(days = 1)
 
             
@@ -149,7 +149,7 @@ class Agenda(object):
                 next_date += timedelta(days = 1)
 
                 # move day to a valid non-holiday workingday:
-                while self.is_holiday(next_date.strftime('%d%m%Y')) or not self.is_working_day(next_date.weekday()):
+                while self.is_holiday(next_date) or not self.is_working_day(next_date.weekday()):
                     next_date += timedelta(days = 1)
 
         #endIf valid starting datetime
@@ -159,14 +159,14 @@ class Agenda(object):
         # first add the necessary workingDaysDuration:
         while workingDaysDuration > 0:
             next_date += timedelta(days = 1)
-            if (not self.is_holiday(next_date.strftime('%d%m%Y'))) and self.is_working_day(next_date.weekday()):
+            if (not self.is_holiday(next_date)) and self.is_working_day(next_date.weekday()):
                 # next valid working datetime found
                 workingDaysDuration -= 1
 
         # next add the necessary workingHoursDuration
         next_date_isSet_to_startOfWorkingDay = False
         while workingHoursDuration > 0:
-            if next_date.time().hour > self.get_last_working_hour() or self.is_holiday(next_date.strftime('%d%m%Y')) or not self.is_working_day(next_date.weekday()):
+            if next_date.time().hour > self.get_last_working_hour() or self.is_holiday(next_date) or not self.is_working_day(next_date.weekday()):
                 # no next working hours today => move to first working hour on next day:
                 next_date = next_date.replace(hour = self.get_first_working_hour())
                 next_date += timedelta(days = 1)
@@ -237,7 +237,7 @@ class Agenda(object):
         if hour <= self.get_first_working_hour():
             result -= timedelta(days=1)
             result = result.replace(hour=self.get_last_working_hour()+1)
-            while (not self.is_working_day(result.weekday())) or self.is_holiday(result.strftime('%d%m%Y')):
+            while (not self.is_working_day(result.weekday())) or self.is_holiday(result):
                 result -= timedelta(days=1)
         else:
             hour -= 1

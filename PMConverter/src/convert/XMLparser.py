@@ -243,7 +243,7 @@ class XMLParser(FileParser):
         activityGroup_to_childActivities_dict = {} # links activityGroup ids to all child low-level activity id's
         res_dict = {}  # resources dict
         trackingPeriodsList = []
-        project_agenda = Agenda()
+        
 
         ## Project name
         project_name = root.find("NAME").text
@@ -254,6 +254,11 @@ class XMLParser(FileParser):
             dateformat=settings.find('DateTimeFormat').text
 
         ## Create Agenda: Working hours, Working days, Holidays
+        working_days = [1]*7
+        working_hours = [1]*24
+        holidays = []
+        project_agenda = Agenda(working_hours= working_hours, working_days=working_days, holidays= holidays)
+
         for agenda in root.findall('Agenda'):
             # working hours
             for nonworkinghour in agenda.findall('NonWorkingHours'):
@@ -268,8 +273,8 @@ class XMLParser(FileParser):
             # Holidays
             for holidays in agenda.findall('Holidays'):
                 for holiday in holidays.findall('Holiday'):
-                    holiday=holiday.text[:8]
-                    project_agenda.set_holiday(holiday)
+                    #holiday=holiday.text[:8]
+                    project_agenda.set_holiday(self.getdate(holiday.text, dateformat))
 
         ###### Resources ######
         ## Resources (Definition): create dict of all resources in project:
@@ -688,7 +693,7 @@ class XMLParser(FileParser):
                 XMLParser.find_xmlNode_and_append_childNode(agendaNode, "NonWorkingDays", "Day", str(i))
         # holidays:
         for holiday in agenda.holidays:
-            XMLParser.find_xmlNode_and_append_childNode(agendaNode, "Holidays", "Holiday", holiday + "0000")
+            XMLParser.find_xmlNode_and_append_childNode(agendaNode, "Holidays", "Holiday", self.get_date_string(holiday, datetimeFormat))
 
         return agendaNode
 

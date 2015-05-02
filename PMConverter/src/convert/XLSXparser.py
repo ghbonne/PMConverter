@@ -107,7 +107,12 @@ class XLSXParser(FileParser):
         i = 2
         while agenda_sheet.cell(row=i, column=7).value:
             holiday_field = agenda_sheet.cell(row=i, column=7).value
-            holidays.append(holiday_field)
+            if type(holiday_field) is not datetime.datetime:
+                holidays.append(datetime.datetime.utcfromtimestamp(((holiday_field - 25569)*86400)))  # ugly hack to convert
+            else:
+                holidays.append(holiday_field)
+
+            #holidays.append(holiday_field)
             i += 1
         return Agenda(working_hours=working_hours, working_days=working_days, holidays=holidays)
 
@@ -1017,6 +1022,7 @@ class XLSXParser(FileParser):
         percent_green_cell = workbook.add_format({'bg_color': '#C4D79B', 'text_wrap': True, 'border': 1, 'font_size': 8,'num_format': '0%'})
         percent_lime_cell = workbook.add_format({'bg_color': '#9BBB59', 'text_wrap': True, 'border': 1, 'font_size': 8,'num_format': '0%'})
         percent_gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1, 'font_size': 8,'num_format': '0%'})
+        holiday_yellow_cell = workbook.add_format({'bg_color': 'yellow', 'text_wrap': True, 'border': 1, 'font_size': 8, 'num_format': 'dd/mm/yyyy'})
 
         # Worksheets
         bsch_worksheet = workbook.add_worksheet("Baseline Schedule")
@@ -1475,7 +1481,7 @@ class XLSXParser(FileParser):
                 agenda_worksheet.write(i+1, 4, "No", red_cell)
         counter = 1
         for holiday in project_object.agenda.holidays:
-            agenda_worksheet.write(1, 6, holiday, yellow_cell)
+            agenda_worksheet.write(counter, 6, holiday, holiday_yellow_cell)
             counter += 1
 
         # Write the tracking overview
