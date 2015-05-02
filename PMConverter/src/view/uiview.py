@@ -4,7 +4,7 @@ __license__ = "GPL"
 #from processor.processor import Processor
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-import ui_UIView
+from view.ui_UIView import Ui_UIView
 import sys
 import ntpath
 import os
@@ -17,7 +17,7 @@ import time
 
 #from processor import Processor
 
-class UIView(QDialog, ui_UIView.Ui_UIView):
+class UIView(QDialog, Ui_UIView):
     """
     This is the main dialog window of the GUI controlling the PMConverter application.
 

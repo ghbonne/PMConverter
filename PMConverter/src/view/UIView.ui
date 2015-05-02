@@ -28,7 +28,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>4</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="StartPage">
       <layout class="QVBoxLayout" name="verticalLayout">
@@ -1018,7 +1018,7 @@
   <customwidget>
    <class>Custom_QComboBox</class>
    <extends>QComboBox</extends>
-   <header>customWidgets.custom_QComboBox</header>
+   <header>view.customWidgets.custom_QComboBox</header>
   </customwidget>
  </customwidgets>
  <tabstops>
