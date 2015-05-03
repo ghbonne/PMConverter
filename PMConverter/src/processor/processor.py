@@ -78,7 +78,7 @@ class Processor(QThread):
                 return
 
         # Parse from project object
-        file_path_to = inputFilePath + "_converted_" + time.strftime("%Y-%m-%d_%H-%M-%S") + self.inputFiletypes[self.parser_to]
+        file_path_to = inputFilePath + "_converted_" + time.strftime("%d_%H%M%S") + self.inputFiletypes[self.parser_to]
         if self.parser_to == "Excel":
             try:
                 xlsx_parser = XLSXParser()

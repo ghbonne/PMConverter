@@ -1,6 +1,6 @@
 __author__ = 'PM Group 8'
 
-from datetime import datetime, timedelta,date
+from datetime import datetime, timedelta,date, time
 import xml.etree.ElementTree as ET
 from objects.activity import Activity
 from objects.baselineschedule import BaselineScheduleRecord
@@ -274,7 +274,7 @@ class XMLParser(FileParser):
             for holidays in agenda.findall('Holidays'):
                 for holiday in holidays.findall('Holiday'):
                     #holiday=holiday.text[:8]
-                    project_agenda.set_holiday(self.getdate(holiday.text, dateformat))
+                    project_agenda.set_holiday(self.getdate(holiday.text, dateformat).date())
 
         ###### Resources ######
         ## Resources (Definition): create dict of all resources in project:
@@ -692,8 +692,10 @@ class XMLParser(FileParser):
             if agenda.working_days[i] == False:
                 XMLParser.find_xmlNode_and_append_childNode(agendaNode, "NonWorkingDays", "Day", str(i))
         # holidays:
+        zeroTime = time(0, 0)
         for holiday in agenda.holidays:
-            XMLParser.find_xmlNode_and_append_childNode(agendaNode, "Holidays", "Holiday", self.get_date_string(holiday, datetimeFormat))
+            # get_date_string requires a datetime object
+            XMLParser.find_xmlNode_and_append_childNode(agendaNode, "Holidays", "Holiday", self.get_date_string(datetime.combine(holiday, zeroTime), datetimeFormat))
 
         return agendaNode
 

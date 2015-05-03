@@ -72,7 +72,13 @@ class RiskAnalysis(Visualization):
              ]
         ]
 
-        chart = BarChart(self.title, ["Hours", "Activities"], data_series)
+        if self.data_type == DataType.ABSOLUTE:
+            chartAxisLabels = ["Duration (Hours)", "Activities"]
+        elif self.data_type == DataType.RELATIVE:
+            chartAxisLabels = ["Duration relative to baseline duration (%)", "Activities"]
+
+
+        chart = BarChart(self.title, chartAxisLabels, data_series)
 
         options = {'height': height, 'width': 800}
         chart.draw(workbook, worksheet, 'I1', None, options)

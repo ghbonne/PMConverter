@@ -82,7 +82,11 @@ class ActualCost(Visualization):
              ]
         ]
 
-        chart = BarChart(self.title, ["Euro", self.level_of_detail.value], data_series)
+        if self.data_type == DataType.ABSOLUTE:
+            chartAxisLabels = ["Cost (Euro)", self.level_of_detail.value]
+        elif self.data_type == DataType.RELATIVE:
+            chartAxisLabels = ["Cost relative to baseline schedule (%)", self.level_of_detail.value]
+        chart = BarChart(self.title, chartAxisLabels, data_series)
 
         options = {'height': height, 'width': 650}
         position = "K" + str(start + i + 1)
@@ -120,15 +124,15 @@ class ActualCost(Visualization):
             if (atr.activity.baseline_schedule.var_cost is None and self.level_of_detail == LevelOfDetail.WORK_PACKAGES) or (atr.activity.baseline_schedule.var_cost is not None and self.level_of_detail == LevelOfDetail.ACTIVITIES):
                 if self.data_type == DataType.RELATIVE:
                     # relative baseline cost
-                    worksheet.write_number(counter, 29, 1, calculation)
+                    worksheet.write_number(counter, 29, 100, calculation)
                     # relative actual cost
                     bc = atr.activity.baseline_schedule.total_cost
                     ac = atr.actual_cost
                     if ac and bool(bc):
-                        ac_rel = ac/bc
+                        ac_rel = ac/bc * 100
                         worksheet.write_number(counter, 30, ac_rel, calculation)
                     # percentage completed
-                    worksheet.write_number(counter, 31, atr.percentage_completed/100, calculation)
+                    worksheet.write_number(counter, 31, atr.percentage_completed, calculation)
                 elif self.data_type == DataType.ABSOLUTE:
                     # absolute baseline cost
                     worksheet.write_number(counter, 29, atr.activity.baseline_schedule.total_cost, calculation)

@@ -82,7 +82,11 @@ class ActualDuration(Visualization):
              ]
         ]
 
-        chart = BarChart(self.title, ["Hours", self.level_of_detail.value], data_series)
+        if self.data_type == DataType.ABSOLUTE:
+            chartAxisLabels = ["Duration (Hours)", self.level_of_detail.value]
+        elif self.data_type == DataType.RELATIVE:
+            chartAxisLabels = ["Duration relative to baseline duration (%)", self.level_of_detail.value]
+        chart = BarChart(self.title, chartAxisLabels, data_series)
 
         options = {'height': height, 'width': 650}
         position = "B" + str(start + i + 1)
@@ -119,15 +123,15 @@ class ActualDuration(Visualization):
             if (atr.activity.baseline_schedule.var_cost is None and self.level_of_detail == LevelOfDetail.WORK_PACKAGES) or (atr.activity.baseline_schedule.var_cost is not None and self.level_of_detail == LevelOfDetail.ACTIVITIES):
                 if self.data_type == DataType.RELATIVE:
                     # relative baseline duration
-                    worksheet.write(counter, 26, 1, calculation)
+                    worksheet.write(counter, 26, 100, calculation)
                     # relative actual duration
                     bd = self.get_duration(atr.activity.baseline_schedule.duration, project_object.agenda)
                     ad = self.get_duration(atr.actual_duration, project_object.agenda)
                     if ad and bd:
-                        ad_rel = ad/bd
+                        ad_rel = ad/bd * 100
                         worksheet.write(counter, 27, ad_rel, calculation)
                     # percentage completed
-                    worksheet.write(counter, 28, atr.percentage_completed/100, calculation)
+                    worksheet.write(counter, 28, atr.percentage_completed, calculation)
                 elif self.data_type == DataType.ABSOLUTE:
                     # absolute baseline duration (float)
                     pd = self.get_duration(atr.activity.baseline_schedule.duration, project_object.agenda)

@@ -108,9 +108,9 @@ class XLSXParser(FileParser):
         while agenda_sheet.cell(row=i, column=7).value:
             holiday_field = agenda_sheet.cell(row=i, column=7).value
             if type(holiday_field) is not datetime.datetime:
-                holidays.append(datetime.datetime.utcfromtimestamp(((holiday_field - 25569)*86400)))  # ugly hack to convert
+                holidays.append(datetime.datetime.utcfromtimestamp(((holiday_field - 25569)*86400)).date())  # ugly hack to convert
             else:
-                holidays.append(holiday_field)
+                holidays.append(holiday_field.date())
 
             #holidays.append(holiday_field)
             i += 1
