@@ -18,6 +18,10 @@
   <property name="windowTitle">
    <string>PMConverter</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="designer_resource.qrc">
+    <normaloff>:/icon/pmconverter_icon.ico</normaloff>:/icon/pmconverter_icon.ico</iconset>
+  </property>
   <layout class="QHBoxLayout" name="horizontalLayout_2">
    <item>
     <widget class="QStackedWidget" name="pagesMain">
@@ -118,6 +122,18 @@
          </item>
          <item>
           <widget class="QCommandLinkButton" name="cmdStep0_Start">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>100</width>
+             <height>0</height>
+            </size>
+           </property>
            <property name="maximumSize">
             <size>
              <width>100</width>
@@ -405,6 +421,18 @@
           <widget class="QCommandLinkButton" name="cmdStep1_Next">
            <property name="enabled">
             <bool>false</bool>
+           </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>100</width>
+             <height>0</height>
+            </size>
            </property>
            <property name="maximumSize">
             <size>
@@ -707,6 +735,18 @@
              </item>
              <item>
               <widget class="QCommandLinkButton" name="cmdStep2_Convert">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>100</width>
+                 <height>0</height>
+                </size>
+               </property>
                <property name="maximumSize">
                 <size>
                  <width>100</width>
@@ -992,6 +1032,18 @@
          </item>
          <item>
           <widget class="QCommandLinkButton" name="cmdFinished_End">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>100</width>
+             <height>0</height>
+            </size>
+           </property>
            <property name="maximumSize">
             <size>
              <width>100</width>
@@ -1044,6 +1096,8 @@
   <tabstop>listStep2_ChosenVisualisations</tabstop>
   <tabstop>lineEditStep1_InputFilename</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="designer_resource.qrc"/>
+ </resources>
  <connections/>
 </ui>

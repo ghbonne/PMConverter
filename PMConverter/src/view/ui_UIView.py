@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'UIView.ui'
 #
-# Created: Sun May  3 00:52:54 2015
+# Created: Sat May 16 13:09:21 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -30,6 +30,9 @@ class Ui_UIView(object):
         font = QtGui.QFont()
         font.setPointSize(10)
         UIView.setFont(font)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/icon/pmconverter_icon.ico")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        UIView.setWindowIcon(icon)
         self.horizontalLayout_2 = QtGui.QHBoxLayout(UIView)
         self.horizontalLayout_2.setObjectName(_fromUtf8("horizontalLayout_2"))
         self.pagesMain = QtGui.QStackedWidget(UIView)
@@ -71,6 +74,12 @@ class Ui_UIView(object):
         spacerItem3 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout_3.addItem(spacerItem3)
         self.cmdStep0_Start = QtGui.QCommandLinkButton(self.StartPage)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.cmdStep0_Start.sizePolicy().hasHeightForWidth())
+        self.cmdStep0_Start.setSizePolicy(sizePolicy)
+        self.cmdStep0_Start.setMinimumSize(QtCore.QSize(100, 0))
         self.cmdStep0_Start.setMaximumSize(QtCore.QSize(100, 50))
         self.cmdStep0_Start.setAutoDefault(True)
         self.cmdStep0_Start.setDefault(False)
@@ -176,6 +185,12 @@ class Ui_UIView(object):
         self.horizontalLayout_6.addItem(spacerItem11)
         self.cmdStep1_Next = QtGui.QCommandLinkButton(self.pageStep1)
         self.cmdStep1_Next.setEnabled(False)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.cmdStep1_Next.sizePolicy().hasHeightForWidth())
+        self.cmdStep1_Next.setSizePolicy(sizePolicy)
+        self.cmdStep1_Next.setMinimumSize(QtCore.QSize(100, 0))
         self.cmdStep1_Next.setMaximumSize(QtCore.QSize(100, 50))
         self.cmdStep1_Next.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.cmdStep1_Next.setObjectName(_fromUtf8("cmdStep1_Next"))
@@ -318,6 +333,12 @@ class Ui_UIView(object):
         spacerItem15 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout_12.addItem(spacerItem15)
         self.cmdStep2_Convert = QtGui.QCommandLinkButton(self.pageStep2)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.cmdStep2_Convert.sizePolicy().hasHeightForWidth())
+        self.cmdStep2_Convert.setSizePolicy(sizePolicy)
+        self.cmdStep2_Convert.setMinimumSize(QtCore.QSize(100, 0))
         self.cmdStep2_Convert.setMaximumSize(QtCore.QSize(100, 50))
         self.cmdStep2_Convert.setObjectName(_fromUtf8("cmdStep2_Convert"))
         self.horizontalLayout_12.addWidget(self.cmdStep2_Convert)
@@ -425,6 +446,12 @@ class Ui_UIView(object):
         spacerItem25 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout_17.addItem(spacerItem25)
         self.cmdFinished_End = QtGui.QCommandLinkButton(self.pageFinished)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.cmdFinished_End.sizePolicy().hasHeightForWidth())
+        self.cmdFinished_End.setSizePolicy(sizePolicy)
+        self.cmdFinished_End.setMinimumSize(QtCore.QSize(100, 0))
         self.cmdFinished_End.setMaximumSize(QtCore.QSize(100, 50))
         self.cmdFinished_End.setDefault(False)
         self.cmdFinished_End.setObjectName(_fromUtf8("cmdFinished_End"))
@@ -495,3 +522,4 @@ class Ui_UIView(object):
         self.cmdFinished_End.setText(_translate("UIView", "Exit", None))
 
 from view.customWidgets.custom_QComboBox import Custom_QComboBox
+import view.designer_resource_rc

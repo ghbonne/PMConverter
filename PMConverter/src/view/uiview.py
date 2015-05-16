@@ -553,6 +553,11 @@ class UIView(QDialog, Ui_UIView):
             # write visualisation settings
             self.ExportChosenVisualisationSettings(outputFilename)
 
+            # change focus to export button:
+            self.btnStep2_ImportSettings.setDefault(False)
+            self.cmdStep2_Convert.setDefault(True)
+            self.cmdStep2_Convert.setFocus()
+
         else:
             # no file chosen to export
             # do nothing
@@ -616,6 +621,11 @@ class UIView(QDialog, Ui_UIView):
             #print("Chosen file = {0}".format(filename))
             # load visualisation settings
             self.ImportChosenVisualisationSettings(filename)
+
+            # change selected button to convert after having imported a settings file:
+            self.btnStep2_ImportSettings.setDefault(False)
+            self.cmdStep2_Convert.setDefault(True)
+            self.cmdStep2_Convert.setFocus()
 
         else:
             # no file chosen to import
