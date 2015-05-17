@@ -20,7 +20,7 @@ class CV(Visualization):
 
     def __init__(self):
         self.title = "CV"
-        self.description = ""
+        self.description = "A line graph showing the cost variance of the project, based on the available tracking periods."
         self.parameters = {"x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
         self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]

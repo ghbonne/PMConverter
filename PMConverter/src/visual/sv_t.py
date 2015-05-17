@@ -20,7 +20,7 @@ class SvT(Visualization):
 
     def __init__(self):
         self.title = "SV(t)"
-        self.description = "Shows the variance in time (ES - AT) expressed in time units"
+        self.description = "Shows the schedule variance expressed in time units of the project, based on the available tracking periods."
         self.parameters = {"x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
         self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
@@ -49,7 +49,7 @@ class SvT(Visualization):
              ],
         ]
 
-        labels = ["", ""]
+        labels = ["", "Schedule variance (working days)"]
         chart = LineChart(self.title, labels, data_series)
 
         size = {'width': 750, 'height': 500}
@@ -72,7 +72,8 @@ class SvT(Visualization):
         worksheet.write('AJ2', 'SV(t)', header)
 
         counter = 2
+        workingHours_inDay = float(project_object.agenda.get_working_hours_in_a_day())
 
         for tp in project_object.tracking_periods:
-            worksheet.write_number(counter, 35, tp.sv_t, calculation)
+            worksheet.write_number(counter, 35, tp.sv_t / workingHours_inDay, calculation) # tp.sv_t is stored in working hours
             counter += 1

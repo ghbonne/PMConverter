@@ -17,8 +17,7 @@ class BaselineSchedule(Visualization):
 
     def __init__(self):
         self.title = "Baseline Schedule"
-        self.description = "Baseline Schedule is a gannt chart where every activity workpackage is shown." \
-                           +" In this chart you can clearly see when activities are planned.\n"
+        self.description = "Baseline Schedule is a gantt chart on which the baseline schedule of every activity and work package is shown."
         self.parameters = {}
         self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
 

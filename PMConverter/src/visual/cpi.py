@@ -22,7 +22,8 @@ class CPI(Visualization):
 
     def __init__(self):
         self.title = "CPI"
-        self.description = "Shows the performance of cost (EV / AC) in a unitless dimension"
+        self.description = "Shows the project's cost performance (earned value/ actual cost), based on the available tracking periods. "\
+                            + "For control purposes it's possible to display a threshold line on the graph."
         self.parameters = {"threshold": True,
                            "x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None

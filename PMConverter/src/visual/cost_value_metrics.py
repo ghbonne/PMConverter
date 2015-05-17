@@ -20,7 +20,7 @@ class CostValueMetrics(Visualization):
 
     def __init__(self):
         self.title = "AC, EV, PV"
-        self.description = ""
+        self.description = "A cumulative graph of the actual cost, earned value and planned value of the project, based on the available tracking periods."
         self.parameters = {"x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
         self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]

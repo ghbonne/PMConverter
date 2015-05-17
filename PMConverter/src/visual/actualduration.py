@@ -22,7 +22,8 @@ class ActualDuration(Visualization):
 
     def __init__(self):
         self.title = "PD vs AD"
-        self.description = ""
+        self.description = "A bar chart is generated on every tracking period tab indicating for each work package or activity its actual duration w.r.t. its baseline duration. "\
+                            +"Also the percentage completed of the tasks at that tracking period moment is indicated."
         self.parameters = {"level_of_detail": [LevelOfDetail.WORK_PACKAGES, LevelOfDetail.ACTIVITIES],
                            "data_type": [DataType.ABSOLUTE, DataType.RELATIVE]}
         self.level_of_detail = None
@@ -141,7 +142,7 @@ class ActualDuration(Visualization):
                     worksheet.write(counter, 27, ad, calculation)
                     # absolute completed
                     percent = atr.percentage_completed
-                    abs_completed = pd * percent / 100
+                    abs_completed = pd * percent / 100.0
                     worksheet.write(counter, 28, abs_completed, calculation)
             else:
                 pass
@@ -150,9 +151,9 @@ class ActualDuration(Visualization):
     @staticmethod
     def get_duration(delta, agenda):
         """
-        Convert from timedelta to a number, this number is the time expressed in days
+        Convert from timedelta to a number, this number is the time expressed in working days and excess working hours are added relative to a workingday.
         :param delta: timedelta
-        :return: int
+        :return: float
         """
         if delta:
             if delta.seconds != 0:

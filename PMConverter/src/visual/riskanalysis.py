@@ -2,7 +2,7 @@ __author__ = 'Eveline'
 from visual.visualization import Visualization
 from visual.enums import LevelOfDetail, DataType, ExcelVersion
 from visual.charts.barchart import BarChart
-from objects.riskanalysisdistribution import DistributionType
+from objects.riskanalysisdistribution import DistributionType, ManualDistributionUnit
 from objects.activity import Activity
 
 class RiskAnalysis(Visualization):
@@ -22,7 +22,8 @@ class RiskAnalysis(Visualization):
 
     def __init__(self):
         self.title = "Risk analysis"
-        self.description = ""
+        self.description = "A bar chart presenting of each activity its estimated optimistic, most probable and pessimistic duration. "\
+                            +"The values can be shown in absolute working hours or as percentages w.r.t. the planned baseline duration."
         self.parameters = {"data_type": [DataType.ABSOLUTE, DataType.RELATIVE]}
         self.data_type = None
         self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
@@ -105,18 +106,19 @@ class RiskAnalysis(Visualization):
         for activity in project_object.activities:
             ra = activity.risk_analysis
             if ra:
-                if ra.distribution_type == DistributionType.MANUAL and self.data_type == DataType.RELATIVE: #calculate relative values
+                if ra.distribution_type == DistributionType.MANUAL and ra.distribution_units == ManualDistributionUnit.ABSOLUTE and self.data_type == DataType.RELATIVE: # convert to relative values
                     dur = self.get_hours(activity.baseline_schedule.duration, project_object.agenda)
                     if dur != 0:
                         worksheet.write(counter, 22, int((ra.optimistic_duration/dur)*100), calculation)
                         worksheet.write(counter, 23, int((ra.probable_duration/dur)*100), calculation)
                         worksheet.write(counter, 24, int((ra.pessimistic_duration/dur)*100), calculation)
-                elif ra.distribution_type == DistributionType.STANDARD and self.data_type == DataType.ABSOLUTE: #calculate absolute values
+
+                elif (ra.distribution_type == DistributionType.STANDARD or (ra.distribution_type == DistributionType.MANUAL and ra.distribution_units == ManualDistributionUnit.RELATIVE)) and self.data_type == DataType.ABSOLUTE: #calculate absolute values
                     dur = self.get_hours(activity.baseline_schedule.duration, project_object.agenda)
                     if dur != 0:
-                        worksheet.write(counter, 22, int((ra.optimistic_duration/100)*dur), calculation)
-                        worksheet.write(counter, 23, int((ra.probable_duration/100)*dur), calculation)
-                        worksheet.write(counter, 24, int((ra.pessimistic_duration/100)*dur), calculation)
+                        worksheet.write(counter, 22, int((ra.optimistic_duration/100.0)*dur), calculation)
+                        worksheet.write(counter, 23, int((ra.probable_duration/100.0)*dur), calculation)
+                        worksheet.write(counter, 24, int((ra.pessimistic_duration/100.0)*dur), calculation)
                 else:
                     worksheet.write(counter, 22, ra.optimistic_duration, calculation)
                     worksheet.write(counter, 23, ra.probable_duration, calculation)

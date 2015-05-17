@@ -22,7 +22,8 @@ class SpiT(Visualization):
 
     def __init__(self):
         self.title = "SPI(t)"
-        self.description = "Shows the performance of time (ES / AT) in a unitless dimension"
+        self.description = "Shows the project's time performance (earned schedule / actual duration), based on the available tracking periods. "\
+                            + "For control purposes it's possible to display a threshold line on the graph."
         self.parameters = {"threshold": True,
                            "x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None

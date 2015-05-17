@@ -22,7 +22,8 @@ class ActualCost(Visualization):
 
     def __init__(self):
         self.title = "PC vs AC"
-        self.description = ""
+        self.description = "A bar chart is generated on every tracking period tab indicating for each work package or activity its actual cost w.r.t. its baseline cost. "\
+                            +"Also the percentage completed of the tasks at that tracking period moment is indicated."
         self.parameters = {"level_of_detail": [LevelOfDetail.WORK_PACKAGES, LevelOfDetail.ACTIVITIES],
                            "data_type": [DataType.ABSOLUTE, DataType.RELATIVE]}
         self.level_of_detail = None
@@ -142,7 +143,7 @@ class ActualCost(Visualization):
                     # absolute completed
                     percent = atr.percentage_completed
                     bc = atr.activity.baseline_schedule.total_cost
-                    abs_completed = bc * percent / 100
+                    abs_completed = bc * percent / 100.0
                     worksheet.write_number(counter, 31, abs_completed, calculation)
             else:
                 pass
