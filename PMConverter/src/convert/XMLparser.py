@@ -286,7 +286,9 @@ class XMLParser(FileParser):
                 res_type = ResourceType.RENEWABLE if int(resourceNode.find('FIELD769').text) else ResourceType.CONSUMABLE
                 cost_per_use = float(resourceNode.find('FIELD770').text)
                 cost_per_unit = float(resourceNode.find('FIELD771').text)
-                total_resource_cost = ast.literal_eval(resourceNode.find('FIELD776').text)
+                # total_resource_cost node can be unavailable?
+                total_resource_cost_Node = resourceNode.find('FIELD776')
+                total_resource_cost = ast.literal_eval(total_resource_cost_Node.text) if total_resource_cost_Node is not None else 0.0
                 availability_default = ast.literal_eval(resourceNode.find('FIELD780').text)
 
                 if name is None:
@@ -486,7 +488,9 @@ class XMLParser(FileParser):
             # process each tracking period:  
             for i in range(0, len(trackingPeriodHeaderNode_list)):
                 # read tracking period header first:
-                name = trackingPeriodHeaderNode_list[i].find('Name').text
+                # if no name for the tracking period is given, create a default one
+                trackingPeriod_name_node = trackingPeriodHeaderNode_list[i].find('Name')
+                name = trackingPeriod_name_node.text if trackingPeriod_name_node is not None and trackingPeriod_name_node.text else "TP{0}".format(i)
                 statusdate = trackingPeriodHeaderNode_list[i].find('EndDate').text
                 statusdate_datetime = self.getdate(statusdate, dateformat)
 

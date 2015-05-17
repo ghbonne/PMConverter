@@ -1375,7 +1375,7 @@ class XLSXParser(FileParser):
                         tracking_period_worksheet.write_number(counter, 8, atr.activity.baseline_schedule.hourly_cost, money_cyan_cell)
                         tracking_period_worksheet.write(counter, 9, "", money_cyan_cell)
                         tracking_period_worksheet.write_number(counter, 10, atr.activity.baseline_schedule.total_cost, money_cyan_cell)
-                        if atr.actual_start and atr.actual_start < datetime.datetime.max:
+                        if atr.actual_start and atr.actual_start.date() < datetime.datetime.max.date():
                             tracking_period_worksheet.write_datetime(counter, 11, atr.actual_start, date_cyan_cell)
                         else:
                             tracking_period_worksheet.write(counter, 11, '', cyan_cell)
@@ -1405,7 +1405,7 @@ class XLSXParser(FileParser):
                         tracking_period_worksheet.write_number(counter, 8, atr.activity.baseline_schedule.hourly_cost, money_gray_cell)
                         tracking_period_worksheet.write_number(counter, 9, atr.activity.baseline_schedule.var_cost, money_gray_cell)
                         tracking_period_worksheet.write_number(counter, 10, atr.activity.baseline_schedule.total_cost, money_gray_cell)
-                        if atr.actual_start and atr.actual_start < datetime.datetime.max:
+                        if atr.actual_start and atr.actual_start.date() < datetime.datetime.max.date():
                             tracking_period_worksheet.write_datetime(counter, 11, atr.actual_start, date_lime_cell)
                         else:
                             tracking_period_worksheet.write(counter, 11, '', green_cell)
@@ -1437,7 +1437,7 @@ class XLSXParser(FileParser):
                     if Activity.is_not_lowest_level_activity(atr.activity, project_object.activities):
                         tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, cyan_cell)
                         tracking_period_worksheet.write(counter, 1, atr.activity.name, cyan_cell)
-                        if atr.actual_start and atr.actual_start < datetime.datetime.max:
+                        if atr.actual_start and atr.actual_start.date() < datetime.datetime.max.date():
                             tracking_period_worksheet.write_datetime(counter, 2, atr.actual_start, date_cyan_cell)
                         else:
                             tracking_period_worksheet.write(counter, 2, '', cyan_cell)
@@ -1448,7 +1448,7 @@ class XLSXParser(FileParser):
                     else:
                         tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, gray_cell)
                         tracking_period_worksheet.write(counter, 1, atr.activity.name, gray_cell)
-                        if atr.actual_start and atr.actual_start < datetime.datetime.max:
+                        if atr.actual_start and atr.actual_start.date() < datetime.datetime.max.date():
                             tracking_period_worksheet.write_datetime(counter, 2, atr.actual_start, date_lime_cell)
                         else:
                             tracking_period_worksheet.write(counter, 2, '', green_cell)

@@ -74,7 +74,7 @@ class ActivityTrackingRecord(object):
         """
 
         #if actualDuration_hours > 0:
-        if actualStart < datetime.datetime.max: # if activity not yet started, its actualStart is set to datetime.max
+        if actualStart.date() < datetime.datetime.max.date(): # if activity not yet started, its actualStart is set to datetime.max
             # activity started or already finished: PAC depends on real actual duration!
             planned_actual_cost = activity.baseline_schedule.fixed_cost + actualDuration_hours * activity.baseline_schedule.hourly_cost
             # no fixed starting costs anymore for PRC:
@@ -175,7 +175,7 @@ class ActivityTrackingRecord(object):
                     earliest_start = childActivityTrackingRecord.actual_start
                 if childActivityTrackingRecord.percentage_completed < 100:
                     childActivity_latestDate = current_status_date
-                elif childActivityTrackingRecord.actual_start < datetime.datetime.max:
+                elif childActivityTrackingRecord.actual_start.date() < datetime.datetime.max.date():
                     childActivity_latestDate = agenda.get_end_date(childActivityTrackingRecord.actual_start, childActivityTrackingRecord.actual_duration.days, childActivityTrackingRecord.actual_duration.seconds / 3600)
                 else:
                     childActivity_latestDate = current_status_date
@@ -183,7 +183,7 @@ class ActivityTrackingRecord(object):
                 if childActivity_latestDate > latest_finish:
                     latest_finish = childActivity_latestDate
         
-        if earliest_start < datetime.datetime.max and latest_finish > datetime.datetime.min:
+        if earliest_start.date() < datetime.datetime.max.date() and latest_finish > datetime.datetime.min:
             total_actual_duration = agenda.get_time_between(earliest_start, latest_finish)
         else:
             total_actual_duration = datetime.timedelta(0)
