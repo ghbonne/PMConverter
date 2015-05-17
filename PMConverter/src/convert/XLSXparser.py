@@ -1364,36 +1364,36 @@ class XLSXParser(FileParser):
 
                 for atr in project_object.tracking_periods[i].tracking_period_records:  # atr = ActivityTrackingRecord
                     if Activity.is_not_lowest_level_activity(atr.activity, project_object.activities):
+                        # work package here:
                         tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, cyan_cell)
                         tracking_period_worksheet.write(counter, 1, atr.activity.name, cyan_cell)
                         tracking_period_worksheet.write_datetime(counter, 2, atr.activity.baseline_schedule.start, date_cyan_cell)
                         tracking_period_worksheet.write_datetime(counter, 3, atr.activity.baseline_schedule.end, date_cyan_cell)
                         tracking_period_worksheet.write(counter, 4, self.get_duration_str(atr.activity.baseline_schedule.duration), cyan_cell)
-                        self.write_resources(tracking_period_worksheet, counter, 5, atr.activity.resources, cyan_cell)
-                        tracking_period_worksheet.write_number(counter, 6, atr.activity.resource_cost, money_cyan_cell)
+                        tracking_period_worksheet.write(counter, 5, "", cyan_cell) # not printed for workpackages
+                        tracking_period_worksheet.write(counter, 6, "", money_cyan_cell) # not printed for workpackages
                         tracking_period_worksheet.write_number(counter, 7, atr.activity.baseline_schedule.fixed_cost, money_cyan_cell)
-                        tracking_period_worksheet.write_number(counter, 8, atr.activity.baseline_schedule.hourly_cost, money_cyan_cell)
+                        tracking_period_worksheet.write(counter, 8, "", money_cyan_cell) # not printed for workpackages
                         tracking_period_worksheet.write(counter, 9, "", money_cyan_cell)
                         tracking_period_worksheet.write_number(counter, 10, atr.activity.baseline_schedule.total_cost, money_cyan_cell)
-                        if atr.actual_start and atr.actual_start.date() < datetime.datetime.max.date():
-                            tracking_period_worksheet.write_datetime(counter, 11, atr.actual_start, date_cyan_cell)
-                        else:
-                            tracking_period_worksheet.write(counter, 11, '', cyan_cell)
+
+                        tracking_period_worksheet.write(counter, 11, '', cyan_cell) # not printed for workpackages
                         tracking_period_worksheet.write(counter, 12, self.get_duration_str(atr.actual_duration), cyan_cell)
-                        tracking_period_worksheet.write_number(counter, 13, atr.planned_actual_cost, money_cyan_cell)
-                        tracking_period_worksheet.write_number(counter, 14, atr.planned_remaining_cost, money_cyan_cell)
-                        tracking_period_worksheet.write(counter, 15, self.get_duration_str(atr.remaining_duration), cyan_cell)
-                        tracking_period_worksheet.write_number(counter, 16, atr.deviation_pac, money_cyan_cell)
-                        tracking_period_worksheet.write_number(counter, 17, atr.deviation_prc, money_cyan_cell)
+                        tracking_period_worksheet.write(counter, 13, "", money_cyan_cell) # not printed for workpackages
+                        tracking_period_worksheet.write(counter, 14, "", money_cyan_cell) # not printed for workpackages
+                        tracking_period_worksheet.write(counter, 15, "", cyan_cell) # NECESSARY EMPTY field for workpackages!
+                        tracking_period_worksheet.write(counter, 16, "", money_cyan_cell) # not printed for workpackages
+                        tracking_period_worksheet.write(counter, 17, "", money_cyan_cell) # not printed for workpackages
 
                         tracking_period_worksheet.write_number(counter, 18, atr.actual_cost, money_cyan_cell)
-                        tracking_period_worksheet.write_number(counter, 19, atr.remaining_cost, money_cyan_cell)
+                        tracking_period_worksheet.write(counter, 19, "", money_cyan_cell) # not printed for workpackages
                         #percentage_completed = str(atr.percentage_completed) + "%"
                         tracking_period_worksheet.write(counter, 20, atr.percentage_completed / 100.0, percent_cyan_cell)
-                        tracking_period_worksheet.write(counter, 21, atr.tracking_status, cyan_cell)
+                        tracking_period_worksheet.write(counter, 21, "", cyan_cell) # not printed for workpackages
                         tracking_period_worksheet.write_number(counter, 22, atr.earned_value, money_cyan_cell)
                         tracking_period_worksheet.write_number(counter, 23, atr.planned_value, money_cyan_cell)
                     else:
+                        # activity:
                         tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, gray_cell)
                         tracking_period_worksheet.write(counter, 1, atr.activity.name, gray_cell)
                         tracking_period_worksheet.write_datetime(counter, 2, atr.activity.baseline_schedule.start, date_gray_cell)
@@ -1435,17 +1435,17 @@ class XLSXParser(FileParser):
                 
                 for atr in project_object.tracking_periods[i].tracking_period_records:  # atr = ActivityTrackingRecord
                     if Activity.is_not_lowest_level_activity(atr.activity, project_object.activities):
+                        # workpackage:
                         tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, cyan_cell)
                         tracking_period_worksheet.write(counter, 1, atr.activity.name, cyan_cell)
-                        if atr.actual_start and atr.actual_start.date() < datetime.datetime.max.date():
-                            tracking_period_worksheet.write_datetime(counter, 2, atr.actual_start, date_cyan_cell)
-                        else:
-                            tracking_period_worksheet.write(counter, 2, '', cyan_cell)
+
+                        tracking_period_worksheet.write(counter, 2, '', cyan_cell) # not printed for workpackages
                         tracking_period_worksheet.write(counter, 3, self.get_duration_str(atr.actual_duration), cyan_cell)
                         tracking_period_worksheet.write_number(counter, 4, atr.actual_cost, money_cyan_cell)
                         #percentage_completed = str(atr.percentage_completed) + "%"
                         tracking_period_worksheet.write(counter, 5, atr.percentage_completed / 100.0, percent_cyan_cell)
                     else:
+                        # activity:
                         tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, gray_cell)
                         tracking_period_worksheet.write(counter, 1, atr.activity.name, gray_cell)
                         if atr.actual_start and atr.actual_start.date() < datetime.datetime.max.date():

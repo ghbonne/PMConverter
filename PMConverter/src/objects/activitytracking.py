@@ -188,7 +188,7 @@ class ActivityTrackingRecord(object):
         else:
             total_actual_duration = datetime.timedelta(0)
 
-        percentage_completed = int(round(total_earned_value / activityGroup.baseline_schedule.total_cost)) if activityGroup.baseline_schedule.total_cost else 0
+        percentage_completed = int(round(100 * total_earned_value / activityGroup.baseline_schedule.total_cost)) if activityGroup.baseline_schedule.total_cost else 0
         return ActivityTrackingRecord(activity= activityGroup, percentage_completed= percentage_completed, earned_value= total_earned_value, planned_value= total_planned_value,
                                       actual_cost= total_actual_cost, actual_duration= total_actual_duration)
 
