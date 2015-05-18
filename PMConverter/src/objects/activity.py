@@ -1,6 +1,6 @@
 from objects.resource import Resource
 
-__author__ = 'PM Group 8'
+__author__ = 'Project management group 8, Ghent University 2015'
 
 from objects.baselineschedule import BaselineScheduleRecord
 from objects.riskanalysisdistribution import RiskAnalysisDistribution

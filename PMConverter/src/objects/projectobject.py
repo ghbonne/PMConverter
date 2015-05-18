@@ -3,7 +3,7 @@ from objects.activity import Activity
 from objects.trackingperiod import TrackingPeriod
 from objects.resource import Resource
 
-__author__ = 'PM Group 8'
+__author__ = 'Project management group 8, Ghent University 2015'
 
 
 class ProjectObject(object):

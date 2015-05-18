@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import copy
 import re
 
-__author__ = 'Eveline'
+__author__ = 'Project management group 8, Ghent University 2015'
 
 
 class Agenda(object):

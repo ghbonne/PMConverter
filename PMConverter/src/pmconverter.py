@@ -2,6 +2,7 @@ from PyQt4.QtGui import *
 from view.uiview import UIView
 import sys
 import traceback
+__author__ = 'Project management group 8, Ghent University 2015'
     
 def main():
     try:

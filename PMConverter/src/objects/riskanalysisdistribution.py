@@ -1,6 +1,6 @@
 from enum import Enum
 
-__author__ = 'PM Group 8'
+__author__ = 'Project management group 8, Ghent University 2015'
 
 
 class DistributionType(Enum):

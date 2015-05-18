@@ -1,7 +1,7 @@
 import calendar
 import math
 
-__author__ = 'PM Group 8'
+__author__ = 'Project management group 8, Ghent University 2015'
 __license__ = ["BSD", "MIT/expat"]
 __credits__ = ["John McNamara"]
 
