@@ -159,7 +159,8 @@ class XLSXParser(FileParser):
                             actual_start = project_control_sheet.cell(row=curr_row, column=12).value
                     
                     
-                    if project_control_sheet.cell(row=curr_row, column=13).value is not None:
+                    actualDuration_field = project_control_sheet.cell(row=curr_row, column=13).value
+                    if actualDuration_field is not None and isinstance(actualDuration_field, str):
                         actual_duration_hours = agenda.convert_durationString_to_workingHours(project_control_sheet.cell(row=curr_row, column=13).value)
                         actual_duration = agenda.get_workingDuration_timedelta(actual_duration_hours)
 
