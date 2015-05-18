@@ -47,7 +47,7 @@ class Resource(object):
         self.resource_id = resource_id
         self.name = name
         self.resource_type = resource_type
-        self.availability = availability
+        self.availability = availability if resource_type != ResourceType.CONSUMABLE else -1
         self.cost_use = cost_use
         self.cost_unit = cost_unit
         self.total_resource_cost = total_resource_cost
