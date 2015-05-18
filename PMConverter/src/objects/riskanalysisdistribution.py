@@ -69,6 +69,13 @@ class RiskAnalysisDistribution(object):
                 raise TypeError('RiskAnalysisDistribution: probable_duration should be an integer')
             if not isinstance(pessimistic_duration, int):
                 raise TypeError('RiskAnalysisDistribution: pessimistic_duration should be an integer')
+
+        if distribution_type == DistributionType.STANDARD and distribution_units == StandardDistributionUnit.NO_RISK and optimistic_duration == 0 and probable_duration == 0 and pessimistic_duration == 0:
+            # set default distribution correct
+            optimistic_duration = 99
+            probable_duration = 100
+            pessimistic_duration = 101
+
         self.distribution_type = distribution_type
         self.distribution_units = distribution_units
         self.optimistic_duration = optimistic_duration
