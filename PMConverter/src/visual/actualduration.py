@@ -163,6 +163,8 @@ class ActualDuration(Visualization):
             else:
                 duration = delta.days
             return duration
+        #else no delta:
+        return 0.0
 
 
 

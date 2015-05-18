@@ -99,10 +99,10 @@ class XLSXParser(FileParser):
         working_hours = [0]*24
         holidays = []
         for i in range(0, 24):
-            if agenda_sheet.cell(row=i+2, column=2).value == "Yes":
+            if agenda_sheet.cell(row=i+2, column=2).value.lower() == "yes":
                 working_hours[i] = 1
         for i in range(0, 7):
-            if agenda_sheet.cell(row=i+2, column=5).value == "Yes":
+            if agenda_sheet.cell(row=i+2, column=5).value.lower() == "yes":
                 working_days[i] = 1
         i = 2
         while agenda_sheet.cell(row=i, column=7).value:
