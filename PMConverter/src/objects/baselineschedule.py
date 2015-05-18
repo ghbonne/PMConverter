@@ -46,17 +46,17 @@ class BaselineScheduleRecord(object):
         self.var_cost = var_cost
         self.total_cost = total_cost
 
-    def get_duration_string(self):
-        """
-        First we calculate the difference between the end and the start, then this is converted to a date format.
+    #def get_duration_string(self):
+    #    """
+    #    First we calculate the difference between the end and the start, then this is converted to a date format.
 
-        :return difference between end and start in a date format
-        """
+    #    :return difference between end and start in a date format
+    #    """
 
-        if self._duration.seconds > 0:
-            return "{0}d {1}h".format(self._duration.days, round(self._duration.seconds / 3600))
-        else:
-            return "{0}d".format(self._duration.days)
+    #    if self._duration.seconds > 0:
+    #        return "{0}d {1}h".format(self._duration.days, round(self._duration.seconds / 3600.0))
+    #    else:
+    #        return "{0}d".format(self._duration.days)
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):

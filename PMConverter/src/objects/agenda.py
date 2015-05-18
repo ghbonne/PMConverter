@@ -38,7 +38,7 @@ class Agenda(object):
         :param hour: integer value between 0 and 23
         :return: bool
         """
-        return self.working_hours[hour]
+        return self.working_hours[round(hour)]
 
     def get_last_working_hour(self):
         for i in range(1, 25):
@@ -105,6 +105,10 @@ class Agenda(object):
         :param hours: integer;
         :return: calculated end date (end of the working hour), based on working days, holidays and working hours
         """
+        # ensure days and hours is rounded:
+        days = round(days)
+        hours = round(hours)
+
         # get_next_date returns the start of the next valid workinghour after the given duration => give duration - 1 and manually add 1 hour afterwards to get an end date
         if hours >= 1:
             return self.get_next_date(begin_date, days, hours - 1) + timedelta(hours = 1)
@@ -122,8 +126,12 @@ class Agenda(object):
         :param workingHoursDuration: integer; smaller then the max working hours in a day
         :return: calculated next datetime with a valid working hour, minimum workingDaysDuration + workingHoursDuration after begin_date, based on working days, holidays and working hours
         """
+        # ensure days and hours is rounded:
+        workingDaysDuration = round(workingDaysDuration)
+        workingHoursDuration = round(workingHoursDuration)
 
-        next_date = copy.deepcopy(begin_date)  # ensures that a new datetime object is returned
+        # ensure that a new datetime object is returned and drop all time data smaller than an hour:
+        next_date = datetime(year= begin_date.year, month= begin_date.month, day= begin_date.day, hour= begin_date.hour)
 
         # first go to first working hour >= begin_date
         if self.is_holiday(begin_date.date()) or not self.is_working_day(begin_date.weekday()):
@@ -233,7 +241,9 @@ class Agenda(object):
     def get_previous_working_hour_end(self, date):
         "This function returns the end of the previous workinghour."
         hour = date.hour
-        result = copy.deepcopy(date)
+        # ensure that a new datetime object is returned and drop all time data smaller than an hour:
+        result = datetime(year= date.year, month= date.month, day= date.day, hour= date.hour)
+
         if hour <= self.get_first_working_hour():
             result -= timedelta(days=1)
             result = result.replace(hour=self.get_last_working_hour()+1)

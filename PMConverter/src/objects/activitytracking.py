@@ -16,7 +16,7 @@ class ActivityTrackingRecord(object):
     :var deviation_prc: float
     :var actual_cost: float
     :var remaining_cost: float
-    :var percentage_completed: int (0-100)
+    :var percentage_completed: float (0.0 - 100.0)
     :var tracking_status: string, Not Started/Started/Finished
     :var earned_value: float
     :var planned_value: float
@@ -24,7 +24,7 @@ class ActivityTrackingRecord(object):
 
     def __init__(self, activity=None, actual_start=None, actual_duration=None, planned_actual_cost=0.0,
                  planned_remaining_cost=-1.0, remaining_duration=None, deviation_pac=0.0,
-                 deviation_prc=0.0, actual_cost=0.0, remaining_cost=-1.0, percentage_completed=0,
+                 deviation_prc=0.0, actual_cost=0.0, remaining_cost=-1.0, percentage_completed=0.0,
                  tracking_status='', earned_value=0.0, planned_value=0.0, type_check=True):
         if type_check:
             if not isinstance(planned_actual_cost, float):
@@ -43,8 +43,14 @@ class ActivityTrackingRecord(object):
                 raise TypeError('tracking_status must be a string!')
             if not isinstance(planned_value, float):
                 raise TypeError('planned_value must be a float!')
-            if not isinstance(percentage_completed, int) or not (0 <= percentage_completed <= 100):
-                raise TypeError('percentage_completed must be an integer between 0 and 100')
+            if not isinstance(percentage_completed, float) or not (0.0 <= percentage_completed <= 100.0): 
+                if not isinstance(percentage_completed, float) or not (abs(percentage_completed) < 1e-10 or abs(percentage_completed - 100) < 1e-10):
+                    # percentage completed is not a float or not within allowed margins around bounds
+                    raise TypeError('percentage_completed must be a float between 0.0 and 100.0')
+                else:
+                    # percentage_completed is a float => could be tiny bit out of bounds => round it to the bounds
+                    percentage_completed = float(round(percentage_completed))
+                    print("ActivityTracking: percentage_completed needed to be rounded to bounds, probably because of float rounding issues.")
 
         self.activity = activity
         self.actual_start = actual_start
@@ -70,7 +76,7 @@ class ActivityTrackingRecord(object):
     @staticmethod
     def calculate_activityTrackingRecord_derived_values(activity, actualCostDev, actualDuration_hours, agenda, percentageComplete, remainingCostDev, remainingDuration_hours, statusdate_datetime, actualStart):
         """This function calculates the derived values of a low-level activity tracking record, given the minimum values of ProTrack.
-        :param percentageComplete: in range(0,100), with 100 included
+        :param percentageComplete: in range(0.0, 100.0), with 100 included
         """
 
         #if actualDuration_hours > 0:
@@ -173,10 +179,11 @@ class ActivityTrackingRecord(object):
                 total_actual_cost += childActivityTrackingRecord.actual_cost
                 if childActivityTrackingRecord.actual_start < earliest_start:
                     earliest_start = childActivityTrackingRecord.actual_start
-                if childActivityTrackingRecord.percentage_completed < 100:
+                if childActivityTrackingRecord.percentage_completed < 100 and abs(childActivityTrackingRecord.percentage_completed - 100) > 1e-10:
+                    # activity is definitely not finished yet
                     childActivity_latestDate = current_status_date
                 elif childActivityTrackingRecord.actual_start.date() < datetime.datetime.max.date():
-                    childActivity_latestDate = agenda.get_end_date(childActivityTrackingRecord.actual_start, childActivityTrackingRecord.actual_duration.days, childActivityTrackingRecord.actual_duration.seconds / 3600)
+                    childActivity_latestDate = agenda.get_end_date(childActivityTrackingRecord.actual_start, childActivityTrackingRecord.actual_duration.days, round(childActivityTrackingRecord.actual_duration.seconds / 3600.0))
                 else:
                     childActivity_latestDate = current_status_date
 
@@ -188,7 +195,8 @@ class ActivityTrackingRecord(object):
         else:
             total_actual_duration = datetime.timedelta(0)
 
-        percentage_completed = int(round(100 * total_earned_value / activityGroup.baseline_schedule.total_cost)) if activityGroup.baseline_schedule.total_cost else 0
+        percentage_completed = 100 * total_earned_value / activityGroup.baseline_schedule.total_cost if activityGroup.baseline_schedule.total_cost else 0.0
+        if percentage_completed > 100.0: percentage_completed = 100.0 # avoid percentage_completed to be larger than 100.0
         return ActivityTrackingRecord(activity= activityGroup, percentage_completed= percentage_completed, earned_value= total_earned_value, planned_value= total_planned_value,
                                       actual_cost= total_actual_cost, actual_duration= total_actual_duration)
 

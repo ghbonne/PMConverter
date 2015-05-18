@@ -176,25 +176,30 @@ class XLSXParser(FileParser):
                         raise XLSXParseError("process_project_controls: No percentage completed found on row {0} of sheet {1}".format(curr_row, project_control_sheet.title))
 
                     # In the test file, some percentages are strings, some are ints, some are floats (#YOLO)
+                    # update: keep all decimals if present!
                     if type(percentage_completed_str) != str:
                         percentage_completed_str *= 100
-                    if type(percentage_completed_str) == float:
-                        percentage_completed_str = int(round(percentage_completed_str))  # round the floating point number to an int
+                    #if type(percentage_completed_str) == float:
+                    #    percentage_completed_str = int(round(percentage_completed_str))  # round the floating point number to an int
                     percentage_completed_str = str(percentage_completed_str)
                     if not percentage_completed_str[-1].isdigit():
                         percentage_completed_str = percentage_completed_str[:-1]
                     if float(percentage_completed_str) < 1:
                         percentage_completed_str = float(float(percentage_completed_str)*100)
-                    percentage_completed = int(round(float(percentage_completed_str)))
+                    #percentage_completed = int(round(float(percentage_completed_str)))
+                    percentage_completed = float(percentage_completed_str)
                     if percentage_completed > 100:
-                        print("Gilles V has made a stupid error by putting some ifs & transformations in XLSXparser.py "
-                              "with the variable percentage_completed_str")
+                        if percentage_completed > 100 + 1e-5:
+                            print("Gilles V has made a stupid error by putting some ifs & transformations in XLSXparser.py "
+                                "with the variable percentage_completed_str")
+                        # fix percentage completed to 100.0
+                        percentage_completed = 100.0
 
                     # convert percentage completed to remainnig duration:
                     if percentage_completed > 0:
-                        remainingDuration_hours = actual_duration_hours / float(percentage_completed) * 100 - actual_duration_hours
+                        remainingDuration_hours = round(actual_duration_hours / float(percentage_completed) * 100 - actual_duration_hours)
                     else:
-                        remainingDuration_hours = currentActivity.baseline_schedule.duration.days * agenda.get_working_hours_in_a_day() + currentActivity.baseline_schedule.duration.seconds / 3600
+                        remainingDuration_hours = round(currentActivity.baseline_schedule.duration.days * agenda.get_working_hours_in_a_day() + currentActivity.baseline_schedule.duration.seconds / 3600)
                     
                     remaining_duration = agenda.get_workingDuration_timedelta(remainingDuration_hours)
 
@@ -209,7 +214,7 @@ class XLSXParser(FileParser):
                     tracking_status = ""
                     if actual_start == datetime.datetime.max:
                         tracking_status = "Not Started"
-                    elif percentage_completed == 100:
+                    elif abs(percentage_completed - 100) < 1e-10: # compare float
                         tracking_status = "Finished"
                     else:
                         tracking_status = "Started"
@@ -298,25 +303,30 @@ class XLSXParser(FileParser):
                         raise XLSXParseError("process_project_controls: No percentage completed found on row {0} of sheet {1}".format(curr_row, project_control_sheet.title))
 
                     # In the test file, some percentages are strings, some are ints, some are floats (#YOLO)
+                    # update: keep all decimals if present!
                     if type(percentage_completed_str) != str:
                         percentage_completed_str *= 100
-                    if type(percentage_completed_str) == float:
-                        percentage_completed_str = int(round(percentage_completed_str)) # round the floating point number to an int
+                    #if type(percentage_completed_str) == float:
+                    #    percentage_completed_str = int(round(percentage_completed_str)) # round the floating point number to an int
                     percentage_completed_str = str(percentage_completed_str)
                     if not percentage_completed_str[-1].isdigit():
                         percentage_completed_str = percentage_completed_str[:-1]
                     if float(percentage_completed_str) < 1:
                         percentage_completed_str = float(float(percentage_completed_str)*100)
-                    percentage_completed = int(percentage_completed_str)
+                    #percentage_completed = int(round(percentage_completed_str))
+                    percentage_completed = float(percentage_completed_str)
                     if percentage_completed > 100:
-                        print("Gilles V has made a stupid error by putting some ifs & transformations in XLSXparser.py "
-                              "with the variable percentage_completed_str")
+                        if percentage_completed > 100 + 1e-5:
+                            print("Gilles V has made a stupid error by putting some ifs & transformations in XLSXparser.py "
+                                "with the variable percentage_completed_str")
+                        # fix percentage completed to 100.0
+                        percentage_completed = 100.0
 
                     # convert percentage completed to remainnig duration:
                     if percentage_completed > 0:
-                        remainingDuration_hours = actual_duration_hours / float(percentage_completed) * 100 - actual_duration_hours
+                        remainingDuration_hours = round(actual_duration_hours / float(percentage_completed) * 100 - actual_duration_hours)
                     else:
-                        remainingDuration_hours = currentActivity.baseline_schedule.duration.days * agenda.get_working_hours_in_a_day() + currentActivity.baseline_schedule.duration.seconds / 3600
+                        remainingDuration_hours = round(currentActivity.baseline_schedule.duration.days * agenda.get_working_hours_in_a_day() + currentActivity.baseline_schedule.duration.seconds / 3600)
                     remaining_duration = agenda.get_workingDuration_timedelta(remainingDuration_hours)
 
                     # derive other fields:
@@ -330,7 +340,7 @@ class XLSXParser(FileParser):
                     tracking_status = ""
                     if actual_start == datetime.datetime.max:
                         tracking_status = "Not Started"
-                    elif percentage_completed == 100:
+                    elif abs(percentage_completed - 100) < 1e-10: # compare float
                         tracking_status = "Finished"
                     else:
                         tracking_status = "Started"
@@ -409,29 +419,30 @@ class XLSXParser(FileParser):
     def process_activity_resource_assignments(self, activity_assignment_str, activity_resources, resources_dict, activity_baseline_duration_workingHours):
         ":returns: total cost of resource assignments and implicitly add resource assignments to the activity.resources"
         resources_cost = 0.0
-        for activity_resource in activity_assignment_str.split(';'):
-            if not activity_resource: continue # if empty string => continue
-            activity_resource_name = resources_dict[activity_resource.split("[")[0]]
-            activity_resource_demand = 1
+        for activity_resource_readString in activity_assignment_str.split(';'):
+            if not activity_resource_readString: continue # if empty string => continue
+            activity_resource = resources_dict[activity_resource_readString.split("[")[0]]
+            activity_resource_demand = 1.0
             activity_resource_demand_fixed = False # for consumable resources only
-            if len(activity_resource.split("[")) > 1:
-                activity_resource_demand_str = activity_resource.split("[")[1].split(" ")[0]
+            if len(activity_resource_readString.split("[")) > 1:
+                activity_resource_demand_str = activity_resource_readString.split("[")[1].split(" ")[0]
                 activity_resource_demand_fixed = activity_resource_demand_str.endswith("F")
                 if activity_resource_demand_fixed: 
                     activity_resource_demand_str = activity_resource_demand_str[:-1]
                     # check if resource is consumable:
-                    if activity_resource_name.resource_type != ResourceType.CONSUMABLE:
-                        print("XLSXParser:process_baseline_schedule:Found a fixed resource assignment to {0}, which is a non-consumable resource type!".format(activity_resource_name.name))
+                    if activity_resource.resource_type != ResourceType.CONSUMABLE:
+                        print("XLSXParser:process_baseline_schedule:Found a fixed resource assignment to {0}, which is a non-consumable resource type!".format(activity_resource.name))
                         activity_resource_demand_fixed = False
         
-                activity_resource_demand = int(float(activity_resource_demand_str.translate(str.maketrans(",", "."))))
-                # calculate cost of resource assignment
-                resource_demand_cost = Resource.calculate_resource_assignment_cost(activity_resource_name, activity_resource_demand, activity_resource_demand_fixed, activity_baseline_duration_workingHours)
-                resources_cost += resource_demand_cost
-                # update resource its total cost:
-                activity_resource_name.total_resource_cost += resource_demand_cost
+                activity_resource_demand = float(activity_resource_demand_str.translate(str.maketrans(",", "."))) # demand can be integer or float!
+
+            # calculate cost of resource assignment
+            resource_demand_cost = Resource.calculate_resource_assignment_cost(activity_resource, activity_resource_demand, activity_resource_demand_fixed, activity_baseline_duration_workingHours)
+            resources_cost += resource_demand_cost
+            # update resource its total cost:
+            activity_resource.total_resource_cost += resource_demand_cost
         
-            activity_resources.append((activity_resource_name, activity_resource_demand, activity_resource_demand_fixed))
+            activity_resources.append((activity_resource, activity_resource_demand, activity_resource_demand_fixed))
 
         return resources_cost
 
@@ -913,10 +924,10 @@ class XLSXParser(FileParser):
 
         if ES >= currentTime:
             timeBetween = project_object.agenda.get_time_between(currentTime, ES)
-            return (timeBetween.days * project_object.agenda.get_working_hours_in_a_day() + int(timeBetween.seconds / 3600), XLSXParser.get_duration_str(timeBetween, False))
+            return (timeBetween.days * project_object.agenda.get_working_hours_in_a_day() + round(timeBetween.seconds / 3600), XLSXParser.get_duration_str(timeBetween, False))
         else:
             timeBetween = project_object.agenda.get_time_between(ES, currentTime)
-            return (- timeBetween.days * project_object.agenda.get_working_hours_in_a_day() - int(timeBetween.seconds / 3600), XLSXParser.get_duration_str(timeBetween, True))
+            return (- timeBetween.days * project_object.agenda.get_working_hours_in_a_day() - round(timeBetween.seconds / 3600), XLSXParser.get_duration_str(timeBetween, True))
 
     def calculate_SPIt(self, project_object, ES, currentTime):
         "This fuction calculates the SPI(t) value = ES / AT"
@@ -928,7 +939,7 @@ class XLSXParser(FileParser):
         if durationWorkingTimeAT.total_seconds() <= 0:
             return 0.0
 
-        return (durationWorkingTimeES.days * project_object.agenda.get_working_hours_in_a_day() + (durationWorkingTimeES.seconds / 3600)) / (durationWorkingTimeAT.days * project_object.agenda.get_working_hours_in_a_day() + (durationWorkingTimeAT.seconds / 3600.0))
+        return (durationWorkingTimeES.days * project_object.agenda.get_working_hours_in_a_day() + round(durationWorkingTimeES.seconds / 3600)) / (durationWorkingTimeAT.days * project_object.agenda.get_working_hours_in_a_day() + round(durationWorkingTimeAT.seconds / 3600.0))
 
     def calculate_p_factor(self, project_object, tracking_period, ES):
         "This function calculates the p-factor for the given tracking_period and ES datetime"
@@ -1703,14 +1714,14 @@ class XLSXParser(FileParser):
             # Writing a duration requires some converting..
             if delta.days != 0 and delta.seconds != 0:
                 if not negativeValue:
-                    duration = str(delta.days) + "d " + str(int(delta.seconds / 3600)) + "h"
+                    duration = str(delta.days) + "d " + str(round(delta.seconds / 3600.0)) + "h"
                 else:
-                    duration = "-" + str(delta.days) + "d " + str(int(delta.seconds / 3600)) + "h"
+                    duration = "-" + str(delta.days) + "d " + str(round(delta.seconds / 3600.0)) + "h"
             elif delta.seconds != 0:
                 if not negativeValue:
-                    duration = "0d " + str(int(delta.seconds / 3600)) + "h"
+                    duration = "0d " + str(round(delta.seconds / 3600.0)) + "h"
                 else:
-                    duration = "0d -" + str(int(delta.seconds / 3600)) + "h"
+                    duration = "0d -" + str(round(delta.seconds / 3600.0)) + "h"
             else:
                 if not negativeValue:
                     duration = str(delta.days) + "d"

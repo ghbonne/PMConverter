@@ -71,8 +71,9 @@ class Activity(object):
 
             if(not isinstance(resources, list) or not all(isinstance(element, tuple) for element in resources)
                or not all(isinstance(element[0], Resource) for element in resources)
-               or not all(isinstance(element[1], int) for element in resources)):
-                raise TypeError('resources should be a list with tuples (resource: Resource, demand: int)!')
+               or not all(isinstance(element[1], float) for element in resources)
+               or not all(isinstance(element[2], bool) for element in resources)):
+                raise TypeError('resources should be a list with tuples (resource: Resource, demand: float, fixed assignment: bool)!')
 
             if not isinstance(resource_cost, float):
                 raise TypeError('resource_cost must be a float!')

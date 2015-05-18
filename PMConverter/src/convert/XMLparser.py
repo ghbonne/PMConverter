@@ -168,7 +168,7 @@ class XMLParser(FileParser):
     def update_activities_aggregated_costs(self, activities_list, agenda):
         "This function updates the given activities their total_cost and resource_cost fields"
         for activity in activities_list:
-            activityDuration_hours = activity.baseline_schedule.duration.days * agenda.get_working_hours_in_a_day() + activity.baseline_schedule.duration.seconds / 3600
+            activityDuration_hours = activity.baseline_schedule.duration.days * agenda.get_working_hours_in_a_day() + round(activity.baseline_schedule.duration.seconds / 3600)
             resource_cost = 0
             for resourceTuple in activity.resources:
                 resource = resourceTuple[0]
@@ -230,7 +230,7 @@ class XMLParser(FileParser):
             
         
         return ActivityTrackingRecord(activity, actualStart, actualDuration, planned_actual_cost, float(planned_remaining_cost), remainingDuration, actualCostDev,
-                                                        remainingCostDev, actual_cost, remaining_cost, int(round(percentageComplete)), trackingStatus, float(earned_value), float(planned_value), True)
+                                                        remainingCostDev, actual_cost, remaining_cost, percentageComplete, trackingStatus, float(earned_value), float(planned_value), True)
 
 
     def to_schedule_object(self, file_path_input):
@@ -459,7 +459,7 @@ class XMLParser(FileParser):
                     # both Id's are found => add resource assignment
                     resource = res_dict[res_id]
                     # check if consumable resource if to add fixed assignment
-                    res_assignment = (resource, res_demand, False if resource.resource_type != ResourceType.CONSUMABLE else res_fixed_assignment)
+                    res_assignment = (resource, float(res_demand), False if resource.resource_type != ResourceType.CONSUMABLE else res_fixed_assignment)
                     activity_dict[activity_ID].resources.append(res_assignment)
                 #else:
                 #    # resource assignment to a non-existing acitivity or resource: ignore
@@ -1211,12 +1211,12 @@ class XMLParser(FileParser):
             customValues_dict["ActualStart"] = self.get_date_string(activityTrackingRecord.actual_start, datetimeFormat)
         if activityTrackingRecord.actual_duration:
             # actual duration > 0
-            customValues_dict["ActualDuration"] = str(activityTrackingRecord.actual_duration.days * agenda.get_working_hours_in_a_day() + int(round(activityTrackingRecord.actual_duration.seconds / 3600)))
+            customValues_dict["ActualDuration"] = str(activityTrackingRecord.actual_duration.days * agenda.get_working_hours_in_a_day() + int(round(activityTrackingRecord.actual_duration.seconds / 3600.0)))
         if activityTrackingRecord.deviation_pac:
             # PACdev != 0
             customValues_dict["ActualCostDev"] = str(activityTrackingRecord.deviation_pac)
         if activityTrackingRecord.remaining_duration:
-            customValues_dict["RemainingDuration"] = str(activityTrackingRecord.remaining_duration.days * agenda.get_working_hours_in_a_day() + int(round(activityTrackingRecord.remaining_duration.seconds / 3600))) 
+            customValues_dict["RemainingDuration"] = str(activityTrackingRecord.remaining_duration.days * agenda.get_working_hours_in_a_day() + int(round(activityTrackingRecord.remaining_duration.seconds / 3600.0))) 
         if activityTrackingRecord.deviation_prc:
             # PRCdev != 0
             customValues_dict["RemainingCostDev"] = str(activityTrackingRecord.deviation_prc)
