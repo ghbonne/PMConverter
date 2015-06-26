@@ -7,7 +7,7 @@ from visual.charts.linechart import LineChart
 class Performance(Visualization):
 
     """
-    Implements drawings for performance chart (CPI,SPI) (type = Line chart)
+    Implements drawings for performance chart (CPI,SPI(t)) (type = Line chart)
 
     Common:
     :var title: str, title of the graph
@@ -48,9 +48,9 @@ class Performance(Visualization):
              names,
              ['Tracking Overview', 2, 32, (1+tp_size), 32]
              ],
-            ["SPI",
+            ["SPI(t)",
              names,
-             ['Tracking Overview', 2, 31, (1+tp_size), 31]
+             ['Tracking Overview', 2, 38, (1+tp_size), 38]
              ],
         ]
 
