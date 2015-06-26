@@ -20,8 +20,8 @@ class Performance(Visualization):
     """
 
     def __init__(self):
-        self.title = "CPI,SPI"
-        self.description = "A line graph showing the Cost Performance Index and Schedule Performance Index of the project, based on the available tracking periods."
+        self.title = "CPI,SPI(t)"
+        self.description = "A line graph showing the Cost Performance Index and Schedule Performance Index as (earned schedule / actual duration) of the project, based on the available tracking periods."
         self.parameters = {"x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
         self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]

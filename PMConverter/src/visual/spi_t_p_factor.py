@@ -19,8 +19,8 @@ class SpiTvsPfactor(Visualization):
     """
 
     def __init__(self):
-        self.title = "SPI(t), p-factor"
-        self.description = "A line graph showing the Schedule Performance Index as (earned schedule / actual duration) and the p-factor of the project, based on the available tracking periods."
+        self.title = "SPI, SPI(t), p-factor"
+        self.description = "A line graph showing the Schedule Performance Index, the Schedule Performance Index as (earned schedule / actual duration) and the p-factor of the project, based on the available tracking periods."
         self.parameters = {"x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
         self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
@@ -44,6 +44,10 @@ class SpiTvsPfactor(Visualization):
             names = ['Tracking Overview', 2, 2, (1+tp_size), 2]
 
         data_series = [
+            ["SPI",
+             names,
+             ['Tracking Overview', 2, 31, (1+tp_size), 31]
+             ],
             ["SPI(t)",
              names,
              ['Tracking Overview', 2, 33, (1+tp_size), 33]
