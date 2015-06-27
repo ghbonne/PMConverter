@@ -27,12 +27,12 @@ class BaselineSchedule(Visualization):
         chartsheet = workbook.add_worksheet("Gantt chart")
         self.change_order(workbook)
 
-        names = "='" + worksheet.get_name() + "'!$B$3:$B$" + str(size)
+        names = "='" + worksheet.get_name() + "'!$B$4:$B$" + str(size)
         if excel_version == ExcelVersion.EXTENDED:
-            baseline_start = "='" + worksheet.get_name() + "'!$F$3:$F$" + str(size)
+            baseline_start = "='" + worksheet.get_name() + "'!$F$4:$F$" + str(size)
         else:
-            baseline_start = "='" + worksheet.get_name() + "'!$E$3:$E$" + str(size)
-        baseline_duration = "='" + worksheet.get_name() + "'!$Q$3:$Q$" + str(size)
+            baseline_start = "='" + worksheet.get_name() + "'!$E$4:$E$" + str(size)
+        baseline_duration = "='" + worksheet.get_name() + "'!$Q$4:$Q$" + str(size)
 
         data_series = [
             ["Baseline start",

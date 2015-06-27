@@ -13,7 +13,7 @@ class GanttChart(Chart):
 
     def draw(self, workbook, worksheet, size={}):
         """
-        add a linechart visualisation to the Excel-file
+        add a barchart visualisation to the Excel-file
         :param workbook: xlsxworkbook
         :return:
         """
