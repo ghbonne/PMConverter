@@ -50,7 +50,7 @@ class Performance(Visualization):
              ],
             ["SPI(t)",
              names,
-             ['Tracking Overview', 2, 38, (1+tp_size), 38]
+             ['Tracking Overview', 2, 31, (1+tp_size), 31]
              ],
         ]
 
@@ -74,12 +74,12 @@ class Performance(Visualization):
                                       'border': 1, 'font_size': 8})
         calculation = workbook.add_format({'bg_color': '#FFF2CC', 'text_wrap': True, 'border': 1, 'font_size': 8})
 
-        worksheet.write('AF2', 'SPI', header)
+        worksheet.write('AF2', 'SPI(t)', header)
         worksheet.write('AG2', 'CPI', header)
 
         counter = 2
 
         for tp in project_object.tracking_periods:
-            worksheet.write_number(counter, 31, tp.spi, calculation)
+            worksheet.write_number(counter, 31, tp.spi_t, calculation)
             worksheet.write_number(counter, 32, tp.cpi, calculation)
             counter += 1

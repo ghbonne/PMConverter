@@ -44,11 +44,11 @@ class SpiTvsPfactor(Visualization):
             names = ['Tracking Overview', 2, 2, (1+tp_size), 2]
 
         data_series = [
-            ["SPI",
+            ["SPI(t)",
              names,
              ['Tracking Overview', 2, 31, (1+tp_size), 31]
              ],
-            ["SPI(t)",
+            ["SPI",
              names,
              ['Tracking Overview', 2, 33, (1+tp_size), 33]
              ],
@@ -78,13 +78,15 @@ class SpiTvsPfactor(Visualization):
                                       'border': 1, 'font_size': 8})
         calculation = workbook.add_format({'bg_color': '#FFF2CC', 'text_wrap': True, 'border': 1, 'font_size': 8})
 
-        worksheet.write('AH2', 'SPI(t)', header)
+        worksheet.write('AF2', 'SPI(t)', header)
+        worksheet.write('AH2', 'SPI', header)
         worksheet.write('AI2', 'p-factor', header)
 
         counter = 2
 
         for tp in project_object.tracking_periods:
-            worksheet.write_number(counter, 33, tp.spi_t, calculation)
+            worksheet.write_number(counter, 31, tp.spi_t, calculation)
+            worksheet.write_number(counter, 33, tp.spi, calculation)
             worksheet.write_number(counter, 34, tp.p_factor, calculation)
             counter += 1
 
