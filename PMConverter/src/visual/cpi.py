@@ -78,6 +78,13 @@ class CPI(Visualization):
     Private methods
     """
     def calculate_threshold(self, workbook, worksheet, tp_size):
+        """
+        Calculate the values for the treshold
+        :param workbook:
+        :param worksheet:
+        :param tp_size:
+        :return:
+        """
         header = workbook.add_format({'bold': True, 'bg_color': '#316AC5', 'font_color': 'white', 'text_wrap': True,
                                       'border': 1, 'font_size': 8})
         calculation = workbook.add_format({'bg_color': '#FFF2CC', 'text_wrap': True, 'border': 1, 'font_size': 8})
@@ -89,10 +96,7 @@ class CPI(Visualization):
             for i in range(0, tp_size):
                 worksheet.write(start + i, 37, self.thresholdValues[0], calculation)
         else:
-            if self.thresholdValues[0] > self.thresholdValues[1]:
-                value = (self.thresholdValues[0] - self.thresholdValues[1])/(tp_size - 1)
-            else:
-                value = (self.thresholdValues[1] - self.thresholdValues[0])/(tp_size - 1)
+            value = (self.thresholdValues[1] - self.thresholdValues[0])/(tp_size - 1)
             for i in range(0, tp_size):
                 worksheet.write(start + i, 37, self.thresholdValues[0] + (i * value), calculation)
 
