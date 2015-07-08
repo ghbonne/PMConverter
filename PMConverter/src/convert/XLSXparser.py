@@ -35,6 +35,7 @@ class XLSXParser(FileParser):
     def __init__(self):
         super(XLSXParser, self).__init__()
 
+    """ ---------------------- MAIN FUNCTION TO READ FROM EXCEL ------------------------- """
     def to_schedule_object(self, file_path_input):
         # determine if we're reading a basic or extended version (#columns)
 
@@ -55,9 +56,8 @@ class XLSXParser(FileParser):
 
         if activities_sheet.cell(row=2, column=14).value:  # We know if is an extended version if the baseline schedule contains 14 columns
             # We are processing an extended version
-            # Process the agenda sheet first to have an agendo to parse all dates in in the other sheets
+            # Process the agenda sheet first to have an agenda to parse all dates in in the other sheets
             if agenda_sheet:
-                #print(agenda_sheet) #DEBUG
                 agenda = self.process_agenda(agenda_sheet)
             else:
                 agenda = Agenda()
@@ -73,7 +73,7 @@ class XLSXParser(FileParser):
             activities_dict, activityGroups_dict, activityGroup_to_childActivities_dict, project_name = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict, ExcelVersion.EXTENDED, agenda)
             #print(activities_dict)
             tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, activityGroups_dict, activityGroup_to_childActivities_dict, ExcelVersion.EXTENDED, agenda)
-            #print(tracking_periods)   
+            #print(tracking_periods)
 
             return ProjectObject(name= project_name,activities=[i[1] for i in sorted(activities_dict.values(), key=lambda x: x[1].wbs_id)],
                                  resources=sorted(resources_dict.values(), key=lambda x: x.resource_id),
@@ -88,611 +88,13 @@ class XLSXParser(FileParser):
             risk_analysis_dict = self.process_risk_analysis(risk_analysis_sheet, ExcelVersion.BASIC)
             activities_dict, activityGroups_dict, activityGroup_to_childActivities_dict, project_name = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict, ExcelVersion.BASIC, agenda)
             tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, activityGroups_dict, activityGroup_to_childActivities_dict, ExcelVersion.BASIC, agenda)
-            
+
 
             return ProjectObject(name= project_name,activities=[i[1] for i in sorted(activities_dict.values(), key=lambda x: x[0])],
                                  resources=sorted(resources_dict.values(), key=lambda x: x.resource_id), tracking_periods=tracking_periods,
                                  agenda=agenda)
 
-    def process_agenda(self, agenda_sheet):
-        working_days = [0]*7
-        working_hours = [0]*24
-        holidays = []
-        for i in range(0, 24):
-            if agenda_sheet.cell(row=i+2, column=2).value.lower() == "yes":
-                working_hours[i] = 1
-        for i in range(0, 7):
-            if agenda_sheet.cell(row=i+2, column=5).value.lower() == "yes":
-                working_days[i] = 1
-        i = 2
-        while agenda_sheet.cell(row=i, column=7).value:
-            holiday_field = agenda_sheet.cell(row=i, column=7).value
-            if type(holiday_field) is not datetime.datetime:
-                holidays.append(datetime.datetime.utcfromtimestamp(((holiday_field - 25569)*86400)).date())  # ugly hack to convert
-            else:
-                holidays.append(holiday_field.date())
-
-            #holidays.append(holiday_field)
-            i += 1
-        return Agenda(working_hours=working_hours, working_days=working_days, holidays=holidays)
-
-    def process_project_controls(self, project_control_sheets, activities_dict, activityGroups_dict, activityGroup_to_childActivities_dict, excel_version, agenda):
-        tracking_periods = []
-        if excel_version == ExcelVersion.EXTENDED:
-            for project_control_sheet in project_control_sheets:
-                tp_status_date_field = project_control_sheet.cell(row=1, column=3).value
-                if tp_status_date_field:
-                    if type(tp_status_date_field) is float:
-                        tp_date = datetime.datetime.utcfromtimestamp(((tp_status_date_field - 25569)*86400))
-                    else:
-                        tp_date = tp_status_date_field
-                else:
-                    raise XLSXParseError("process_project_controls: No status date found on tracking period sheet: {0}".format(project_control_sheet.title))
-
-                tp_name = project_control_sheet.cell(row=1, column=6).value
-                if not tp_name:
-                    # no TP name was given:
-                    tp_name = project_control_sheet.title
-
-                act_track_records = []
-                currentTrackingPeriod_records_dict = {}
-
-                for curr_row in range(self.get_nr_of_header_lines(project_control_sheet), project_control_sheet.get_highest_row()+1):
-                    # don't read activityGroups, add them later
-                    activity_id_field = project_control_sheet.cell(row=curr_row, column=1).value
-                    if activity_id_field is not None:
-                        # check if activity_id field corresponds with an activityGroup:
-                        if int(activity_id_field) in activityGroups_dict:
-                            # process groups later
-                            continue
-
-                    # processing an activity tracking record:
-                    activity_id = int(activity_id_field)
-                    currentActivity = activities_dict[activity_id][1]
-                    actual_start = datetime.datetime.max  # Set a default value in case there is nothing in that cell
-                    actual_duration = datetime.timedelta(0) # default
-                    actual_duration_hours = 0 # default
-                    if project_control_sheet.cell(row=curr_row, column=12).value is not None:
-                        if type(project_control_sheet.cell(row=curr_row, column=12).value) is not datetime.datetime:
-                            actual_start = datetime.datetime.utcfromtimestamp(((project_control_sheet.cell(row=curr_row, column=12).value - 25569)*86400))  # ugly hack to convert
-                        else:
-                            actual_start = project_control_sheet.cell(row=curr_row, column=12).value
-                    
-                    
-                    actualDuration_field = project_control_sheet.cell(row=curr_row, column=13).value
-                    if actualDuration_field is not None and isinstance(actualDuration_field, str):
-                        actual_duration_hours = agenda.convert_durationString_to_workingHours(project_control_sheet.cell(row=curr_row, column=13).value)
-                        actual_duration = agenda.get_workingDuration_timedelta(actual_duration_hours)
-
-                    prc_dev = 0.0
-                    if project_control_sheet.cell(row=curr_row, column=18).value:
-                        prc_dev = float(project_control_sheet.cell(row=curr_row, column=18).value)
-
-                    actual_cost = 0.0
-                    if project_control_sheet.cell(row=curr_row, column=19).value:
-                        actual_cost = float(project_control_sheet.cell(row=curr_row, column=19).value)
-
-                    percentage_completed_str = project_control_sheet.cell(row=curr_row, column=21).value  # always given
-                    if percentage_completed_str is None or percentage_completed_str == "":
-                        raise XLSXParseError("process_project_controls: No percentage completed found on row {0} of sheet {1}".format(curr_row, project_control_sheet.title))
-
-                    # In the test file, some percentages are strings, some are ints, some are floats (#YOLO)
-                    # update: keep all decimals if present!
-                    if type(percentage_completed_str) != str:
-                        percentage_completed_str *= 100
-                    #if type(percentage_completed_str) == float:
-                    #    percentage_completed_str = int(round(percentage_completed_str))  # round the floating point number to an int
-                    percentage_completed_str = str(percentage_completed_str)
-                    if not percentage_completed_str[-1].isdigit():
-                        percentage_completed_str = percentage_completed_str[:-1]
-                    if float(percentage_completed_str) < 1:
-                        percentage_completed_str = float(float(percentage_completed_str)*100)
-                    #percentage_completed = int(round(float(percentage_completed_str)))
-                    percentage_completed = float(percentage_completed_str)
-                    if percentage_completed > 100:
-                        if percentage_completed > 100 + 1e-5:
-                            print("Gilles V has made a stupid error by putting some ifs & transformations in XLSXparser.py "
-                                "with the variable percentage_completed_str")
-                        # fix percentage completed to 100.0
-                        percentage_completed = 100.0
-
-                    # convert percentage completed to remainnig duration:
-                    if percentage_completed > 0:
-                        remainingDuration_hours = round(actual_duration_hours / float(percentage_completed) * 100 - actual_duration_hours)
-                    else:
-                        remainingDuration_hours = round(currentActivity.baseline_schedule.duration.days * agenda.get_working_hours_in_a_day() + currentActivity.baseline_schedule.duration.seconds / 3600)
-                    
-                    remaining_duration = agenda.get_workingDuration_timedelta(remainingDuration_hours)
-
-                    # derive other fields:
-                    actual_cost_calced, earned_value, planned_actual_cost, planned_remaining_cost, planned_value, remaining_cost = \
-                            ActivityTrackingRecord.calculate_activityTrackingRecord_derived_values(activities_dict[activity_id][1],0, actual_duration_hours, agenda, percentage_completed, prc_dev,
-                                                                                                   remainingDuration_hours, tp_date, actual_start)
-        
-                    pac_dev = actual_cost - planned_actual_cost
-
-                    # determine tracking status:
-                    tracking_status = ""
-                    if actual_start == datetime.datetime.max:
-                        tracking_status = "Not Started"
-                    elif abs(percentage_completed - 100) < 1e-10: # compare float
-                        tracking_status = "Finished"
-                    else:
-                        tracking_status = "Started"
-
-
-                    act_track_record = ActivityTrackingRecord(activity=activities_dict[activity_id][1],
-                                                              actual_start=actual_start, actual_duration=actual_duration,
-                                                              planned_actual_cost=planned_actual_cost, planned_remaining_cost=planned_remaining_cost,
-                                                              remaining_duration=remaining_duration, deviation_pac=pac_dev,
-                                                              deviation_prc=prc_dev, actual_cost=actual_cost,
-                                                              remaining_cost=remaining_cost,
-                                                              percentage_completed=percentage_completed,
-                                                              tracking_status=tracking_status, earned_value=earned_value,
-                                                              planned_value=planned_value)
-                    act_track_records.append(act_track_record)
-                    currentTrackingPeriod_records_dict[activity_id] = act_track_record
-                #endFor reading acitivityTracking records
-
-                currentTrackingPeriod = TrackingPeriod(tracking_period_name=tp_name, tracking_period_statusdate=tp_date,
-                                                       tracking_period_records=act_track_records)
-                # calculate aggregated values for activityGroups tracking:
-                for activityGroupId in activityGroups_dict.keys():
-                    childActivityIds = activityGroup_to_childActivities_dict[activityGroupId]
-                    # construct the activityGroup trackingRecord:
-                    activityGroup_trackingRecord = ActivityTrackingRecord.construct_activityGroup_trackingRecord(activityGroups_dict[activityGroupId], childActivityIds, currentTrackingPeriod_records_dict, tp_date, agenda)
-                    currentTrackingPeriod.tracking_period_records.append(activityGroup_trackingRecord)
-
-                # sort currentTrackingPeriod on wbs:
-                currentTrackingPeriod.tracking_period_records = sorted(currentTrackingPeriod.tracking_period_records, key=lambda activityTrackingRecord: activityTrackingRecord.activity.wbs_id)
-
-                # add trackingperiod to list
-                tracking_periods.append(currentTrackingPeriod)
-        else:
-            # BASIC input sheet
-            for project_control_sheet in project_control_sheets:
-                tp_status_date_field = project_control_sheet.cell(row=1, column=3).value
-                if tp_status_date_field is not None:
-                    if type(tp_status_date_field) is float:
-                        tp_date = datetime.datetime.utcfromtimestamp(((tp_status_date_field - 25569)*86400))
-                    else:
-                        tp_date = tp_status_date_field
-                else:
-                    raise XLSXParseError("process_project_controls: No status date found on tracking period sheet: {0}".format(project_control_sheet.title))
-
-                tp_name = project_control_sheet.cell(row=1, column=5).value
-                if not tp_name:
-                    # no TP name was given:
-                    tp_name = project_control_sheet.title
-                
-                act_track_records = []
-                currentTrackingPeriod_records_dict = {}
-
-                for curr_row in range(self.get_nr_of_header_lines(project_control_sheet), project_control_sheet.get_highest_row()+1):
-                    # don't read activityGroups, add them later
-                    activity_id_field = project_control_sheet.cell(row=curr_row, column=1).value
-                    if activity_id_field is not None:
-                        # check if activity_id field corresponds with an activityGroup:
-                        if int(activity_id_field) in activityGroups_dict:
-                            # process groups later
-                            continue
-
-                    # processing an activity tracking record:
-                    activity_id = int(activity_id_field)
-                    currentActivity = activities_dict[activity_id][1]
-                    actual_start = datetime.datetime.max  # Set a default value in case there is nothing in that cell
-                    actual_duration = datetime.timedelta(0) # default
-                    actual_duration_hours = 0 # default
-                    if project_control_sheet.cell(row=curr_row, column=12).value is not None:
-                        if type(project_control_sheet.cell(row=curr_row, column=12).value) is not datetime.datetime:
-                            actual_start = datetime.datetime.utcfromtimestamp(((project_control_sheet.cell(row=curr_row, column=3).value - 25569)*86400))  # ugly hack to convert
-                        else:
-                            actual_start = project_control_sheet.cell(row=curr_row, column=3).value
-                    
-                    if project_control_sheet.cell(row=curr_row, column=4).value is not None:
-                        actual_duration_hours = agenda.convert_durationString_to_workingHours(project_control_sheet.cell(row=curr_row, column=4).value)
-                        actual_duration = agenda.get_workingDuration_timedelta(actual_duration_hours)
-
-
-                    actual_cost = 0.0
-                    if project_control_sheet.cell(row=curr_row, column=5).value:
-                        actual_cost = float(project_control_sheet.cell(row=curr_row, column=5).value)
-                    prc_dev = 0.0
-
-                    percentage_completed_str = project_control_sheet.cell(row=curr_row, column=6).value  # always given
-                    if percentage_completed_str is None or percentage_completed_str == "":
-                        raise XLSXParseError("process_project_controls: No percentage completed found on row {0} of sheet {1}".format(curr_row, project_control_sheet.title))
-
-                    # In the test file, some percentages are strings, some are ints, some are floats (#YOLO)
-                    # update: keep all decimals if present!
-                    if type(percentage_completed_str) != str:
-                        percentage_completed_str *= 100
-                    #if type(percentage_completed_str) == float:
-                    #    percentage_completed_str = int(round(percentage_completed_str)) # round the floating point number to an int
-                    percentage_completed_str = str(percentage_completed_str)
-                    if not percentage_completed_str[-1].isdigit():
-                        percentage_completed_str = percentage_completed_str[:-1]
-                    if float(percentage_completed_str) < 1:
-                        percentage_completed_str = float(float(percentage_completed_str)*100)
-                    #percentage_completed = int(round(percentage_completed_str))
-                    percentage_completed = float(percentage_completed_str)
-                    if percentage_completed > 100:
-                        if percentage_completed > 100 + 1e-5:
-                            print("Gilles V has made a stupid error by putting some ifs & transformations in XLSXparser.py "
-                                "with the variable percentage_completed_str")
-                        # fix percentage completed to 100.0
-                        percentage_completed = 100.0
-
-                    # convert percentage completed to remainnig duration:
-                    if percentage_completed > 0:
-                        remainingDuration_hours = round(actual_duration_hours / float(percentage_completed) * 100 - actual_duration_hours)
-                    else:
-                        remainingDuration_hours = round(currentActivity.baseline_schedule.duration.days * agenda.get_working_hours_in_a_day() + currentActivity.baseline_schedule.duration.seconds / 3600)
-                    remaining_duration = agenda.get_workingDuration_timedelta(remainingDuration_hours)
-
-                    # derive other fields:
-                    actual_cost_calced, earned_value, planned_actual_cost, planned_remaining_cost, planned_value, remaining_cost = \
-                            ActivityTrackingRecord.calculate_activityTrackingRecord_derived_values(activities_dict[activity_id][1],0, actual_duration_hours, agenda, percentage_completed, prc_dev,
-                                                                                                   remainingDuration_hours, tp_date, actual_start)
-        
-                    pac_dev = actual_cost - planned_actual_cost
-
-                    # determine tracking status:
-                    tracking_status = ""
-                    if actual_start == datetime.datetime.max:
-                        tracking_status = "Not Started"
-                    elif abs(percentage_completed - 100) < 1e-10: # compare float
-                        tracking_status = "Finished"
-                    else:
-                        tracking_status = "Started"
-
-
-                    act_track_record = ActivityTrackingRecord(activity=activities_dict[activity_id][1],
-                                                              actual_start=actual_start, actual_duration=actual_duration,
-                                                              planned_actual_cost=planned_actual_cost, planned_remaining_cost=planned_remaining_cost,
-                                                              remaining_duration=remaining_duration, deviation_pac=pac_dev,
-                                                              deviation_prc=prc_dev, actual_cost=actual_cost,
-                                                              remaining_cost=remaining_cost,
-                                                              percentage_completed=percentage_completed,
-                                                              tracking_status=tracking_status, earned_value=earned_value,
-                                                              planned_value=planned_value)
-                    act_track_records.append(act_track_record)
-                    currentTrackingPeriod_records_dict[activity_id] = act_track_record
-                #endFor reading acitivityTracking records
-
-                currentTrackingPeriod = TrackingPeriod(tracking_period_name=tp_name, tracking_period_statusdate=tp_date,
-                                                       tracking_period_records=act_track_records)
-                # calculate aggregated values for activityGroups tracking:
-                for activityGroupId in activityGroups_dict.keys():
-                    childActivityIds = activityGroup_to_childActivities_dict[activityGroupId]
-                    # construct the activityGroup trackingRecord:
-                    activityGroup_trackingRecord = ActivityTrackingRecord.construct_activityGroup_trackingRecord(activityGroups_dict[activityGroupId], childActivityIds, currentTrackingPeriod_records_dict, tp_date, agenda)
-                    currentTrackingPeriod.tracking_period_records.append(activityGroup_trackingRecord)
-
-                # sort currentTrackingPeriod on wbs:
-                currentTrackingPeriod.tracking_period_records = sorted(currentTrackingPeriod.tracking_period_records, key=lambda activityTrackingRecord: activityTrackingRecord.activity.wbs_id)
-
-                # add trackingperiod to list
-                tracking_periods.append(currentTrackingPeriod)
-
-        # sort tracking periods on status date
-        tracking_periods = sorted(tracking_periods, key= lambda x: x.tracking_period_statusdate)
-        return tracking_periods
-
-    def process_resources(self, resource_sheet):
-        # We store the resources  in a dict, with as index the resource name, to access them easily later when we
-        # are processing the activities.
-        resources_dict = {}
-        for curr_row in range(self.get_nr_of_header_lines(resource_sheet), resource_sheet.get_highest_row()+1):
-            res_id = int(resource_sheet.cell(row=curr_row, column=1).value)
-            res_name = resource_sheet.cell(row=curr_row, column=2).value
-            res_type = resource_sheet.cell(row=curr_row, column=3).value
-            # Had to cast string -> float -> int (silly Python!)
-            res_ava = int(float(resource_sheet.cell(row=curr_row, column=4).value.split(" ")[0]
-                          .translate(str.maketrans(",", "."))))
-            res_cost_use = float(resource_sheet.cell(row=curr_row, column=5).value)
-            res_cost_unit = float(resource_sheet.cell(row=curr_row, column=6).value)
-            resources_dict[res_name] = Resource(resource_id=res_id, name=res_name, resource_type=res_type,
-                                                availability=res_ava, cost_use=res_cost_use, cost_unit=res_cost_unit)
-        return resources_dict
-
-    def process_risk_analysis(self, risk_analysis_sheet, excel_version):
-        risk_analysis_dict = {}
-        if excel_version == ExcelVersion.EXTENDED:
-            col = 4
-        else:
-            col = 3
-        for curr_row in range(self.get_nr_of_header_lines(risk_analysis_sheet), risk_analysis_sheet.get_highest_row()+1):
-            if risk_analysis_sheet.cell(row=curr_row, column=col).value is not None:
-                risk_ana_dist_type = risk_analysis_sheet.cell(row=curr_row, column=col).value.split(" - ")[0].strip()  # remove leading and trailing whitespace
-                risk_ana_dist_units = risk_analysis_sheet.cell(row=curr_row, column=col).value.split(" - ")[1].strip()  # remove leading and trailing whitespace
-                risk_ana_opt_duration = int(risk_analysis_sheet.cell(row=curr_row, column=col+1).value)
-                risk_ana_prob_duration = int(risk_analysis_sheet.cell(row=curr_row, column=col+2).value)
-                risk_ana_pess_duration = int(risk_analysis_sheet.cell(row=curr_row, column=col+3).value)
-                dict_id = int(risk_analysis_sheet.cell(row=curr_row, column=1).value)
-                risk_analysis_dict[dict_id] = RiskAnalysisDistribution(distribution_type=risk_ana_dist_type,
-                                                                       distribution_units=risk_ana_dist_units,
-                                                                       optimistic_duration=risk_ana_opt_duration,
-                                                                       probable_duration=risk_ana_prob_duration,
-                                                                       pessimistic_duration=risk_ana_pess_duration)
-        return risk_analysis_dict
-
-    def process_activity_resource_assignments(self, activity_assignment_str, activity_resources, resources_dict, activity_baseline_duration_workingHours):
-        ":returns: total cost of resource assignments and implicitly add resource assignments to the activity.resources"
-        resources_cost = 0.0
-        for activity_resource_readString in activity_assignment_str.split(';'):
-            if not activity_resource_readString: continue # if empty string => continue
-            activity_resource = resources_dict[activity_resource_readString.split("[")[0]]
-            activity_resource_demand = 1.0
-            activity_resource_demand_fixed = False # for consumable resources only
-            if len(activity_resource_readString.split("[")) > 1:
-                activity_resource_demand_str = activity_resource_readString.split("[")[1].split(" ")[0]
-                activity_resource_demand_fixed = activity_resource_demand_str.endswith("F")
-                if activity_resource_demand_fixed: 
-                    activity_resource_demand_str = activity_resource_demand_str[:-1]
-                    # check if resource is consumable:
-                    if activity_resource.resource_type != ResourceType.CONSUMABLE:
-                        print("XLSXParser:process_baseline_schedule:Found a fixed resource assignment to {0}, which is a non-consumable resource type!".format(activity_resource.name))
-                        activity_resource_demand_fixed = False
-        
-                activity_resource_demand = float(activity_resource_demand_str.translate(str.maketrans(",", "."))) # demand can be integer or float!
-
-            # calculate cost of resource assignment
-            resource_demand_cost = Resource.calculate_resource_assignment_cost(activity_resource, activity_resource_demand, activity_resource_demand_fixed, activity_baseline_duration_workingHours)
-            resources_cost += resource_demand_cost
-            # update resource its total cost:
-            activity_resource.total_resource_cost += resource_demand_cost
-        
-            activity_resources.append((activity_resource, activity_resource_demand, activity_resource_demand_fixed))
-
-        return resources_cost
-
-    def process_baseline_schedule(self, activities_sheet, resources_dict, risk_analysis_dict, excel_version, agenda):
-        activities_dict = {}  # contains all activities and group, activityId: (row, Activity)
-        activityGroups_dict = {} # contains only groups, activityId: Activity
-        # process the first project line manually:
-        first_data_row = self.get_nr_of_header_lines(activities_sheet)
-        project_name = activities_sheet.cell(row=first_data_row, column=2).value
-        projectGroupActivity = Activity(0, name=project_name, wbs_id=(1,))
-        activities_dict[0] = (first_data_row, projectGroupActivity)
-        activityGroups_dict[0] = projectGroupActivity
-
-        if excel_version == ExcelVersion.EXTENDED:
-            for curr_row in range(first_data_row + 1, activities_sheet.get_highest_row()+1):
-                activity_id = int(activities_sheet.cell(row=curr_row, column=1).value)
-                activity_name = activities_sheet.cell(row=curr_row, column=2).value
-                activity_wbs = ()
-                for number in activities_sheet.cell(row=curr_row, column=3).value.split("."):
-                    activity_wbs = activity_wbs + (int(number),)
-
-                # check if is activityGroup by var_cost: # NOTE: this is hack to determine if this row belongs to an activityGroup
-                if activities_sheet.cell(row=curr_row, column=13).value is None:
-                    # current row belongs to an activityGroup
-                    # don't read any further, calculate its aggregate value lateron:
-                    activityGroup = Activity(activity_id, name=activity_name, wbs_id=activity_wbs)
-                    activityGroups_dict[activity_id] = activityGroup
-                    activities_dict[activity_id] = (curr_row, activityGroup)
-                    continue
-
-                activity_predecessors = self.process_predecessors(activities_sheet.cell(row=curr_row, column=4).value, agenda)
-                activity_successors = self.process_successors(activities_sheet.cell(row=curr_row, column=5).value, agenda)
-               
-                if type(activities_sheet.cell(row=curr_row, column=6).value) is float:
-                    baseline_start = datetime.datetime.utcfromtimestamp(((activities_sheet.cell(row=curr_row, column=6).value -
-                                                                          25569)*86400))  # Convert to correct date
-                else:
-                    baseline_start = activities_sheet.cell(row=curr_row, column=6).value
-
-                # check if duration is given to calculate baseline end:
-                baseline_duration = 0
-                baseline_end = datetime.datetime.max
-                # read the field values of the mutual alternative fields:
-                baseline_end_field = activities_sheet.cell(row=curr_row, column=7).value
-                baseline_duration_field = activities_sheet.cell(row=curr_row, column=8).value
-                
-                if baseline_duration_field is not None and baseline_duration_field != "":
-                    # baseline duration is given
-                    baseline_duration_workingHours = agenda.convert_durationString_to_workingHours(baseline_duration_field)
-                    baseline_duration = agenda.get_workingDuration_timedelta(baseline_duration_workingHours)
-                    # calculate baseline end:
-                    baseline_end = agenda.get_end_date(baseline_start, baseline_duration.days, baseline_duration_workingHours - baseline_duration.days * agenda.get_working_hours_in_a_day())
-                elif baseline_end_field is not None and baseline_end_field != "":
-                    # end date is given
-                    if type(baseline_end_field) is float:
-                        baseline_end = datetime.datetime.utcfromtimestamp(((baseline_end_field -
-                                                                            25569)*86400))  # Convert to correct date
-                    else:
-                        baseline_end = baseline_end_field
-
-                    # calculate baseline duration:
-                    baseline_duration = agenda.get_time_between(baseline_start, baseline_end)
-                else:
-                    raise XLSXParseError("process_baseline_schedule:Acitivity on row {0}, has no basline duration or baseline end!".format(curr_row))
-
-                # process resource demand:
-                activity_resources = []
-                activity_resource_cost = 0.0 # calculate resource cost instead of reading it
-                if activities_sheet.cell(row=curr_row, column=9).value:
-                    activity_resource_cost = self.process_activity_resource_assignments(activities_sheet.cell(row=curr_row, column=9).value, activity_resources, resources_dict, baseline_duration_workingHours)
-                
-                baseline_fixed_cost = 0.0
-                if activities_sheet.cell(row=curr_row, column=11).value:
-                    baseline_fixed_cost = float(activities_sheet.cell(row=curr_row, column=11).value)
-
-                # check if cost/hour or variable cost is given to calculate values:
-                baseline_hourly_cost = 0.0
-                baseline_var_cost = 0.0
-
-                baseline_hourly_cost_field = activities_sheet.cell(row=curr_row, column=12).value
-                baseline_var_cost_field = activities_sheet.cell(row=curr_row, column=13).value
-
-                if baseline_hourly_cost_field is not None and baseline_hourly_cost_field != "":              
-                    baseline_hourly_cost = float(baseline_hourly_cost_field)
-                    # calculate var_cost:
-                    baseline_var_cost = baseline_hourly_cost * baseline_duration_workingHours
-                elif baseline_var_cost_field is not None and baseline_var_cost_field != "":                
-                    baseline_var_cost = float(baseline_var_cost_field)
-                    # calculate hourly cost:
-                    baseline_hourly_cost = baseline_var_cost / baseline_duration_workingHours if baseline_duration_workingHours != 0 else 0
-                else:
-                    raise XLSXParseError("process_baseline_schedule:Acitivity on row {0}, has no baseline hourly cost or baseline variable cost given!".format(curr_row))
-
-                # calculate total_cost:
-                baseline_total_cost = baseline_fixed_cost + baseline_var_cost + activity_resource_cost
-                #if activities_sheet.cell(row=curr_row, column=14).value:
-                #    baseline_total_cost = float(activities_sheet.cell(row=curr_row, column=14).value)
-
-
-                activity_baseline_schedule = BaselineScheduleRecord(start=baseline_start, end=baseline_end,
-                                                                    duration=baseline_duration,
-                                                                    fixed_cost=baseline_fixed_cost,
-                                                                    hourly_cost=baseline_hourly_cost,
-                                                                    var_cost=baseline_var_cost,
-                                                                    total_cost=baseline_total_cost)
-                activity_risk_analysis = None
-                if activity_id in risk_analysis_dict:
-                    activity_risk_analysis = risk_analysis_dict[activity_id]
-                
-
-                activities_dict[activity_id] = (curr_row, Activity(activity_id, name=activity_name, wbs_id=activity_wbs,
-                                                   predecessors=activity_predecessors, successors=activity_successors,
-                                                   baseline_schedule=activity_baseline_schedule,
-                                                   resource_cost=activity_resource_cost,
-                                                   risk_analysis=activity_risk_analysis, resources=activity_resources))
-        else:
-            # BASIC input sheet:
-            # build our own basic wbs
-            current_wbs = [1]
-            activityGroupFound = False # bool for building simple wbs
-
-            for curr_row in range(first_data_row + 1, activities_sheet.get_highest_row()+1):
-                activity_id = int(activities_sheet.cell(row=curr_row, column=1).value)
-                activity_name = activities_sheet.cell(row=curr_row, column=2).value
-
-                # check if is activityGroup by var_cost: # NOTE: this is hack to determine if this row belongs to an activityGroup
-                if activities_sheet.cell(row=curr_row, column=11).value is None:
-                    # current row belongs to an activityGroup
-                    # don't read any further, calculate its aggregate value lateron:
-                    if len(current_wbs) == 2:
-                        current_wbs[1] += 1
-                    elif len(current_wbs) > 2:
-                        current_wbs = current_wbs[:2]
-                        current_wbs[1] += 1
-                    else:
-                        # previous node was the project root:
-                        current_wbs = [1,1]
-
-                    activityGroupFound = True
-                    activityGroup = Activity(activity_id, name=activity_name, wbs_id= tuple(current_wbs))
-                    activityGroups_dict[activity_id] = activityGroup
-                    activities_dict[activity_id] = (curr_row, activityGroup)
-                    continue
-                else:
-                    # construct wbs of an activity:
-                    if len(current_wbs) == 2:
-                        if not activityGroupFound:
-                            current_wbs[1] += 1
-                        else:
-                            current_wbs.append(1)
-                    elif len(current_wbs) > 2:
-                        current_wbs[-1] += 1
-                    else:
-                        # previous node was the project root:
-                        current_wbs = [1,1]
-
-                activity_predecessors = self.process_predecessors(activities_sheet.cell(row=curr_row, column=3).value, agenda)
-                activity_successors = self.process_successors(activities_sheet.cell(row=curr_row, column=4).value, agenda)
-                if type(activities_sheet.cell(row=curr_row, column=5).value) is float:
-                    baseline_start = datetime.datetime.utcfromtimestamp(((activities_sheet.cell(row=curr_row, column=5).value -
-                                                                          25569)*86400))  # Convert to correct date
-                else:
-                    baseline_start = activities_sheet.cell(row=curr_row, column=5).value
-
-                # check if duration is given to calculate baseline end:
-                baseline_duration = 0
-                baseline_end = datetime.datetime.max
-                # read the field values of the mutual alternative fields:
-                baseline_end_field = activities_sheet.cell(row=curr_row, column=6).value
-                baseline_duration_field = activities_sheet.cell(row=curr_row, column=7).value
-                
-                if baseline_duration_field is not None and baseline_duration_field != "":
-                    # baseline duration is given
-                    baseline_duration_workingHours = agenda.convert_durationString_to_workingHours(baseline_duration_field)
-                    baseline_duration = agenda.get_workingDuration_timedelta(baseline_duration_workingHours)
-                    # calculate baseline end:
-                    baseline_end = agenda.get_end_date(baseline_start, baseline_duration.days, baseline_duration_workingHours - baseline_duration.days * agenda.get_working_hours_in_a_day())
-                elif baseline_end_field is not None and baseline_end_field != "":
-                    # end date is given
-                    if type(baseline_end_field) is float:
-                        baseline_end = datetime.datetime.utcfromtimestamp(((baseline_end_field -
-                                                                            25569)*86400))  # Convert to correct date
-                    else:
-                        baseline_end = baseline_end_field
-
-                    # calculate baseline duration:
-                    baseline_duration = agenda.get_time_between(baseline_start, baseline_end)
-                else:
-                    raise XLSXParseError("process_baseline_schedule:Acitivity on row {0}, has no basline duration or baseline end!".format(curr_row))
-
-                # process resource demand:
-                activity_resources = []
-                activity_resource_cost = 0.0 # calculate resource cost
-                if activities_sheet.cell(row=curr_row, column=8).value:
-                    activity_resource_cost = self.process_activity_resource_assignments(activities_sheet.cell(row=curr_row, column=8).value, activity_resources, resources_dict, baseline_duration_workingHours)
-
-                baseline_fixed_cost = 0.0
-                if activities_sheet.cell(row=curr_row, column=9).value:
-                    baseline_fixed_cost = float(activities_sheet.cell(row=curr_row, column=9).value)
-
-                # check if cost/hour or variable cost is given to calculate values:
-                baseline_hourly_cost = 0.0
-                baseline_var_cost = 0.0
-
-                baseline_hourly_cost_field = activities_sheet.cell(row=curr_row, column=10).value
-                baseline_var_cost_field = activities_sheet.cell(row=curr_row, column=11).value
-
-                if baseline_hourly_cost_field is not None and baseline_hourly_cost_field != "":              
-                    baseline_hourly_cost = float(baseline_hourly_cost_field)
-                    # calculate var_cost:
-                    baseline_var_cost = baseline_hourly_cost * baseline_duration_workingHours
-                elif baseline_var_cost_field is not None and baseline_var_cost_field != "":                
-                    baseline_var_cost = float(baseline_var_cost_field)
-                    # calculate hourly cost:
-                    baseline_hourly_cost = baseline_var_cost / baseline_duration_workingHours if baseline_duration_workingHours != 0 else 0
-                else:
-                    raise XLSXParseError("process_baseline_schedule:Acitivity on row {0}, has no baseline hourly cost or baseline variable cost given!".format(curr_row))
-
-                # calculate total_cost:
-                baseline_total_cost = baseline_fixed_cost + baseline_var_cost + activity_resource_cost
-
-                activity_baseline_schedule = BaselineScheduleRecord(start=baseline_start, end=baseline_end,
-                                                                    duration=baseline_duration,
-                                                                    fixed_cost=baseline_fixed_cost,
-                                                                    hourly_cost=baseline_hourly_cost,
-                                                                    var_cost=baseline_var_cost,
-                                                                    total_cost=baseline_total_cost)
-
-                activity_risk_analysis = None
-                if activity_id in risk_analysis_dict:
-                    activity_risk_analysis = risk_analysis_dict[activity_id]
-
-                activities_dict[activity_id] = (curr_row, Activity(activity_id, name=activity_name, wbs_id=tuple(current_wbs),
-                                                   predecessors=activity_predecessors, successors=activity_successors,
-                                                   baseline_schedule=activity_baseline_schedule,
-                                                   resource_cost=activity_resource_cost,
-                                                   risk_analysis=activity_risk_analysis, resources=activity_resources))
-
-
-        # calculate aggregated values of activityGroups:
-
-        # get a dict, linking each activityId to a list of all its child activityId's:
-        activityGroups = list(activityGroups_dict.values())
-        activitiesOnly_dict = {activity_id: x[1] for activity_id, x in activities_dict.items() if activity_id not in activityGroups_dict}
-        activityGroup_to_childActivities_dict = Activity.generate_activityGroups_to_childActivities_dict(list(activitiesOnly_dict.values()), activityGroups)
-        Activity.update_activityGroups_aggregated_values(activityGroups, activitiesOnly_dict, activityGroup_to_childActivities_dict, agenda)
-
-        return activities_dict, activityGroups_dict, activityGroup_to_childActivities_dict, project_name
-
+    """ READING PRIVATE FUNCTIONS """
     @staticmethod
     def process_predecessors(predecessors, agenda):
         if predecessors:
@@ -754,32 +156,640 @@ class XLSXParser(FileParser):
                 break
         return header_lines
 
+    @staticmethod
+    def read_date(date):
+        if type(date) is not datetime.datetime:
+            return datetime.datetime.utcfromtimestamp(((date - 25569)*86400)).date()  # ugly hack to convert
+        else:
+            return date
+
+    @staticmethod
+    def process_activity_resource_assignments(activity_assignment_str, activity_resources, resources_dict, activity_baseline_duration_workingHours):
+        ":returns: total cost of resource assignments and implicitly add resource assignments to the activity.resources"
+        resources_cost = 0.0
+        for activity_resource_readString in activity_assignment_str.split(';'):
+            if not activity_resource_readString:
+                continue  # if empty string => continue
+            activity_resource = resources_dict[activity_resource_readString.split("[")[0]]
+            activity_resource_demand = 1.0
+            activity_resource_demand_fixed = False  # for consumable resources only
+            if len(activity_resource_readString.split("[")) > 1:
+                activity_resource_demand_str = activity_resource_readString.split("[")[1].split(" ")[0]
+                activity_resource_demand_fixed = activity_resource_demand_str.endswith("F")
+                if activity_resource_demand_fixed:
+                    activity_resource_demand_str = activity_resource_demand_str[:-1]
+                    # check if resource is consumable:
+                    if activity_resource.resource_type != ResourceType.CONSUMABLE:
+                        print("XLSXParser:process_baseline_schedule:Found a fixed resource assignment to {0}, which is a non-consumable resource type!".format(activity_resource.name))
+                        activity_resource_demand_fixed = False
+
+                activity_resource_demand = float(activity_resource_demand_str.translate(str.maketrans(",", "."))) # demand can be integer or float!
+
+            # calculate cost of resource assignment
+            resource_demand_cost = Resource.calculate_resource_assignment_cost(activity_resource, activity_resource_demand, activity_resource_demand_fixed, activity_baseline_duration_workingHours)
+            resources_cost += resource_demand_cost
+            # update resource its total cost:
+            activity_resource.total_resource_cost += resource_demand_cost
+
+            activity_resources.append((activity_resource, activity_resource_demand, activity_resource_demand_fixed))
+
+        return resources_cost
+
+    """ SHEET PROCESSING FUNCTIONS """
+    def process_agenda(self, agenda_sheet):
+        working_days = [0]*7
+        working_hours = [0]*24
+        holidays = []
+
+        if not (agenda_sheet.cell(row=1, column=1).value and agenda_sheet.cell(row=1, column=4).value and agenda_sheet.cell(row=1, column=7).value):
+            raise XLSXParseError("Not all required columns are on the required position of the Agenda sheet.")
+        if not agenda_sheet.cell(row=25, column=2).value:
+            raise XLSXParseError("24 hour fields are required in the Agenda sheet.")
+        if not agenda_sheet.cell(row=8, column=5).value:
+            raise XLSXParseError("7 days fields are required in the Agenda sheet.")
+
+        # Iterate over all hour fields
+        for i in range(0, 24):
+            if agenda_sheet.cell(row=i+2, column=2).value.lower() == "yes":
+                working_hours[i] = 1
+
+        # Iterate over all days
+        for i in range(0, 7):
+            if agenda_sheet.cell(row=i+2, column=5).value.lower() == "yes":
+                working_days[i] = 1
+
+        # Check if any holidays are given
+        i = 2
+        while agenda_sheet.cell(row=i, column=7).value:
+            holidays.append(self.read_date(agenda_sheet.cell(row=i, column=7).value))
+            i += 1
+
+        return Agenda(working_hours=working_hours, working_days=working_days, holidays=holidays)
+
+    def process_project_controls(self, project_control_sheets, activities_dict, activityGroups_dict, activityGroup_to_childActivities_dict, excel_version, agenda):
+        tracking_periods = []
+
+        #if excel_version == ExcelVersion.EXTENDED:
+        for project_control_sheet in project_control_sheets:
+            if project_control_sheet.cell(row=1, column=3).value:
+                tp_date = self.read_date(project_control_sheet.cell(row=1, column=3).value)
+            else:
+                raise XLSXParseError("process_project_controls: No status date found on tracking period sheet: {0}".format(project_control_sheet.title))
+
+            tp_name = project_control_sheet.cell(row=1, column=6).value
+            if not tp_name:
+                # no TP name was given, we can take the title of the sheet as default value
+                tp_name = project_control_sheet.title
+
+            act_track_records = []
+            currentTrackingPeriod_records_dict = {}
+
+            for curr_row in range(self.get_nr_of_header_lines(project_control_sheet), project_control_sheet.get_highest_row()+1):
+                # don't read activityGroups, add them later
+                activity_id_field = project_control_sheet.cell(row=curr_row, column=1).value
+                if activity_id_field is not None:
+                    # check if activity_id field corresponds with an activityGroup
+                    if int(activity_id_field) in activityGroups_dict:
+                        # process groups later
+                        continue
+
+                # processing an activity tracking record
+                activity_id = int(activity_id_field)
+                currentActivity = activities_dict[activity_id][1]
+                actual_start = datetime.datetime.max  # Set a default value in case there is nothing in that cell
+                actual_duration = datetime.timedelta(0) # default
+                actual_duration_hours = 0 # default
+                if project_control_sheet.cell(row=curr_row, column=12).value is not None:
+                    actual_start = project_control_sheet.cell(row=curr_row, column=12).value
+
+                actualDuration_field = project_control_sheet.cell(row=curr_row, column=13).value
+                if actualDuration_field is not None and isinstance(actualDuration_field, str):
+                    actual_duration_hours = agenda.convert_durationString_to_workingHours(project_control_sheet.cell(row=curr_row, column=13).value)
+                    actual_duration = agenda.get_workingDuration_timedelta(actual_duration_hours)
+
+                prc_dev = 0.0
+                if project_control_sheet.cell(row=curr_row, column=18).value:
+                    prc_dev = float(project_control_sheet.cell(row=curr_row, column=18).value)
+
+                actual_cost = 0.0
+                if project_control_sheet.cell(row=curr_row, column=19).value:
+                    actual_cost = float(project_control_sheet.cell(row=curr_row, column=19).value)
+
+                percentage_completed_str = project_control_sheet.cell(row=curr_row, column=21).value  # always given
+                if percentage_completed_str is None or percentage_completed_str == "":
+                    raise XLSXParseError("process_project_controls: No percentage completed found on row {0} of sheet {1}".format(curr_row, project_control_sheet.title))
+
+                # In the test file, some percentages are strings, some are ints, some are floats (#YOLO)
+                if type(percentage_completed_str) != str:
+                    percentage_completed_str *= 100
+                percentage_completed_str = str(percentage_completed_str)
+                if not percentage_completed_str[-1].isdigit():
+                    percentage_completed_str = percentage_completed_str[:-1] # remove the % in the string
+                if float(percentage_completed_str) < 1:
+                    percentage_completed_str = float(float(percentage_completed_str)*100)
+                percentage_completed = float(percentage_completed_str)
+                if percentage_completed > 100:
+                    if percentage_completed > 100 + 1e-5:
+                        print("Gilles V has made a stupid error by putting some ifs & transformations in XLSXparser.py "
+                            "with the variable percentage_completed_str")
+                    # fix percentage completed to 100.0
+                    percentage_completed = 100.0
+
+                # convert percentage completed to remaining duration
+                if percentage_completed > 0:
+                    remainingDuration_hours = round(actual_duration_hours / float(percentage_completed) * 100 - actual_duration_hours)
+                else:
+                    remainingDuration_hours = round(currentActivity.baseline_schedule.duration.days * agenda.get_working_hours_in_a_day() + currentActivity.baseline_schedule.duration.seconds / 3600)
+
+                remaining_duration = agenda.get_workingDuration_timedelta(remainingDuration_hours)
+
+                # derive other fields:
+                actual_cost_calced, earned_value, planned_actual_cost, planned_remaining_cost, planned_value, remaining_cost = \
+                        ActivityTrackingRecord.calculate_activityTrackingRecord_derived_values(activities_dict[activity_id][1],0, actual_duration_hours, agenda, percentage_completed, prc_dev,
+                                                                                               remainingDuration_hours, tp_date, actual_start)
+                pac_dev = actual_cost - planned_actual_cost
+
+                # determine tracking status:
+                if actual_start == datetime.datetime.max:
+                    tracking_status = "Not Started"
+                elif abs(percentage_completed - 100) < 1e-10: # compare float
+                    tracking_status = "Finished"
+                else:
+                    tracking_status = "Started"
+
+                act_track_record = ActivityTrackingRecord(activity=activities_dict[activity_id][1],
+                                                          actual_start=actual_start, actual_duration=actual_duration,
+                                                          planned_actual_cost=planned_actual_cost, planned_remaining_cost=planned_remaining_cost,
+                                                          remaining_duration=remaining_duration, deviation_pac=pac_dev,
+                                                          deviation_prc=prc_dev, actual_cost=actual_cost,
+                                                          remaining_cost=remaining_cost,
+                                                          percentage_completed=percentage_completed,
+                                                          tracking_status=tracking_status, earned_value=earned_value,
+                                                          planned_value=planned_value)
+                act_track_records.append(act_track_record)
+                currentTrackingPeriod_records_dict[activity_id] = act_track_record
+
+            currentTrackingPeriod = TrackingPeriod(tracking_period_name=tp_name, tracking_period_statusdate=tp_date,
+                                                   tracking_period_records=act_track_records)
+            # calculate aggregated values for activityGroups tracking:
+            for activityGroupId in activityGroups_dict.keys():
+                childActivityIds = activityGroup_to_childActivities_dict[activityGroupId]
+                # construct the activityGroup trackingRecord:
+                activityGroup_trackingRecord = ActivityTrackingRecord.construct_activityGroup_trackingRecord(activityGroups_dict[activityGroupId], childActivityIds, currentTrackingPeriod_records_dict, tp_date, agenda)
+                currentTrackingPeriod.tracking_period_records.append(activityGroup_trackingRecord)
+
+            # sort currentTrackingPeriod on wbs:
+            currentTrackingPeriod.tracking_period_records = sorted(currentTrackingPeriod.tracking_period_records, key=lambda activityTrackingRecord: activityTrackingRecord.activity.wbs_id)
+
+            # add trackingperiod to list
+            tracking_periods.append(currentTrackingPeriod)
+        # else:
+        #     # BASIC input sheet
+        #     for project_control_sheet in project_control_sheets:
+        #         tp_status_date_field = project_control_sheet.cell(row=1, column=3).value
+        #         if tp_status_date_field is not None:
+        #             if type(tp_status_date_field) is float:
+        #                 tp_date = datetime.datetime.utcfromtimestamp(((tp_status_date_field - 25569)*86400))
+        #             else:
+        #                 tp_date = tp_status_date_field
+        #         else:
+        #             raise XLSXParseError("process_project_controls: No status date found on tracking period sheet: {0}".format(project_control_sheet.title))
+        #
+        #         tp_name = project_control_sheet.cell(row=1, column=5).value
+        #         if not tp_name:
+        #             # no TP name was given:
+        #             tp_name = project_control_sheet.title
+        #
+        #         act_track_records = []
+        #         currentTrackingPeriod_records_dict = {}
+        #
+        #         for curr_row in range(self.get_nr_of_header_lines(project_control_sheet), project_control_sheet.get_highest_row()+1):
+        #             # don't read activityGroups, add them later
+        #             activity_id_field = project_control_sheet.cell(row=curr_row, column=1).value
+        #             if activity_id_field is not None:
+        #                 # check if activity_id field corresponds with an activityGroup:
+        #                 if int(activity_id_field) in activityGroups_dict:
+        #                     # process groups later
+        #                     continue
+        #
+        #             # processing an activity tracking record:
+        #             activity_id = int(activity_id_field)
+        #             currentActivity = activities_dict[activity_id][1]
+        #             actual_start = datetime.datetime.max  # Set a default value in case there is nothing in that cell
+        #             actual_duration = datetime.timedelta(0) # default
+        #             actual_duration_hours = 0 # default
+        #             if project_control_sheet.cell(row=curr_row, column=12).value is not None:
+        #                 if type(project_control_sheet.cell(row=curr_row, column=12).value) is not datetime.datetime:
+        #                     actual_start = datetime.datetime.utcfromtimestamp(((project_control_sheet.cell(row=curr_row, column=3).value - 25569)*86400))  # ugly hack to convert
+        #                 else:
+        #                     actual_start = project_control_sheet.cell(row=curr_row, column=3).value
+        #
+        #             if project_control_sheet.cell(row=curr_row, column=4).value is not None:
+        #                 actual_duration_hours = agenda.convert_durationString_to_workingHours(project_control_sheet.cell(row=curr_row, column=4).value)
+        #                 actual_duration = agenda.get_workingDuration_timedelta(actual_duration_hours)
+        #
+        #
+        #             actual_cost = 0.0
+        #             if project_control_sheet.cell(row=curr_row, column=5).value:
+        #                 actual_cost = float(project_control_sheet.cell(row=curr_row, column=5).value)
+        #             prc_dev = 0.0
+        #
+        #             percentage_completed_str = project_control_sheet.cell(row=curr_row, column=6).value  # always given
+        #             if percentage_completed_str is None or percentage_completed_str == "":
+        #                 raise XLSXParseError("process_project_controls: No percentage completed found on row {0} of sheet {1}".format(curr_row, project_control_sheet.title))
+        #
+        #             # In the test file, some percentages are strings, some are ints, some are floats (#YOLO)
+        #             # update: keep all decimals if present!
+        #             if type(percentage_completed_str) != str:
+        #                 percentage_completed_str *= 100
+        #             #if type(percentage_completed_str) == float:
+        #             #    percentage_completed_str = int(round(percentage_completed_str)) # round the floating point number to an int
+        #             percentage_completed_str = str(percentage_completed_str)
+        #             if not percentage_completed_str[-1].isdigit():
+        #                 percentage_completed_str = percentage_completed_str[:-1]
+        #             if float(percentage_completed_str) < 1:
+        #                 percentage_completed_str = float(float(percentage_completed_str)*100)
+        #             #percentage_completed = int(round(percentage_completed_str))
+        #             percentage_completed = float(percentage_completed_str)
+        #             if percentage_completed > 100:
+        #                 if percentage_completed > 100 + 1e-5:
+        #                     print("Gilles V has made a stupid error by putting some ifs & transformations in XLSXparser.py "
+        #                         "with the variable percentage_completed_str")
+        #                 # fix percentage completed to 100.0
+        #                 percentage_completed = 100.0
+        #
+        #             # convert percentage completed to remainnig duration:
+        #             if percentage_completed > 0:
+        #                 remainingDuration_hours = round(actual_duration_hours / float(percentage_completed) * 100 - actual_duration_hours)
+        #             else:
+        #                 remainingDuration_hours = round(currentActivity.baseline_schedule.duration.days * agenda.get_working_hours_in_a_day() + currentActivity.baseline_schedule.duration.seconds / 3600)
+        #             remaining_duration = agenda.get_workingDuration_timedelta(remainingDuration_hours)
+        #
+        #             # derive other fields:
+        #             actual_cost_calced, earned_value, planned_actual_cost, planned_remaining_cost, planned_value, remaining_cost = \
+        #                     ActivityTrackingRecord.calculate_activityTrackingRecord_derived_values(activities_dict[activity_id][1],0, actual_duration_hours, agenda, percentage_completed, prc_dev,
+        #                                                                                            remainingDuration_hours, tp_date, actual_start)
+        #
+        #             pac_dev = actual_cost - planned_actual_cost
+        #
+        #             # determine tracking status:
+        #             tracking_status = ""
+        #             if actual_start == datetime.datetime.max:
+        #                 tracking_status = "Not Started"
+        #             elif abs(percentage_completed - 100) < 1e-10: # compare float
+        #                 tracking_status = "Finished"
+        #             else:
+        #                 tracking_status = "Started"
+        #
+        #
+        #             act_track_record = ActivityTrackingRecord(activity=activities_dict[activity_id][1],
+        #                                                       actual_start=actual_start, actual_duration=actual_duration,
+        #                                                       planned_actual_cost=planned_actual_cost, planned_remaining_cost=planned_remaining_cost,
+        #                                                       remaining_duration=remaining_duration, deviation_pac=pac_dev,
+        #                                                       deviation_prc=prc_dev, actual_cost=actual_cost,
+        #                                                       remaining_cost=remaining_cost,
+        #                                                       percentage_completed=percentage_completed,
+        #                                                       tracking_status=tracking_status, earned_value=earned_value,
+        #                                                       planned_value=planned_value)
+        #             act_track_records.append(act_track_record)
+        #             currentTrackingPeriod_records_dict[activity_id] = act_track_record
+        #         #endFor reading acitivityTracking records
+        #
+        #         currentTrackingPeriod = TrackingPeriod(tracking_period_name=tp_name, tracking_period_statusdate=tp_date,
+        #                                                tracking_period_records=act_track_records)
+        #         # calculate aggregated values for activityGroups tracking:
+        #         for activityGroupId in activityGroups_dict.keys():
+        #             childActivityIds = activityGroup_to_childActivities_dict[activityGroupId]
+        #             # construct the activityGroup trackingRecord:
+        #             activityGroup_trackingRecord = ActivityTrackingRecord.construct_activityGroup_trackingRecord(activityGroups_dict[activityGroupId], childActivityIds, currentTrackingPeriod_records_dict, tp_date, agenda)
+        #             currentTrackingPeriod.tracking_period_records.append(activityGroup_trackingRecord)
+        #
+        #         # sort currentTrackingPeriod on wbs:
+        #         currentTrackingPeriod.tracking_period_records = sorted(currentTrackingPeriod.tracking_period_records, key=lambda activityTrackingRecord: activityTrackingRecord.activity.wbs_id)
+        #
+        #         # add trackingperiod to list
+        #         tracking_periods.append(currentTrackingPeriod)
+
+        # sort tracking periods on status date
+        tracking_periods = sorted(tracking_periods, key= lambda x: x.tracking_period_statusdate)
+        return tracking_periods
+
+    def process_resources(self, resource_sheet):
+        # We store the resources  in a dict, with as index the resource name, to access them easily later when we
+        # are processing the activities.
+        resources_dict = {}
+        for curr_row in range(self.get_nr_of_header_lines(resource_sheet), resource_sheet.get_highest_row()+1):
+            res_id = int(resource_sheet.cell(row=curr_row, column=1).value)
+            res_name = resource_sheet.cell(row=curr_row, column=2).value
+            res_type = resource_sheet.cell(row=curr_row, column=3).value
+            # Had to cast string -> float -> int (silly Python!)
+            res_ava = int(float(resource_sheet.cell(row=curr_row, column=4).value.split(" ")[0]
+                          .translate(str.maketrans(",", "."))))
+            res_cost_use = float(resource_sheet.cell(row=curr_row, column=5).value)
+            res_cost_unit = float(resource_sheet.cell(row=curr_row, column=6).value)
+            resources_dict[res_name] = Resource(resource_id=res_id, name=res_name, resource_type=res_type,
+                                                availability=res_ava, cost_use=res_cost_use, cost_unit=res_cost_unit)
+        return resources_dict
+
+    def process_risk_analysis(self, risk_analysis_sheet, excel_version):
+        risk_analysis_dict = {}
+        #update: remove basic version
+        #if excel_version == ExcelVersion.EXTENDED:
+        col = 4
+        #else:
+        #    col = 3
+        for curr_row in range(self.get_nr_of_header_lines(risk_analysis_sheet), risk_analysis_sheet.get_highest_row()+1):
+            if risk_analysis_sheet.cell(row=curr_row, column=col).value is not None:
+                risk_ana_dist_type = risk_analysis_sheet.cell(row=curr_row, column=col).value.split(" - ")[0].strip()  # remove leading and trailing whitespace
+                risk_ana_dist_units = risk_analysis_sheet.cell(row=curr_row, column=col).value.split(" - ")[1].strip()  # remove leading and trailing whitespace
+                risk_ana_opt_duration = int(risk_analysis_sheet.cell(row=curr_row, column=col+1).value)
+                risk_ana_prob_duration = int(risk_analysis_sheet.cell(row=curr_row, column=col+2).value)
+                risk_ana_pess_duration = int(risk_analysis_sheet.cell(row=curr_row, column=col+3).value)
+                dict_id = int(risk_analysis_sheet.cell(row=curr_row, column=1).value)
+                risk_analysis_dict[dict_id] = RiskAnalysisDistribution(distribution_type=risk_ana_dist_type,
+                                                                       distribution_units=risk_ana_dist_units,
+                                                                       optimistic_duration=risk_ana_opt_duration,
+                                                                       probable_duration=risk_ana_prob_duration,
+                                                                       pessimistic_duration=risk_ana_pess_duration)
+        return risk_analysis_dict
+
+    def process_baseline_schedule(self, activities_sheet, resources_dict, risk_analysis_dict, excel_version, agenda):
+        activities_dict = {}  # contains all activities and group, activityId: (row, Activity)
+        activityGroups_dict = {} # contains only groups, activityId: Activity
+        # process the first project line manually:
+        first_data_row = self.get_nr_of_header_lines(activities_sheet)
+        project_name = activities_sheet.cell(row=first_data_row, column=2).value
+        projectGroupActivity = Activity(0, name=project_name, wbs_id=(1,))
+        activities_dict[0] = (first_data_row, projectGroupActivity)
+        activityGroups_dict[0] = projectGroupActivity
+
+        #if excel_version == ExcelVersion.EXTENDED:
+        for curr_row in range(first_data_row + 1, activities_sheet.get_highest_row()+1):
+            activity_id = int(activities_sheet.cell(row=curr_row, column=1).value)
+            activity_name = activities_sheet.cell(row=curr_row, column=2).value
+            if activities_sheet.cell(row=curr_row, column=3).value:
+                activity_wbs = ()
+                for number in activities_sheet.cell(row=curr_row, column=3).value.split("."):
+                    activity_wbs = activity_wbs + (int(number),)
+            else:
+                current_wbs = [1]
+                # check if is activityGroup by var_cost: # NOTE: this is hack to determine if this row belongs to an activityGroup
+                if activities_sheet.cell(row=curr_row, column=13).value is None:
+                    # current row belongs to an activityGroup
+                    # don't read any further, calculate its aggregate value later on:
+                    if len(current_wbs) == 2:
+                        current_wbs[1] += 1
+                    elif len(current_wbs) > 2:
+                        current_wbs = current_wbs[:2]
+                        current_wbs[1] += 1
+                    else:
+                        # previous node was the project root:
+                        current_wbs = [1,1]
+
+                    activityGroupFound = True
+                    activityGroup = Activity(activity_id, name=activity_name, wbs_id= tuple(current_wbs))
+                    activityGroups_dict[activity_id] = activityGroup
+                    activities_dict[activity_id] = (curr_row, activityGroup)
+                    continue
+                else:
+                    # construct wbs of an activity:
+                    if len(current_wbs) == 2:
+                        if not activityGroupFound:
+                            current_wbs[1] += 1
+                        else:
+                            current_wbs.append(1)
+                    elif len(current_wbs) > 2:
+                        current_wbs[-1] += 1
+                    else:
+                        # previous node was the project root:
+                        current_wbs = [1,1]
+
+            # check if is activityGroup by var_cost: # NOTE: this is hack to determine if this row belongs to an activityGroup
+            if activities_sheet.cell(row=curr_row, column=13).value is None:
+                # current row belongs to an activityGroup
+                # don't read any further, calculate its aggregate value lateron:
+                activityGroup = Activity(activity_id, name=activity_name, wbs_id=activity_wbs)
+                activityGroups_dict[activity_id] = activityGroup
+                activities_dict[activity_id] = (curr_row, activityGroup)
+                continue
+
+            activity_predecessors = self.process_predecessors(activities_sheet.cell(row=curr_row, column=4).value, agenda)
+            activity_successors = self.process_successors(activities_sheet.cell(row=curr_row, column=5).value, agenda)
+            if activities_sheet.cell(row=curr_row, column=6).value:
+                baseline_start = self.read_date(activities_sheet.cell(row=curr_row, column=6).value)
+            else:
+                raise XLSXParseError("No baseline start date was given in the baseline schedule")
+
+            # check if duration is given to calculate baseline end:
+            baseline_duration = 0
+            baseline_end = datetime.datetime.max
+            # read the field values of the mutual alternative fields:
+            baseline_end_field = activities_sheet.cell(row=curr_row, column=7).value
+            baseline_duration_field = activities_sheet.cell(row=curr_row, column=8).value
+
+            if baseline_duration_field is not None and baseline_duration_field != "":
+                # baseline duration is given
+                baseline_duration_workingHours = agenda.convert_durationString_to_workingHours(baseline_duration_field)
+                baseline_duration = agenda.get_workingDuration_timedelta(baseline_duration_workingHours)
+                # calculate baseline end:
+                baseline_end = agenda.get_end_date(baseline_start, baseline_duration.days, baseline_duration_workingHours - baseline_duration.days * agenda.get_working_hours_in_a_day())
+            elif baseline_end_field is not None and baseline_end_field != "":
+                baseline_end = self.read_date(baseline_end_field)
+                # calculate baseline duration:
+                baseline_duration = agenda.get_time_between(baseline_start, baseline_end)
+            else:
+                raise XLSXParseError("process_baseline_schedule:Acitivity on row {0}, has no basline duration or baseline end!".format(curr_row))
+
+            # process resource demand:
+            activity_resources = []
+            activity_resource_cost = 0.0 # calculate resource cost instead of reading it
+            if activities_sheet.cell(row=curr_row, column=9).value:
+                activity_resource_cost = self.process_activity_resource_assignments(activities_sheet.cell(row=curr_row, column=9).value, activity_resources, resources_dict, baseline_duration_workingHours)
+
+            baseline_fixed_cost = 0.0
+            if activities_sheet.cell(row=curr_row, column=11).value:
+                baseline_fixed_cost = float(activities_sheet.cell(row=curr_row, column=11).value)
+
+            # check if cost/hour or variable cost is given to calculate values:
+            baseline_hourly_cost = 0.0
+            baseline_var_cost = 0.0
+
+            baseline_hourly_cost_field = activities_sheet.cell(row=curr_row, column=12).value
+            baseline_var_cost_field = activities_sheet.cell(row=curr_row, column=13).value
+
+            if baseline_hourly_cost_field is not None and baseline_hourly_cost_field != "":
+                baseline_hourly_cost = float(baseline_hourly_cost_field)
+                # calculate var_cost:
+                baseline_var_cost = baseline_hourly_cost * baseline_duration_workingHours
+            elif baseline_var_cost_field is not None and baseline_var_cost_field != "":
+                baseline_var_cost = float(baseline_var_cost_field)
+                # calculate hourly cost:
+                baseline_hourly_cost = baseline_var_cost / baseline_duration_workingHours if baseline_duration_workingHours != 0 else 0
+            else:
+                raise XLSXParseError("process_baseline_schedule:Acitivity on row {0}, has no baseline hourly cost or baseline variable cost given!".format(curr_row))
+
+            # calculate total_cost:
+            baseline_total_cost = baseline_fixed_cost + baseline_var_cost + activity_resource_cost
+            #if activities_sheet.cell(row=curr_row, column=14).value:
+            #    baseline_total_cost = float(activities_sheet.cell(row=curr_row, column=14).value)
+
+
+            activity_baseline_schedule = BaselineScheduleRecord(start=baseline_start, end=baseline_end,
+                                                                duration=baseline_duration,
+                                                                fixed_cost=baseline_fixed_cost,
+                                                                hourly_cost=baseline_hourly_cost,
+                                                                var_cost=baseline_var_cost,
+                                                                total_cost=baseline_total_cost)
+            activity_risk_analysis = None
+            if activity_id in risk_analysis_dict:
+                activity_risk_analysis = risk_analysis_dict[activity_id]
+
+
+            activities_dict[activity_id] = (curr_row, Activity(activity_id, name=activity_name, wbs_id=activity_wbs,
+                                               predecessors=activity_predecessors, successors=activity_successors,
+                                               baseline_schedule=activity_baseline_schedule,
+                                               resource_cost=activity_resource_cost,
+                                               risk_analysis=activity_risk_analysis, resources=activity_resources))
+        # else:
+        #     # BASIC input sheet:
+        #     # build our own basic wbs
+        #     current_wbs = [1]
+        #     activityGroupFound = False # bool for building simple wbs
+        #
+        #     for curr_row in range(first_data_row + 1, activities_sheet.get_highest_row()+1):
+        #         activity_id = int(activities_sheet.cell(row=curr_row, column=1).value)
+        #         activity_name = activities_sheet.cell(row=curr_row, column=2).value
+        #
+        #         # check if is activityGroup by var_cost: # NOTE: this is hack to determine if this row belongs to an activityGroup
+        #         if activities_sheet.cell(row=curr_row, column=11).value is None:
+        #             # current row belongs to an activityGroup
+        #             # don't read any further, calculate its aggregate value lateron:
+        #             if len(current_wbs) == 2:
+        #                 current_wbs[1] += 1
+        #             elif len(current_wbs) > 2:
+        #                 current_wbs = current_wbs[:2]
+        #                 current_wbs[1] += 1
+        #             else:
+        #                 # previous node was the project root:
+        #                 current_wbs = [1,1]
+        #
+        #             activityGroupFound = True
+        #             activityGroup = Activity(activity_id, name=activity_name, wbs_id= tuple(current_wbs))
+        #             activityGroups_dict[activity_id] = activityGroup
+        #             activities_dict[activity_id] = (curr_row, activityGroup)
+        #             continue
+        #         else:
+        #             # construct wbs of an activity:
+        #             if len(current_wbs) == 2:
+        #                 if not activityGroupFound:
+        #                     current_wbs[1] += 1
+        #                 else:
+        #                     current_wbs.append(1)
+        #             elif len(current_wbs) > 2:
+        #                 current_wbs[-1] += 1
+        #             else:
+        #                 # previous node was the project root:
+        #                 current_wbs = [1,1]
+        #
+        #         activity_predecessors = self.process_predecessors(activities_sheet.cell(row=curr_row, column=3).value, agenda)
+        #         activity_successors = self.process_successors(activities_sheet.cell(row=curr_row, column=4).value, agenda)
+        #         if type(activities_sheet.cell(row=curr_row, column=5).value) is float:
+        #             baseline_start = datetime.datetime.utcfromtimestamp(((activities_sheet.cell(row=curr_row, column=5).value -
+        #                                                                   25569)*86400))  # Convert to correct date
+        #         else:
+        #             baseline_start = activities_sheet.cell(row=curr_row, column=5).value
+        #
+        #         # check if duration is given to calculate baseline end:
+        #         baseline_duration = 0
+        #         baseline_end = datetime.datetime.max
+        #         # read the field values of the mutual alternative fields:
+        #         baseline_end_field = activities_sheet.cell(row=curr_row, column=6).value
+        #         baseline_duration_field = activities_sheet.cell(row=curr_row, column=7).value
+        #
+        #         if baseline_duration_field is not None and baseline_duration_field != "":
+        #             # baseline duration is given
+        #             baseline_duration_workingHours = agenda.convert_durationString_to_workingHours(baseline_duration_field)
+        #             baseline_duration = agenda.get_workingDuration_timedelta(baseline_duration_workingHours)
+        #             # calculate baseline end:
+        #             baseline_end = agenda.get_end_date(baseline_start, baseline_duration.days, baseline_duration_workingHours - baseline_duration.days * agenda.get_working_hours_in_a_day())
+        #         elif baseline_end_field is not None and baseline_end_field != "":
+        #             # end date is given
+        #             if type(baseline_end_field) is float:
+        #                 baseline_end = datetime.datetime.utcfromtimestamp(((baseline_end_field -
+        #                                                                     25569)*86400))  # Convert to correct date
+        #             else:
+        #                 baseline_end = baseline_end_field
+        #
+        #             # calculate baseline duration:
+        #             baseline_duration = agenda.get_time_between(baseline_start, baseline_end)
+        #         else:
+        #             raise XLSXParseError("process_baseline_schedule:Acitivity on row {0}, has no basline duration or baseline end!".format(curr_row))
+        #
+        #         # process resource demand:
+        #         activity_resources = []
+        #         activity_resource_cost = 0.0 # calculate resource cost
+        #         if activities_sheet.cell(row=curr_row, column=8).value:
+        #             activity_resource_cost = self.process_activity_resource_assignments(activities_sheet.cell(row=curr_row, column=8).value, activity_resources, resources_dict, baseline_duration_workingHours)
+        #
+        #         baseline_fixed_cost = 0.0
+        #         if activities_sheet.cell(row=curr_row, column=9).value:
+        #             baseline_fixed_cost = float(activities_sheet.cell(row=curr_row, column=9).value)
+        #
+        #         # check if cost/hour or variable cost is given to calculate values:
+        #         baseline_hourly_cost = 0.0
+        #         baseline_var_cost = 0.0
+        #
+        #         baseline_hourly_cost_field = activities_sheet.cell(row=curr_row, column=10).value
+        #         baseline_var_cost_field = activities_sheet.cell(row=curr_row, column=11).value
+        #
+        #         if baseline_hourly_cost_field is not None and baseline_hourly_cost_field != "":
+        #             baseline_hourly_cost = float(baseline_hourly_cost_field)
+        #             # calculate var_cost:
+        #             baseline_var_cost = baseline_hourly_cost * baseline_duration_workingHours
+        #         elif baseline_var_cost_field is not None and baseline_var_cost_field != "":
+        #             baseline_var_cost = float(baseline_var_cost_field)
+        #             # calculate hourly cost:
+        #             baseline_hourly_cost = baseline_var_cost / baseline_duration_workingHours if baseline_duration_workingHours != 0 else 0
+        #         else:
+        #             raise XLSXParseError("process_baseline_schedule:Acitivity on row {0}, has no baseline hourly cost or baseline variable cost given!".format(curr_row))
+        #
+        #         # calculate total_cost:
+        #         baseline_total_cost = baseline_fixed_cost + baseline_var_cost + activity_resource_cost
+        #
+        #         activity_baseline_schedule = BaselineScheduleRecord(start=baseline_start, end=baseline_end,
+        #                                                             duration=baseline_duration,
+        #                                                             fixed_cost=baseline_fixed_cost,
+        #                                                             hourly_cost=baseline_hourly_cost,
+        #                                                             var_cost=baseline_var_cost,
+        #                                                             total_cost=baseline_total_cost)
+        #
+        #         activity_risk_analysis = None
+        #         if activity_id in risk_analysis_dict:
+        #             activity_risk_analysis = risk_analysis_dict[activity_id]
+        #
+        #         activities_dict[activity_id] = (curr_row, Activity(activity_id, name=activity_name, wbs_id=tuple(current_wbs),
+        #                                            predecessors=activity_predecessors, successors=activity_successors,
+        #                                            baseline_schedule=activity_baseline_schedule,
+        #                                            resource_cost=activity_resource_cost,
+        #                                            risk_analysis=activity_risk_analysis, resources=activity_resources))
+        #
+
+        # calculate aggregated values of activityGroups:
+
+        # get a dict, linking each activityId to a list of all its child activityId's:
+        activityGroups = list(activityGroups_dict.values())
+        activitiesOnly_dict = {activity_id: x[1] for activity_id, x in activities_dict.items() if activity_id not in activityGroups_dict}
+        activityGroup_to_childActivities_dict = Activity.generate_activityGroups_to_childActivities_dict(list(activitiesOnly_dict.values()), activityGroups)
+        Activity.update_activityGroups_aggregated_values(activityGroups, activitiesOnly_dict, activityGroup_to_childActivities_dict, agenda)
+
+        return activities_dict, activityGroups_dict, activityGroup_to_childActivities_dict, project_name
+
+    """ WRITING PRIVATE FUNCTIONS """
     def get_all_activities(self, tracking_period):
         activities = []
         for atr in tracking_period.tracking_period_records:
             activities.append(atr.activity)
         return activities
-
-    def calculate_aggregated_ac(self, tracking_period):
-        sum_ac = 0
-        for atr in tracking_period.tracking_period_records:
-            if not Activity.is_not_lowest_level_activity(atr.activity, self.get_all_activities(tracking_period)):
-                sum_ac += atr.actual_cost
-        return sum_ac
-
-    def calculate_aggregated_pv(self, tracking_period):
-        sum_pv = 0
-        for atr in tracking_period.tracking_period_records:
-            if not Activity.is_not_lowest_level_activity(atr.activity, self.get_all_activities(tracking_period)):
-                sum_pv += atr.planned_value
-        return sum_pv
-
-    def calculate_aggregated_ev(self, tracking_period):
-        sum_ev = 0
-        for atr in tracking_period.tracking_period_records:
-            if not Activity.is_not_lowest_level_activity(atr.activity, self.get_all_activities(tracking_period)):
-                sum_ev += atr.earned_value
-        return sum_ev
 
     def calculate_aggregated_keyMetrics(self, tracking_period):
         sum_pv = 0.0
@@ -791,14 +801,6 @@ class XLSXParser(FileParser):
                 sum_ev += atr.earned_value
                 sum_ac += atr.actual_cost
         return sum_pv, sum_ev, sum_ac
-
-
-    def calculate_aggregated_rc(self, tracking_period):
-        sum_rc = 0
-        for atr in tracking_period.tracking_period_records:
-            if not Activity.is_not_lowest_level_activity(atr.activity, self.get_all_activities(tracking_period)):
-                sum_rc += atr.remaining_cost
-        return sum_rc
 
     def calculate_eac(self, ac, bac, ev, pf):
         if pf == 0:
@@ -845,7 +847,7 @@ class XLSXParser(FileParser):
 
         ## NOTE: wanted behaviour?
         ## Correct ES to statusDate if PVcumsum has the same value there:
-        #timesWithSamePV = [x[1] for x in PVcurve if abs(x[0] - lowerPV) < 1e-5] 
+        #timesWithSamePV = [x[1] for x in PVcurve if abs(x[0] - lowerPV) < 1e-5]
         ## currentTime can be the start of a workingInterval or the end of a working interval
         #if currentTime in timesWithSamePV or project_object.agenda.get_previous_working_hour_end(currentTime) in timesWithSamePV:
         #    return project_object.agenda.get_previous_working_hour_end(currentTime)
@@ -875,7 +877,7 @@ class XLSXParser(FileParser):
 
         ## DEBUG:
         #traversedHours = 0
-        
+
         # traverse the complete project baseline duration
         while currentDatetime <= projectBaselineEndDate:
             # update list of running activities at this time:
@@ -914,7 +916,7 @@ class XLSXParser(FileParser):
             currentDatetime = project_object.agenda.get_next_date(currentDatetime, 0, 0) + datetime.timedelta(hours = 1)
             ## DEBUG: record how many hours processed, should match with project baseline duration
             #traversedHours += 1
-            
+
         return generated_PVcurve
 
     def calculate_SVt(self, project_object, ES, currentTime):
@@ -946,9 +948,9 @@ class XLSXParser(FileParser):
         "This function calculates the p-factor for the given tracking_period and ES datetime"
         # using algorithm:
         # p-factor = sum(i:N)[ min(PV(i,ES), EV(i,AT))] / sum(i:N)[ PV(i,ES)]
-        # with 
+        # with
         # N: The set of all activities of the project network
-        # PV(i,ES): The planned value of activity i at time ES 
+        # PV(i,ES): The planned value of activity i at time ES
         # EV(i,AT): The earned value of activity i at time AT
 
         # sort the tracking_period_records according to its activity baseline schedule start and end date => can figure out which activity uses first a consumable resource
@@ -972,7 +974,7 @@ class XLSXParser(FileParser):
             else:
                 # activity is still running => calculate intermediate PV value:
                 # add variable costs of this activity according to duration that this activity is running:
-                # determine running duration:                
+                # determine running duration:
                 runningTimedelta = project_object.agenda.get_time_between(atr.activity.baseline_schedule.start, ES)
                 runningWorkingHours = runningTimedelta.days * project_object.agenda.get_working_hours_in_a_day() + int(runningTimedelta.seconds / 3600)
 
@@ -980,7 +982,7 @@ class XLSXParser(FileParser):
 
                 # add starting use cost of used resources by this activity:
                 for resourceTuple in atr.activity.resources:
-                    PV_i_ES += Resource.calculate_resource_assignment_cost(resourceTuple[0], resourceTuple[1], resourceTuple[2], runningWorkingHours)                  
+                    PV_i_ES += Resource.calculate_resource_assignment_cost(resourceTuple[0], resourceTuple[1], resourceTuple[2], runningWorkingHours)
                 #endFor adding resource costs
 
             #endIF calculating PV_i_ES
@@ -993,9 +995,9 @@ class XLSXParser(FileParser):
         else:
             return numerator / denominator
 
+    """ ---------------------- MAIN FUNCTION TO WRITE TO EXCEL ------------------------- """
 
-
-    def from_schedule_object(self, project_object, file_path_output, excel_version):        
+    def from_schedule_object(self, project_object, file_path_output, excel_version):
         """
         This is just a lot of writing to excel code, it is ugly..
 
@@ -1045,135 +1047,135 @@ class XLSXParser(FileParser):
         # Write the Baseline Schedule Worksheet
 
         # Set the width of the columns
-        if excel_version == ExcelVersion.EXTENDED:
-            bsch_worksheet.set_column(0, 0, 3)
-            bsch_worksheet.set_column(1, 1, 25)
-            bsch_worksheet.set_column(2, 2, 5)
-            bsch_worksheet.set_column(3, 4, 16)
-            bsch_worksheet.set_column(5, 6, 13)
-            bsch_worksheet.set_column(7, 7, 8)
-            bsch_worksheet.set_column(8, 8, 25)
-            bsch_worksheet.set_column(9, 9, 10)
-            bsch_worksheet.set_column(10, 11, 10)
-            bsch_worksheet.set_column(13, 13, 12)
-        else:
-            bsch_worksheet.set_column(0, 0, 3)
-            bsch_worksheet.set_column(1, 1, 25)
-            bsch_worksheet.set_column(2, 3, 16)
-            bsch_worksheet.set_column(6, 6, 8)
-            bsch_worksheet.set_column(7, 7, 25)
+        #if excel_version == ExcelVersion.EXTENDED:
+        bsch_worksheet.set_column(0, 0, 3)
+        bsch_worksheet.set_column(1, 1, 25)
+        bsch_worksheet.set_column(2, 2, 5)
+        bsch_worksheet.set_column(3, 4, 16)
+        bsch_worksheet.set_column(5, 6, 13)
+        bsch_worksheet.set_column(7, 7, 8)
+        bsch_worksheet.set_column(8, 8, 25)
+        bsch_worksheet.set_column(9, 9, 10)
+        bsch_worksheet.set_column(10, 11, 10)
+        bsch_worksheet.set_column(13, 13, 12)
+        # else:
+        #     bsch_worksheet.set_column(0, 0, 3)
+        #     bsch_worksheet.set_column(1, 1, 25)
+        #     bsch_worksheet.set_column(2, 3, 16)
+        #     bsch_worksheet.set_column(6, 6, 8)
+        #     bsch_worksheet.set_column(7, 7, 25)
 
         # Set the height of rows
         bsch_worksheet.set_row(1, 30)
 
         # Write header cells (using the header format, and by merging some cells)
-        if excel_version == ExcelVersion.EXTENDED:
-            bsch_worksheet.merge_range('A1:C1', "General", header)
-            bsch_worksheet.merge_range('D1:E1', "Relations", header)
-            bsch_worksheet.merge_range('F1:H1', "Baseline", header)
-            bsch_worksheet.merge_range('I1:J1', "Resource Demand", header)
-            bsch_worksheet.merge_range('K1:N1', "Baseline Costs", header)
+        #if excel_version == ExcelVersion.EXTENDED:
+        bsch_worksheet.merge_range('A1:C1', "General", header)
+        bsch_worksheet.merge_range('D1:E1', "Relations", header)
+        bsch_worksheet.merge_range('F1:H1', "Baseline", header)
+        bsch_worksheet.merge_range('I1:J1', "Resource Demand", header)
+        bsch_worksheet.merge_range('K1:N1', "Baseline Costs", header)
 
-            bsch_worksheet.write('A2', "ID", header)
-            bsch_worksheet.write('B2', "Name", header)
-            bsch_worksheet.write('C2', "WBS", header)
-            bsch_worksheet.write('D2', "Predecessors", header)
-            bsch_worksheet.write('E2', "Successors", header)
-            bsch_worksheet.write('F2', "Baseline Start", header)
-            bsch_worksheet.write('G2', "Baseline End", header)
-            bsch_worksheet.write('H2', "Duration", header)
-            bsch_worksheet.write('I2', "Resource Demand", header)
-            bsch_worksheet.write('J2', "Resource Cost", header)
-            bsch_worksheet.write('K2', "Fixed Cost", header)
-            bsch_worksheet.write('L2', "Cost/Hour", header)
-            bsch_worksheet.write('M2', "Variable Cost", header)
-            bsch_worksheet.write('N2', "Total Cost", header)
-        else:
-            bsch_worksheet.merge_range('A1:B1', "General", header)
-            bsch_worksheet.merge_range('C1:D1', "Relations", header)
-            bsch_worksheet.merge_range('E1:G1', "Baseline", header)
-            bsch_worksheet.write('H1', "Resource Demand", header)
-            bsch_worksheet.merge_range('I1:K1', "Baseline Costs", header)
-
-            bsch_worksheet.write('A2', "ID", header)
-            bsch_worksheet.write('B2', "Name", header)
-            bsch_worksheet.write('C2', "Predecessors", header)
-            bsch_worksheet.write('D2', "Successors", header)
-            bsch_worksheet.write('E2', "Baseline Start", header)
-            bsch_worksheet.write('F2', "Baseline End", header)
-            bsch_worksheet.write('G2', "Duration", header)
-            bsch_worksheet.write('H2', "Resource Demand", header)
-            bsch_worksheet.write('I2', "Fixed Cost", header)
-            bsch_worksheet.write('J2', "Cost/Hour", header)
-            bsch_worksheet.write('K2', "Variable Cost", header)
+        bsch_worksheet.write('A2', "ID", header)
+        bsch_worksheet.write('B2', "Name", header)
+        bsch_worksheet.write('C2', "WBS", header)
+        bsch_worksheet.write('D2', "Predecessors", header)
+        bsch_worksheet.write('E2', "Successors", header)
+        bsch_worksheet.write('F2', "Baseline Start", header)
+        bsch_worksheet.write('G2', "Baseline End", header)
+        bsch_worksheet.write('H2', "Duration", header)
+        bsch_worksheet.write('I2', "Resource Demand", header)
+        bsch_worksheet.write('J2', "Resource Cost", header)
+        bsch_worksheet.write('K2', "Fixed Cost", header)
+        bsch_worksheet.write('L2', "Cost/Hour", header)
+        bsch_worksheet.write('M2', "Variable Cost", header)
+        bsch_worksheet.write('N2', "Total Cost", header)
+        # else:
+        #     bsch_worksheet.merge_range('A1:B1', "General", header)
+        #     bsch_worksheet.merge_range('C1:D1', "Relations", header)
+        #     bsch_worksheet.merge_range('E1:G1', "Baseline", header)
+        #     bsch_worksheet.write('H1', "Resource Demand", header)
+        #     bsch_worksheet.merge_range('I1:K1', "Baseline Costs", header)
+        #
+        #     bsch_worksheet.write('A2', "ID", header)
+        #     bsch_worksheet.write('B2', "Name", header)
+        #     bsch_worksheet.write('C2', "Predecessors", header)
+        #     bsch_worksheet.write('D2', "Successors", header)
+        #     bsch_worksheet.write('E2', "Baseline Start", header)
+        #     bsch_worksheet.write('F2', "Baseline End", header)
+        #     bsch_worksheet.write('G2', "Duration", header)
+        #     bsch_worksheet.write('H2', "Resource Demand", header)
+        #     bsch_worksheet.write('I2', "Fixed Cost", header)
+        #     bsch_worksheet.write('J2', "Cost/Hour", header)
+        #     bsch_worksheet.write('K2', "Variable Cost", header)
 
         # Now we run through all activities to get the required information
         counter = 2
         for activity in project_object.activities:
             if not Activity.is_not_lowest_level_activity(activity, project_object.activities):
                 # Write activity of lowest level
-                if excel_version == ExcelVersion.EXTENDED:
-                    bsch_worksheet.write_number(counter, 0, activity.activity_id, green_cell)
-                    bsch_worksheet.write(counter, 1, str(activity.name), green_cell)
-                    self.write_wbs(bsch_worksheet, counter, 2, activity.wbs_id, gray_cell) ####
-                    self.write_predecessors(bsch_worksheet, counter, 3, activity.predecessors, green_cell, project_object.agenda)
-                    self.write_successors(bsch_worksheet, counter, 4, activity.successors, green_cell, project_object.agenda)
-                    bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.start, date_lime_cell)
-                    bsch_worksheet.write_datetime(counter, 6, activity.baseline_schedule.end, date_green_cell)
-                    bsch_worksheet.write(counter, 7, self.get_duration_str(activity.baseline_schedule.duration), green_cell)
-                    self.write_resources(bsch_worksheet, counter, 8, activity.resources, yellow_cell)
-                    bsch_worksheet.write_number(counter, 9, activity.resource_cost, money_navy_cell) ####
-                    bsch_worksheet.write_number(counter, 10, activity.baseline_schedule.fixed_cost, money_green_cell)
-                    bsch_worksheet.write_number(counter, 11, activity.baseline_schedule.hourly_cost, money_lime_cell)
-                    if activity.baseline_schedule.var_cost is not None:
-                        bsch_worksheet.write_number(counter, 12, activity.baseline_schedule.var_cost, money_green_cell)
-                    else:
-                        bsch_worksheet.write_number(counter, 12, 0, money_green_cell)
-                    bsch_worksheet.write_number(counter, 13, activity.baseline_schedule.total_cost, money_navy_cell) ####
+                #if excel_version == ExcelVersion.EXTENDED:
+                bsch_worksheet.write_number(counter, 0, activity.activity_id, green_cell)
+                bsch_worksheet.write(counter, 1, str(activity.name), green_cell)
+                self.write_wbs(bsch_worksheet, counter, 2, activity.wbs_id, gray_cell)
+                self.write_predecessors(bsch_worksheet, counter, 3, activity.predecessors, green_cell, project_object.agenda)
+                self.write_successors(bsch_worksheet, counter, 4, activity.successors, green_cell, project_object.agenda)
+                bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.start, date_lime_cell)
+                bsch_worksheet.write_datetime(counter, 6, activity.baseline_schedule.end, date_green_cell)
+                bsch_worksheet.write(counter, 7, self.get_duration_str(activity.baseline_schedule.duration), green_cell)
+                self.write_resources(bsch_worksheet, counter, 8, activity.resources, yellow_cell)
+                bsch_worksheet.write_number(counter, 9, activity.resource_cost, money_navy_cell)
+                bsch_worksheet.write_number(counter, 10, activity.baseline_schedule.fixed_cost, money_green_cell)
+                bsch_worksheet.write_number(counter, 11, activity.baseline_schedule.hourly_cost, money_lime_cell)
+                if activity.baseline_schedule.var_cost is not None:
+                    bsch_worksheet.write_number(counter, 12, activity.baseline_schedule.var_cost, money_green_cell)
                 else:
-                    bsch_worksheet.write_number(counter, 0, activity.activity_id, green_cell)
-                    bsch_worksheet.write(counter, 1, str(activity.name), green_cell)
-                    self.write_predecessors(bsch_worksheet, counter, 2, activity.predecessors, green_cell, project_object.agenda)
-                    self.write_successors(bsch_worksheet, counter, 3, activity.successors, green_cell, project_object.agenda)
-                    bsch_worksheet.write_datetime(counter, 4, activity.baseline_schedule.start, date_lime_cell)
-                    bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.end, date_green_cell)
-                    bsch_worksheet.write(counter, 6, self.get_duration_str(activity.baseline_schedule.duration), green_cell)
-                    self.write_resources(bsch_worksheet, counter, 7, activity.resources, yellow_cell)
-                    bsch_worksheet.write_number(counter, 8, activity.baseline_schedule.fixed_cost, money_green_cell)
-                    bsch_worksheet.write_number(counter, 9, activity.baseline_schedule.hourly_cost, money_lime_cell)
-                    if activity.baseline_schedule.var_cost is not None:
-                        bsch_worksheet.write_number(counter, 10, activity.baseline_schedule.var_cost, money_green_cell)
-                    else:
-                        bsch_worksheet.write_number(counter, 10, 0, money_green_cell)
+                    bsch_worksheet.write_number(counter, 12, 0, money_green_cell)
+                bsch_worksheet.write_number(counter, 13, activity.baseline_schedule.total_cost, money_navy_cell)
+                # else:
+                #     bsch_worksheet.write_number(counter, 0, activity.activity_id, green_cell)
+                #     bsch_worksheet.write(counter, 1, str(activity.name), green_cell)
+                #     self.write_predecessors(bsch_worksheet, counter, 2, activity.predecessors, green_cell, project_object.agenda)
+                #     self.write_successors(bsch_worksheet, counter, 3, activity.successors, green_cell, project_object.agenda)
+                #     bsch_worksheet.write_datetime(counter, 4, activity.baseline_schedule.start, date_lime_cell)
+                #     bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.end, date_green_cell)
+                #     bsch_worksheet.write(counter, 6, self.get_duration_str(activity.baseline_schedule.duration), green_cell)
+                #     self.write_resources(bsch_worksheet, counter, 7, activity.resources, yellow_cell)
+                #     bsch_worksheet.write_number(counter, 8, activity.baseline_schedule.fixed_cost, money_green_cell)
+                #     bsch_worksheet.write_number(counter, 9, activity.baseline_schedule.hourly_cost, money_lime_cell)
+                #     if activity.baseline_schedule.var_cost is not None:
+                #         bsch_worksheet.write_number(counter, 10, activity.baseline_schedule.var_cost, money_green_cell)
+                #     else:
+                #         bsch_worksheet.write_number(counter, 10, 0, money_green_cell)
             else:
                 # Write aggregated activity
-                if excel_version == ExcelVersion.EXTENDED:
-                    bsch_worksheet.write_number(counter, 0, activity.activity_id, yellow_cell)
-                    bsch_worksheet.write(counter, 1, str(activity.name), yellow_cell)
-                    self.write_wbs(bsch_worksheet, counter, 2, activity.wbs_id, cyan_cell)
-                    self.write_predecessors(bsch_worksheet, counter, 3, activity.predecessors, cyan_cell, project_object.agenda)
-                    self.write_successors(bsch_worksheet, counter, 4, activity.successors, cyan_cell, project_object.agenda)
-                    bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.start, date_cyan_cell)
-                    bsch_worksheet.write_datetime(counter, 6, activity.baseline_schedule.end, date_cyan_cell)
-                    bsch_worksheet.write(counter, 7, self.get_duration_str(activity.baseline_schedule.duration), cyan_cell)
-                    self.write_resources(bsch_worksheet, counter, 8, activity.resources, cyan_cell)
-                    bsch_worksheet.write(counter, 9, "", money_cyan_cell)
-                    bsch_worksheet.write_number(counter, 10, activity.baseline_schedule.fixed_cost, money_cyan_cell)
-                    bsch_worksheet.write(counter, 11, "", money_cyan_cell)
-                    bsch_worksheet.write(counter, 12, "", money_cyan_cell)
-                    bsch_worksheet.write_number(counter, 13, activity.baseline_schedule.total_cost, money_cyan_cell)
-                else:
-                    bsch_worksheet.write_number(counter, 0, activity.activity_id, yellow_cell)
-                    bsch_worksheet.write(counter, 1, str(activity.name), yellow_cell)
-                    self.write_predecessors(bsch_worksheet, counter, 2, activity.predecessors, cyan_cell, project_object.agenda)
-                    self.write_successors(bsch_worksheet, counter, 3, activity.successors, cyan_cell, project_object.agenda)
-                    bsch_worksheet.write_datetime(counter, 4, activity.baseline_schedule.start, date_cyan_cell)
-                    bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.end, date_cyan_cell)
-                    bsch_worksheet.write(counter, 6, self.get_duration_str(activity.baseline_schedule.duration), cyan_cell)
-                    self.write_resources(bsch_worksheet, counter, 7, activity.resources, cyan_cell)
-                    bsch_worksheet.write_number(counter, 8, activity.baseline_schedule.fixed_cost, money_cyan_cell)
-                    bsch_worksheet.write(counter, 9, "", money_cyan_cell)
-                    bsch_worksheet.write(counter, 10, "", money_cyan_cell)
+                #if excel_version == ExcelVersion.EXTENDED:
+                bsch_worksheet.write_number(counter, 0, activity.activity_id, yellow_cell)
+                bsch_worksheet.write(counter, 1, str(activity.name), yellow_cell)
+                self.write_wbs(bsch_worksheet, counter, 2, activity.wbs_id, cyan_cell)
+                self.write_predecessors(bsch_worksheet, counter, 3, activity.predecessors, cyan_cell, project_object.agenda)
+                self.write_successors(bsch_worksheet, counter, 4, activity.successors, cyan_cell, project_object.agenda)
+                bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.start, date_cyan_cell)
+                bsch_worksheet.write_datetime(counter, 6, activity.baseline_schedule.end, date_cyan_cell)
+                bsch_worksheet.write(counter, 7, self.get_duration_str(activity.baseline_schedule.duration), cyan_cell)
+                self.write_resources(bsch_worksheet, counter, 8, activity.resources, cyan_cell)
+                bsch_worksheet.write(counter, 9, "", money_cyan_cell)
+                bsch_worksheet.write_number(counter, 10, activity.baseline_schedule.fixed_cost, money_cyan_cell)
+                bsch_worksheet.write(counter, 11, "", money_cyan_cell)
+                bsch_worksheet.write(counter, 12, "", money_cyan_cell)
+                bsch_worksheet.write_number(counter, 13, activity.baseline_schedule.total_cost, money_cyan_cell)
+                # else:
+                #     bsch_worksheet.write_number(counter, 0, activity.activity_id, yellow_cell)
+                #     bsch_worksheet.write(counter, 1, str(activity.name), yellow_cell)
+                #     self.write_predecessors(bsch_worksheet, counter, 2, activity.predecessors, cyan_cell, project_object.agenda)
+                #     self.write_successors(bsch_worksheet, counter, 3, activity.successors, cyan_cell, project_object.agenda)
+                #     bsch_worksheet.write_datetime(counter, 4, activity.baseline_schedule.start, date_cyan_cell)
+                #     bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.end, date_cyan_cell)
+                #     bsch_worksheet.write(counter, 6, self.get_duration_str(activity.baseline_schedule.duration), cyan_cell)
+                #     self.write_resources(bsch_worksheet, counter, 7, activity.resources, cyan_cell)
+                #     bsch_worksheet.write_number(counter, 8, activity.baseline_schedule.fixed_cost, money_cyan_cell)
+                #     bsch_worksheet.write(counter, 9, "", money_cyan_cell)
+                #     bsch_worksheet.write(counter, 10, "", money_cyan_cell)
 
             counter += 1
 
@@ -1225,71 +1227,71 @@ class XLSXParser(FileParser):
         ra_worksheet.set_column(4, 6, 12)
 
         # Write the headers
-        if excel_version == ExcelVersion.EXTENDED:
-            ra_worksheet.merge_range('A1:B1', "General", header)
-            ra_worksheet.write('C1', "Baseline", header)
-            ra_worksheet.merge_range('D1:G1', "Activity Duration Distribution Profiles", header)
+        #if excel_version == ExcelVersion.EXTENDED:
+        ra_worksheet.merge_range('A1:B1', "General", header)
+        ra_worksheet.write('C1', "Baseline", header)
+        ra_worksheet.merge_range('D1:G1', "Activity Duration Distribution Profiles", header)
 
-            ra_worksheet.write('A2', "ID", header)
-            ra_worksheet.write('B2', "Name", header)
-            ra_worksheet.write('C2', "Duration", header)
-            ra_worksheet.write('D2', "Description", header)
-            ra_worksheet.write('E2', "Optimistic", header)
-            ra_worksheet.write('F2', "Most Probable", header)
-            ra_worksheet.write('G2', "Pessimistic", header)
-        else:
-            ra_worksheet.merge_range('A1:B1', "General", header)
-            ra_worksheet.merge_range('C1:F1', "Activity Duration Distribution Profiles", header)
-
-            ra_worksheet.write('A2', "ID", header)
-            ra_worksheet.write('B2', "Name", header)
-            ra_worksheet.write('C2', "Description", header)
-            ra_worksheet.write('D2', "Optimistic", header)
-            ra_worksheet.write('E2', "Most Probable", header)
-            ra_worksheet.write('F2', "Pessimistic", header)
+        ra_worksheet.write('A2', "ID", header)
+        ra_worksheet.write('B2', "Name", header)
+        ra_worksheet.write('C2', "Duration", header)
+        ra_worksheet.write('D2', "Description", header)
+        ra_worksheet.write('E2', "Optimistic", header)
+        ra_worksheet.write('F2', "Most Probable", header)
+        ra_worksheet.write('G2', "Pessimistic", header)
+        # else:
+        #     ra_worksheet.merge_range('A1:B1', "General", header)
+        #     ra_worksheet.merge_range('C1:F1', "Activity Duration Distribution Profiles", header)
+        #
+        #     ra_worksheet.write('A2', "ID", header)
+        #     ra_worksheet.write('B2', "Name", header)
+        #     ra_worksheet.write('C2', "Description", header)
+        #     ra_worksheet.write('D2', "Optimistic", header)
+        #     ra_worksheet.write('E2', "Most Probable", header)
+        #     ra_worksheet.write('F2', "Pessimistic", header)
 
 
         # Write the rows by iterating through the activities (since they are linked to it)
         counter = 2
         for activity in project_object.activities:
             if Activity.is_not_lowest_level_activity(activity, project_object.activities):
-                if excel_version == ExcelVersion.EXTENDED:
-                    ra_worksheet.write_number(counter, 0, activity.activity_id, cyan_cell)
-                    ra_worksheet.write(counter, 1, str(activity.name), cyan_cell)
-                    ra_worksheet.write(counter, 2, self.get_duration_hours_str(activity.baseline_schedule.duration, project_object.agenda.get_working_hours_in_a_day()), cyan_cell)
-                    #ra_worksheet.write(counter, 2, self.get_duration_str(activity.baseline_schedule.duration), cyan_cell)
-                    ra_worksheet.write(counter, 3, "", cyan_cell)
-                    ra_worksheet.write(counter, 4, "", cyan_cell)
-                    ra_worksheet.write(counter, 5, "", cyan_cell)
-                    ra_worksheet.write(counter, 6, "", cyan_cell)
-                else:
-                    ra_worksheet.write_number(counter, 0, activity.activity_id, cyan_cell)
-                    ra_worksheet.write(counter, 1, str(activity.name), cyan_cell)
-                    ra_worksheet.write(counter, 2, "", cyan_cell)
-                    ra_worksheet.write(counter, 3, "", cyan_cell)
-                    ra_worksheet.write(counter, 4, "", cyan_cell)
-                    ra_worksheet.write(counter, 5, "", cyan_cell)
+                #if excel_version == ExcelVersion.EXTENDED:
+                ra_worksheet.write_number(counter, 0, activity.activity_id, cyan_cell)
+                ra_worksheet.write(counter, 1, str(activity.name), cyan_cell)
+                ra_worksheet.write(counter, 2, self.get_duration_hours_str(activity.baseline_schedule.duration, project_object.agenda.get_working_hours_in_a_day()), cyan_cell)
+                #ra_worksheet.write(counter, 2, self.get_duration_str(activity.baseline_schedule.duration), cyan_cell)
+                ra_worksheet.write(counter, 3, "", cyan_cell)
+                ra_worksheet.write(counter, 4, "", cyan_cell)
+                ra_worksheet.write(counter, 5, "", cyan_cell)
+                ra_worksheet.write(counter, 6, "", cyan_cell)
+                # else:
+                #     ra_worksheet.write_number(counter, 0, activity.activity_id, cyan_cell)
+                #     ra_worksheet.write(counter, 1, str(activity.name), cyan_cell)
+                #     ra_worksheet.write(counter, 2, "", cyan_cell)
+                #     ra_worksheet.write(counter, 3, "", cyan_cell)
+                #     ra_worksheet.write(counter, 4, "", cyan_cell)
+                #     ra_worksheet.write(counter, 5, "", cyan_cell)
             else:
-                if excel_version == ExcelVersion.EXTENDED:
-                    ra_worksheet.write_number(counter, 0, activity.activity_id, gray_cell)
-                    ra_worksheet.write(counter, 1, str(activity.name), gray_cell)
-                    ra_worksheet.write(counter, 2, self.get_duration_hours_str(activity.baseline_schedule.duration, project_object.agenda.get_working_hours_in_a_day()), gray_cell)
-                    #ra_worksheet.write(counter, 2, self.get_duration_str(activity.baseline_schedule.duration), gray_cell)
-                    description = str(activity.risk_analysis.distribution_type.value) + " - " \
-                                      + str(activity.risk_analysis.distribution_units.value)
-                    ra_worksheet.write(counter, 3, description, yellow_cell)
-                    ra_worksheet.write_number(counter, 4, activity.risk_analysis.optimistic_duration, yellow_cell)
-                    ra_worksheet.write_number(counter, 5, activity.risk_analysis.probable_duration, yellow_cell)
-                    ra_worksheet.write_number(counter, 6, activity.risk_analysis.pessimistic_duration, yellow_cell)
-                else:
-                    ra_worksheet.write_number(counter, 0, activity.activity_id, gray_cell)
-                    ra_worksheet.write(counter, 1, str(activity.name), gray_cell)
-                    description = str(activity.risk_analysis.distribution_type.value) + " - " \
-                                      + str(activity.risk_analysis.distribution_units.value)
-                    ra_worksheet.write(counter, 2, description, yellow_cell)
-                    ra_worksheet.write_number(counter, 3, activity.risk_analysis.optimistic_duration, yellow_cell)
-                    ra_worksheet.write_number(counter, 4, activity.risk_analysis.probable_duration, yellow_cell)
-                    ra_worksheet.write_number(counter, 5, activity.risk_analysis.pessimistic_duration, yellow_cell)
+                #if excel_version == ExcelVersion.EXTENDED:
+                ra_worksheet.write_number(counter, 0, activity.activity_id, gray_cell)
+                ra_worksheet.write(counter, 1, str(activity.name), gray_cell)
+                ra_worksheet.write(counter, 2, self.get_duration_hours_str(activity.baseline_schedule.duration, project_object.agenda.get_working_hours_in_a_day()), gray_cell)
+                #ra_worksheet.write(counter, 2, self.get_duration_str(activity.baseline_schedule.duration), gray_cell)
+                description = str(activity.risk_analysis.distribution_type.value) + " - " \
+                                  + str(activity.risk_analysis.distribution_units.value)
+                ra_worksheet.write(counter, 3, description, yellow_cell)
+                ra_worksheet.write_number(counter, 4, activity.risk_analysis.optimistic_duration, yellow_cell)
+                ra_worksheet.write_number(counter, 5, activity.risk_analysis.probable_duration, yellow_cell)
+                ra_worksheet.write_number(counter, 6, activity.risk_analysis.pessimistic_duration, yellow_cell)
+                # else:
+                #     ra_worksheet.write_number(counter, 0, activity.activity_id, gray_cell)
+                #     ra_worksheet.write(counter, 1, str(activity.name), gray_cell)
+                #     description = str(activity.risk_analysis.distribution_type.value) + " - " \
+                #                       + str(activity.risk_analysis.distribution_units.value)
+                #     ra_worksheet.write(counter, 2, description, yellow_cell)
+                #     ra_worksheet.write_number(counter, 3, activity.risk_analysis.optimistic_duration, yellow_cell)
+                #     ra_worksheet.write_number(counter, 4, activity.risk_analysis.probable_duration, yellow_cell)
+                #     ra_worksheet.write_number(counter, 5, activity.risk_analysis.pessimistic_duration, yellow_cell)
             counter += 1
 
         # Write the tracking periods, same drill, multiple sheets, too many bloody columns
@@ -1300,175 +1302,174 @@ class XLSXParser(FileParser):
                 tracking_period_worksheet = workbook.add_worksheet("TP" + str(i+1))
 
             # Set column widths and create headers
-            if excel_version == ExcelVersion.EXTENDED:
-                tracking_period_worksheet.set_column(0, 0, 3)
-                tracking_period_worksheet.set_column(1, 1, 18)
-                tracking_period_worksheet.set_column(2, 3, 13)
-                tracking_period_worksheet.set_column(4, 4, 6)
-                tracking_period_worksheet.set_column(5, 5, 22)
-                tracking_period_worksheet.set_column(6, 10, 10)
-                tracking_period_worksheet.set_column(11, 11, 13)
-                tracking_period_worksheet.set_column(12, 12, 6)
-                tracking_period_worksheet.set_column(13, 20, 10)
-                tracking_period_worksheet.set_column(21, 21, 8)
-                tracking_period_worksheet.set_column(22, 23, 10)
-                tracking_period_worksheet.set_row(3, 30)
+            #if excel_version == ExcelVersion.EXTENDED:
+            tracking_period_worksheet.set_column(0, 0, 3)
+            tracking_period_worksheet.set_column(1, 1, 18)
+            tracking_period_worksheet.set_column(2, 3, 13)
+            tracking_period_worksheet.set_column(4, 4, 6)
+            tracking_period_worksheet.set_column(5, 5, 22)
+            tracking_period_worksheet.set_column(6, 10, 10)
+            tracking_period_worksheet.set_column(11, 11, 13)
+            tracking_period_worksheet.set_column(12, 12, 6)
+            tracking_period_worksheet.set_column(13, 20, 10)
+            tracking_period_worksheet.set_column(21, 21, 8)
+            tracking_period_worksheet.set_column(22, 23, 10)
+            tracking_period_worksheet.set_row(3, 30)
 
-                tracking_period_worksheet.write('B1', 'TP Status Date', header)
-                tracking_period_worksheet.write('E1', 'TP Name', header)
-                tracking_period_worksheet.merge_range('A3:B3', "General", header)
-                tracking_period_worksheet.merge_range('C3:E3', "Baseline", header)
-                tracking_period_worksheet.merge_range('F3:G3', "Resource Demand", header)
-                tracking_period_worksheet.merge_range('H3:K3', "Baseline Costs", header)
-                tracking_period_worksheet.merge_range('L3:X3', "Tracking", header)
+            tracking_period_worksheet.write('B1', 'TP Status Date', header)
+            tracking_period_worksheet.write('E1', 'TP Name', header)
+            tracking_period_worksheet.merge_range('A3:B3', "General", header)
+            tracking_period_worksheet.merge_range('C3:E3', "Baseline", header)
+            tracking_period_worksheet.merge_range('F3:G3', "Resource Demand", header)
+            tracking_period_worksheet.merge_range('H3:K3', "Baseline Costs", header)
+            tracking_period_worksheet.merge_range('L3:X3', "Tracking", header)
 
-                tracking_period_worksheet.write('A4', 'ID', header)
-                tracking_period_worksheet.write('B4', 'Name', header)
-                tracking_period_worksheet.write('C4', 'Baseline Start', header)
-                tracking_period_worksheet.write('D4', 'Baseline End', header)
-                tracking_period_worksheet.write('E4', 'Duration', header)
-                tracking_period_worksheet.write('F4', 'Resource Demand', header)
-                tracking_period_worksheet.write('G4', 'Resource Cost', header)
-                tracking_period_worksheet.write('H4', 'Fixed Cost', header)
-                tracking_period_worksheet.write('I4', 'Cost/Hour', header)
-                tracking_period_worksheet.write('J4', 'Variable Cost', header)
-                tracking_period_worksheet.write('K4', 'Total Cost', header)
-                tracking_period_worksheet.write('L4', 'Actual Start', header)
-                tracking_period_worksheet.write('M4', 'Actual Duration', header)
-                tracking_period_worksheet.write('N4', 'PAC', header)
-                tracking_period_worksheet.write('O4', 'PRC', header)
-                tracking_period_worksheet.write('P4', 'Remaining Duration', header)
-                tracking_period_worksheet.write('Q4', 'PAC Dev', header)
-                tracking_period_worksheet.write('R4', 'PRC Dev', header)
-                tracking_period_worksheet.write('S4', 'Actual Cost', header)
-                tracking_period_worksheet.write('T4', 'Remaining Cost', header)
-                tracking_period_worksheet.write('U4', 'Percentage Completed', header)
-                tracking_period_worksheet.write('V4', 'Tracking', header)
-                tracking_period_worksheet.write('W4', 'Earned Value (EV)', header)
-                tracking_period_worksheet.write('X4', 'Planned Value (PV)', header)
-            else:
-                tracking_period_worksheet.set_column(0, 0, 3)
-                tracking_period_worksheet.set_column(1, 1, 18)
-                tracking_period_worksheet.set_column(2, 2, 12)
-                tracking_period_worksheet.set_column(3, 3, 9)
-                tracking_period_worksheet.set_column(5, 5, 9)
-                tracking_period_worksheet.set_row(3, 30)
+            tracking_period_worksheet.write('A4', 'ID', header)
+            tracking_period_worksheet.write('B4', 'Name', header)
+            tracking_period_worksheet.write('C4', 'Baseline Start', header)
+            tracking_period_worksheet.write('D4', 'Baseline End', header)
+            tracking_period_worksheet.write('E4', 'Duration', header)
+            tracking_period_worksheet.write('F4', 'Resource Demand', header)
+            tracking_period_worksheet.write('G4', 'Resource Cost', header)
+            tracking_period_worksheet.write('H4', 'Fixed Cost', header)
+            tracking_period_worksheet.write('I4', 'Cost/Hour', header)
+            tracking_period_worksheet.write('J4', 'Variable Cost', header)
+            tracking_period_worksheet.write('K4', 'Total Cost', header)
+            tracking_period_worksheet.write('L4', 'Actual Start', header)
+            tracking_period_worksheet.write('M4', 'Actual Duration', header)
+            tracking_period_worksheet.write('N4', 'PAC', header)
+            tracking_period_worksheet.write('O4', 'PRC', header)
+            tracking_period_worksheet.write('P4', 'Remaining Duration', header)
+            tracking_period_worksheet.write('Q4', 'PAC Dev', header)
+            tracking_period_worksheet.write('R4', 'PRC Dev', header)
+            tracking_period_worksheet.write('S4', 'Actual Cost', header)
+            tracking_period_worksheet.write('T4', 'Remaining Cost', header)
+            tracking_period_worksheet.write('U4', 'Percentage Completed', header)
+            tracking_period_worksheet.write('V4', 'Tracking', header)
+            tracking_period_worksheet.write('W4', 'Earned Value (EV)', header)
+            tracking_period_worksheet.write('X4', 'Planned Value (PV)', header)
+            # else:
+            #     tracking_period_worksheet.set_column(0, 0, 3)
+            #     tracking_period_worksheet.set_column(1, 1, 18)
+            #     tracking_period_worksheet.set_column(2, 2, 12)
+            #     tracking_period_worksheet.set_column(3, 3, 9)
+            #     tracking_period_worksheet.set_column(5, 5, 9)
+            #     tracking_period_worksheet.set_row(3, 30)
+            #
+            #     tracking_period_worksheet.write('B1', 'TP Status Date', header)
+            #     tracking_period_worksheet.write('D1', 'TP Name', header)
+            #     tracking_period_worksheet.merge_range('A3:B3', "General", header)
+            #     tracking_period_worksheet.merge_range('C3:F3', "Tracking", header)
+            #
+            #     tracking_period_worksheet.write('A4', 'ID', header)
+            #     tracking_period_worksheet.write('B4', 'Name', header)
+            #     tracking_period_worksheet.write('C4', 'Actual Start', header)
+            #     tracking_period_worksheet.write('D4', 'Actual Duration', header)
+            #     tracking_period_worksheet.write('E4', 'Actual Cost', header)
+            #     tracking_period_worksheet.write('F4', 'Percentage Completed', header)
 
-                tracking_period_worksheet.write('B1', 'TP Status Date', header)
-                tracking_period_worksheet.write('D1', 'TP Name', header)
-                tracking_period_worksheet.merge_range('A3:B3', "General", header)
-                tracking_period_worksheet.merge_range('C3:F3', "Tracking", header)
+            #if excel_version == ExcelVersion.EXTENDED:
+            # Write the data
+            tracking_period_worksheet.write_datetime('C1', project_object.tracking_periods[i].tracking_period_statusdate
+                                                     , date_green_cell)
+            tracking_period_worksheet.write('F1', project_object.tracking_periods[i].tracking_period_name,
+                                                     yellow_cell)
+            counter = 4
 
-                tracking_period_worksheet.write('A4', 'ID', header)
-                tracking_period_worksheet.write('B4', 'Name', header)
-                tracking_period_worksheet.write('C4', 'Actual Start', header)
-                tracking_period_worksheet.write('D4', 'Actual Duration', header)
-                tracking_period_worksheet.write('E4', 'Actual Cost', header)
-                tracking_period_worksheet.write('F4', 'Percentage Completed', header)
+            for atr in project_object.tracking_periods[i].tracking_period_records:  # atr = ActivityTrackingRecord
+                if Activity.is_not_lowest_level_activity(atr.activity, project_object.activities):
+                    # work package here:
+                    tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, cyan_cell)
+                    tracking_period_worksheet.write(counter, 1, atr.activity.name, cyan_cell)
+                    tracking_period_worksheet.write_datetime(counter, 2, atr.activity.baseline_schedule.start, date_cyan_cell)
+                    tracking_period_worksheet.write_datetime(counter, 3, atr.activity.baseline_schedule.end, date_cyan_cell)
+                    tracking_period_worksheet.write(counter, 4, self.get_duration_str(atr.activity.baseline_schedule.duration), cyan_cell)
+                    tracking_period_worksheet.write(counter, 5, "", cyan_cell) # not printed for workpackages
+                    tracking_period_worksheet.write(counter, 6, "", money_cyan_cell) # not printed for workpackages
+                    tracking_period_worksheet.write_number(counter, 7, atr.activity.baseline_schedule.fixed_cost, money_cyan_cell)
+                    tracking_period_worksheet.write(counter, 8, "", money_cyan_cell) # not printed for workpackages
+                    tracking_period_worksheet.write(counter, 9, "", money_cyan_cell)
+                    tracking_period_worksheet.write_number(counter, 10, atr.activity.baseline_schedule.total_cost, money_cyan_cell)
 
-            if excel_version == ExcelVersion.EXTENDED:
-                # Write the data
-                tracking_period_worksheet.write_datetime('C1', project_object.tracking_periods[i].tracking_period_statusdate
-                                                         , date_green_cell)
-                tracking_period_worksheet.write('F1', project_object.tracking_periods[i].tracking_period_name,
-                                                         yellow_cell)
-                counter = 4
+                    tracking_period_worksheet.write(counter, 11, '', cyan_cell) # not printed for workpackages
+                    tracking_period_worksheet.write(counter, 12, self.get_duration_str(atr.actual_duration), cyan_cell)
+                    tracking_period_worksheet.write(counter, 13, "", money_cyan_cell) # not printed for workpackages
+                    tracking_period_worksheet.write(counter, 14, "", money_cyan_cell) # not printed for workpackages
+                    tracking_period_worksheet.write(counter, 15, "", cyan_cell) # NECESSARY EMPTY field for workpackages!
+                    tracking_period_worksheet.write(counter, 16, "", money_cyan_cell) # not printed for workpackages
+                    tracking_period_worksheet.write(counter, 17, "", money_cyan_cell) # not printed for workpackages
 
-                for atr in project_object.tracking_periods[i].tracking_period_records:  # atr = ActivityTrackingRecord
-                    if Activity.is_not_lowest_level_activity(atr.activity, project_object.activities):
-                        # work package here:
-                        tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, cyan_cell)
-                        tracking_period_worksheet.write(counter, 1, atr.activity.name, cyan_cell)
-                        tracking_period_worksheet.write_datetime(counter, 2, atr.activity.baseline_schedule.start, date_cyan_cell)
-                        tracking_period_worksheet.write_datetime(counter, 3, atr.activity.baseline_schedule.end, date_cyan_cell)
-                        tracking_period_worksheet.write(counter, 4, self.get_duration_str(atr.activity.baseline_schedule.duration), cyan_cell)
-                        tracking_period_worksheet.write(counter, 5, "", cyan_cell) # not printed for workpackages
-                        tracking_period_worksheet.write(counter, 6, "", money_cyan_cell) # not printed for workpackages
-                        tracking_period_worksheet.write_number(counter, 7, atr.activity.baseline_schedule.fixed_cost, money_cyan_cell)
-                        tracking_period_worksheet.write(counter, 8, "", money_cyan_cell) # not printed for workpackages
-                        tracking_period_worksheet.write(counter, 9, "", money_cyan_cell)
-                        tracking_period_worksheet.write_number(counter, 10, atr.activity.baseline_schedule.total_cost, money_cyan_cell)
-
-                        tracking_period_worksheet.write(counter, 11, '', cyan_cell) # not printed for workpackages
-                        tracking_period_worksheet.write(counter, 12, self.get_duration_str(atr.actual_duration), cyan_cell)
-                        tracking_period_worksheet.write(counter, 13, "", money_cyan_cell) # not printed for workpackages
-                        tracking_period_worksheet.write(counter, 14, "", money_cyan_cell) # not printed for workpackages
-                        tracking_period_worksheet.write(counter, 15, "", cyan_cell) # NECESSARY EMPTY field for workpackages!
-                        tracking_period_worksheet.write(counter, 16, "", money_cyan_cell) # not printed for workpackages
-                        tracking_period_worksheet.write(counter, 17, "", money_cyan_cell) # not printed for workpackages
-
-                        tracking_period_worksheet.write_number(counter, 18, atr.actual_cost, money_cyan_cell)
-                        tracking_period_worksheet.write(counter, 19, "", money_cyan_cell) # not printed for workpackages
-                        #percentage_completed = str(atr.percentage_completed) + "%"
-                        tracking_period_worksheet.write(counter, 20, atr.percentage_completed / 100.0, percent_cyan_cell)
-                        tracking_period_worksheet.write(counter, 21, "", cyan_cell) # not printed for workpackages
-                        tracking_period_worksheet.write_number(counter, 22, atr.earned_value, money_cyan_cell)
-                        tracking_period_worksheet.write_number(counter, 23, atr.planned_value, money_cyan_cell)
+                    tracking_period_worksheet.write_number(counter, 18, atr.actual_cost, money_cyan_cell)
+                    tracking_period_worksheet.write(counter, 19, "", money_cyan_cell) # not printed for workpackages
+                    #percentage_completed = str(atr.percentage_completed) + "%"
+                    tracking_period_worksheet.write(counter, 20, atr.percentage_completed / 100.0, percent_cyan_cell)
+                    tracking_period_worksheet.write(counter, 21, "", cyan_cell) # not printed for workpackages
+                    tracking_period_worksheet.write_number(counter, 22, atr.earned_value, money_cyan_cell)
+                    tracking_period_worksheet.write_number(counter, 23, atr.planned_value, money_cyan_cell)
+                else:
+                    # activity:
+                    tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, gray_cell)
+                    tracking_period_worksheet.write(counter, 1, atr.activity.name, gray_cell)
+                    tracking_period_worksheet.write_datetime(counter, 2, atr.activity.baseline_schedule.start, date_gray_cell)
+                    tracking_period_worksheet.write_datetime(counter, 3, atr.activity.baseline_schedule.end, date_gray_cell)
+                    tracking_period_worksheet.write(counter, 4, self.get_duration_str(atr.activity.baseline_schedule.duration), gray_cell)
+                    self.write_resources(tracking_period_worksheet, counter, 5, atr.activity.resources, gray_cell)
+                    tracking_period_worksheet.write_number(counter, 6, atr.activity.resource_cost, money_gray_cell)
+                    tracking_period_worksheet.write_number(counter, 7, atr.activity.baseline_schedule.fixed_cost, money_gray_cell)
+                    tracking_period_worksheet.write_number(counter, 8, atr.activity.baseline_schedule.hourly_cost, money_gray_cell)
+                    tracking_period_worksheet.write_number(counter, 9, atr.activity.baseline_schedule.var_cost, money_gray_cell)
+                    tracking_period_worksheet.write_number(counter, 10, atr.activity.baseline_schedule.total_cost, money_gray_cell)
+                    if atr.actual_start and atr.actual_start.date() < datetime.datetime.max.date():
+                        tracking_period_worksheet.write_datetime(counter, 11, atr.actual_start, date_lime_cell)
                     else:
-                        # activity:
-                        tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, gray_cell)
-                        tracking_period_worksheet.write(counter, 1, atr.activity.name, gray_cell)
-                        tracking_period_worksheet.write_datetime(counter, 2, atr.activity.baseline_schedule.start, date_gray_cell)
-                        tracking_period_worksheet.write_datetime(counter, 3, atr.activity.baseline_schedule.end, date_gray_cell)
-                        tracking_period_worksheet.write(counter, 4, self.get_duration_str(atr.activity.baseline_schedule.duration), gray_cell)
-                        self.write_resources(tracking_period_worksheet, counter, 5, atr.activity.resources, gray_cell)
-                        tracking_period_worksheet.write_number(counter, 6, atr.activity.resource_cost, money_gray_cell)
-                        tracking_period_worksheet.write_number(counter, 7, atr.activity.baseline_schedule.fixed_cost, money_gray_cell)
-                        tracking_period_worksheet.write_number(counter, 8, atr.activity.baseline_schedule.hourly_cost, money_gray_cell)
-                        tracking_period_worksheet.write_number(counter, 9, atr.activity.baseline_schedule.var_cost, money_gray_cell)
-                        tracking_period_worksheet.write_number(counter, 10, atr.activity.baseline_schedule.total_cost, money_gray_cell)
-                        if atr.actual_start and atr.actual_start.date() < datetime.datetime.max.date():
-                            tracking_period_worksheet.write_datetime(counter, 11, atr.actual_start, date_lime_cell)
-                        else:
-                            tracking_period_worksheet.write(counter, 11, '', green_cell)
+                        tracking_period_worksheet.write(counter, 11, '', green_cell)
 
-                        tracking_period_worksheet.write(counter, 12, self.get_duration_str(atr.actual_duration), green_cell)
-                        tracking_period_worksheet.write_number(counter, 13, atr.planned_actual_cost, money_gray_cell)
-                        tracking_period_worksheet.write_number(counter, 14, atr.planned_remaining_cost, money_gray_cell)
-                        tracking_period_worksheet.write(counter, 15, self.get_duration_str(atr.remaining_duration), gray_cell)
-                        tracking_period_worksheet.write_number(counter, 16, atr.deviation_pac, money_gray_cell)
-                        tracking_period_worksheet.write_number(counter, 17, atr.deviation_prc, money_green_cell)
-                        tracking_period_worksheet.write_number(counter, 18, atr.actual_cost, money_lime_cell)
-                        tracking_period_worksheet.write_number(counter, 19, atr.remaining_cost, money_gray_cell)
-                        #percentage_completed = str(atr.percentage_completed) + "%"
-                        tracking_period_worksheet.write(counter, 20, atr.percentage_completed / 100.0, percent_lime_cell)
-                        tracking_period_worksheet.write(counter, 21, atr.tracking_status, gray_cell)
-                        tracking_period_worksheet.write_number(counter, 22, atr.earned_value, money_gray_cell)
-                        tracking_period_worksheet.write_number(counter, 23, atr.planned_value, money_gray_cell)
-                    counter += 1
-            else:
-                # BASIC format
-                # Write the data
-                tracking_period_worksheet.write_datetime('C1', project_object.tracking_periods[i].tracking_period_statusdate
-                                                         , date_green_cell)
-                tracking_period_worksheet.write('E1', project_object.tracking_periods[i].tracking_period_name,
-                                                         yellow_cell)
-                counter = 4
-                
-                for atr in project_object.tracking_periods[i].tracking_period_records:  # atr = ActivityTrackingRecord
-                    if Activity.is_not_lowest_level_activity(atr.activity, project_object.activities):
-                        # workpackage:
-                        tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, cyan_cell)
-                        tracking_period_worksheet.write(counter, 1, atr.activity.name, cyan_cell)
-
-                        tracking_period_worksheet.write(counter, 2, '', cyan_cell) # not printed for workpackages
-                        tracking_period_worksheet.write(counter, 3, self.get_duration_str(atr.actual_duration), cyan_cell)
-                        tracking_period_worksheet.write_number(counter, 4, atr.actual_cost, money_cyan_cell)
-                        #percentage_completed = str(atr.percentage_completed) + "%"
-                        tracking_period_worksheet.write(counter, 5, atr.percentage_completed / 100.0, percent_cyan_cell)
-                    else:
-                        # activity:
-                        tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, gray_cell)
-                        tracking_period_worksheet.write(counter, 1, atr.activity.name, gray_cell)
-                        if atr.actual_start and atr.actual_start.date() < datetime.datetime.max.date():
-                            tracking_period_worksheet.write_datetime(counter, 2, atr.actual_start, date_lime_cell)
-                        else:
-                            tracking_period_worksheet.write(counter, 2, '', green_cell)
-                        tracking_period_worksheet.write(counter, 3, self.get_duration_str(atr.actual_duration), green_cell)
-                        tracking_period_worksheet.write_number(counter, 4, atr.actual_cost, money_lime_cell)
-                        #percentage_completed = str(atr.percentage_completed) + "%"
-                        tracking_period_worksheet.write(counter, 5, atr.percentage_completed / 100.0, percent_lime_cell)
-                    counter += 1
+                    tracking_period_worksheet.write(counter, 12, self.get_duration_str(atr.actual_duration), green_cell)
+                    tracking_period_worksheet.write_number(counter, 13, atr.planned_actual_cost, money_gray_cell)
+                    tracking_period_worksheet.write_number(counter, 14, atr.planned_remaining_cost, money_gray_cell)
+                    tracking_period_worksheet.write(counter, 15, self.get_duration_str(atr.remaining_duration), gray_cell)
+                    tracking_period_worksheet.write_number(counter, 16, atr.deviation_pac, money_gray_cell)
+                    tracking_period_worksheet.write_number(counter, 17, atr.deviation_prc, money_green_cell)
+                    tracking_period_worksheet.write_number(counter, 18, atr.actual_cost, money_lime_cell)
+                    tracking_period_worksheet.write_number(counter, 19, atr.remaining_cost, money_gray_cell)
+                    tracking_period_worksheet.write(counter, 20, atr.percentage_completed / 100.0, percent_lime_cell)
+                    tracking_period_worksheet.write(counter, 21, atr.tracking_status, gray_cell)
+                    tracking_period_worksheet.write_number(counter, 22, atr.earned_value, money_gray_cell)
+                    tracking_period_worksheet.write_number(counter, 23, atr.planned_value, money_gray_cell)
+                counter += 1
+            # else:
+            #     # BASIC format
+            #     # Write the data
+            #     tracking_period_worksheet.write_datetime('C1', project_object.tracking_periods[i].tracking_period_statusdate
+            #                                              , date_green_cell)
+            #     tracking_period_worksheet.write('E1', project_object.tracking_periods[i].tracking_period_name,
+            #                                              yellow_cell)
+            #     counter = 4
+            #
+            #     for atr in project_object.tracking_periods[i].tracking_period_records:  # atr = ActivityTrackingRecord
+            #         if Activity.is_not_lowest_level_activity(atr.activity, project_object.activities):
+            #             # workpackage:
+            #             tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, cyan_cell)
+            #             tracking_period_worksheet.write(counter, 1, atr.activity.name, cyan_cell)
+            #
+            #             tracking_period_worksheet.write(counter, 2, '', cyan_cell) # not printed for workpackages
+            #             tracking_period_worksheet.write(counter, 3, self.get_duration_str(atr.actual_duration), cyan_cell)
+            #             tracking_period_worksheet.write_number(counter, 4, atr.actual_cost, money_cyan_cell)
+            #             #percentage_completed = str(atr.percentage_completed) + "%"
+            #             tracking_period_worksheet.write(counter, 5, atr.percentage_completed / 100.0, percent_cyan_cell)
+            #         else:
+            #             # activity:
+            #             tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, gray_cell)
+            #             tracking_period_worksheet.write(counter, 1, atr.activity.name, gray_cell)
+            #             if atr.actual_start and atr.actual_start.date() < datetime.datetime.max.date():
+            #                 tracking_period_worksheet.write_datetime(counter, 2, atr.actual_start, date_lime_cell)
+            #             else:
+            #                 tracking_period_worksheet.write(counter, 2, '', green_cell)
+            #             tracking_period_worksheet.write(counter, 3, self.get_duration_str(atr.actual_duration), green_cell)
+            #             tracking_period_worksheet.write_number(counter, 4, atr.actual_cost, money_lime_cell)
+            #             #percentage_completed = str(atr.percentage_completed) + "%"
+            #             tracking_period_worksheet.write(counter, 5, atr.percentage_completed / 100.0, percent_lime_cell)
+            #         counter += 1
 
         # Write the agenda
         agenda_worksheet = workbook.add_worksheet("Agenda")
@@ -1505,10 +1506,10 @@ class XLSXParser(FileParser):
         overview_worksheet.set_row(1, 30)
         overview_worksheet.merge_range('A1:C1', 'General', header)
         overview_worksheet.merge_range('D1:G1', 'EVM Performance Measures', header)
-        if excel_version == ExcelVersion.EXTENDED:
-            overview_worksheet.merge_range('H1:N1', 'EVM Forecasting', header)
-        else:
-            overview_worksheet.merge_range('H1:AE1', 'EVM Forecasting', header)
+        #if excel_version == ExcelVersion.EXTENDED:
+        overview_worksheet.merge_range('H1:N1', 'EVM Forecasting', header)
+        #else:
+        #    overview_worksheet.merge_range('H1:AE1', 'EVM Forecasting', header)
 
         overview_worksheet.write('A2', "Name", header)
         overview_worksheet.write('B2', "Start Tracking Period", header)
@@ -1524,24 +1525,24 @@ class XLSXParser(FileParser):
         overview_worksheet.write('L2', "Schedule Variance (SV(t))", header)
         overview_worksheet.write('M2', "Schedule Performance Index (SPI(t))", header)
         overview_worksheet.write('N2', "p-factor", header)
-        if excel_version == ExcelVersion.EXTENDED:
-            overview_worksheet.write('O2', "EAC(t)-PV (PF=1)", header)
-            overview_worksheet.write('P2', "EAC(t)-PV (PF=SPI)", header)
-            overview_worksheet.write('Q2', "EAC(t)-PV (PF=SCI)", header)
-            overview_worksheet.write('R2', "EAC(t)-ED (PF=1)", header)
-            overview_worksheet.write('S2', "EAC(t)-ED (PF=SPI)", header)
-            overview_worksheet.write('T2', "EAC(t)-ED (PF=SPI)", header)
-            overview_worksheet.write('U2', "EAC(t)-ES (PF=1)", header)
-            overview_worksheet.write('V2', "EAC(t)-ES (PF=SPI(t))", header)
-            overview_worksheet.write('W2', "EAC(t)-ES (PF=SCI(t))", header)
-            overview_worksheet.write('X2', "EAC (PF=1)", header)
-            overview_worksheet.write('Y2', "EAC (PF=CPI)", header)
-            overview_worksheet.write('Z2', "EAC (PF=SPI)", header)
-            overview_worksheet.write('AA2', "EAC (PF=SPI(t))", header)
-            overview_worksheet.write('AB2', "EAC (PF=SCI)", header)
-            overview_worksheet.write('AC2', "EAC (PF=SCI(t))", header)
-            overview_worksheet.write('AD2', "EAC (PF=0.8*CPI+0.2*SPI)", header)
-            overview_worksheet.write('AE2', "EAC (PF=0.8*CPI+0.2*SPI(t))", header)
+        #if excel_version == ExcelVersion.EXTENDED:
+        overview_worksheet.write('O2', "EAC(t)-PV (PF=1)", header)
+        overview_worksheet.write('P2', "EAC(t)-PV (PF=SPI)", header)
+        overview_worksheet.write('Q2', "EAC(t)-PV (PF=SCI)", header)
+        overview_worksheet.write('R2', "EAC(t)-ED (PF=1)", header)
+        overview_worksheet.write('S2', "EAC(t)-ED (PF=SPI)", header)
+        overview_worksheet.write('T2', "EAC(t)-ED (PF=SPI)", header)
+        overview_worksheet.write('U2', "EAC(t)-ES (PF=1)", header)
+        overview_worksheet.write('V2', "EAC(t)-ES (PF=SPI(t))", header)
+        overview_worksheet.write('W2', "EAC(t)-ES (PF=SCI(t))", header)
+        overview_worksheet.write('X2', "EAC (PF=1)", header)
+        overview_worksheet.write('Y2', "EAC (PF=CPI)", header)
+        overview_worksheet.write('Z2', "EAC (PF=SPI)", header)
+        overview_worksheet.write('AA2', "EAC (PF=SPI(t))", header)
+        overview_worksheet.write('AB2', "EAC (PF=SCI)", header)
+        overview_worksheet.write('AC2', "EAC (PF=SCI(t))", header)
+        overview_worksheet.write('AD2', "EAC (PF=0.8*CPI+0.2*SPI)", header)
+        overview_worksheet.write('AE2', "EAC (PF=0.8*CPI+0.2*SPI(t))", header)
 
         # generate PV curve:
         generatedPVcurve = self.calculate_PVcurve(project_object)
@@ -1556,15 +1557,10 @@ class XLSXParser(FileParser):
                 overview_worksheet.write_datetime(counter, 1, project_object.tracking_periods[index-1].tracking_period_statusdate, date_green_cell)
             overview_worksheet.write_datetime(counter, 2, tracking_period.tracking_period_statusdate, date_green_cell)
 
+            # calculate the key metrics and write them out
             PV, EV, AC = self.calculate_aggregated_keyMetrics(tracking_period)
-            # calculate PV
-            #PV = self.calculate_aggregated_pv(tracking_period)
             overview_worksheet.write_number(counter, 3, PV, money_green_cell)
-            # calculate EV
-            #EV = self.calculate_aggregated_ev(tracking_period)
             overview_worksheet.write_number(counter, 4, EV, money_green_cell)
-            # calculate AC
-            #AC = self.calculate_aggregated_ac(tracking_period)
             overview_worksheet.write_number(counter, 5, AC, money_green_cell)
             # calculate ES
             ES = self.calculate_es(project_object, generatedPVcurve, EV, tracking_period.tracking_period_statusdate)
@@ -1610,99 +1606,99 @@ class XLSXParser(FileParser):
             # save p_factor value also in tracking_period for visualisations:
             tracking_period.p_factor = p_factor
 
-            if excel_version == ExcelVersion.EXTENDED:
-                workingHours_inDay = project_object.agenda.get_working_hours_in_a_day()
-                BAC = generatedPVcurve[-1][0]  # last PV cumsum point corresponds to BAC
-                PD = project_object.agenda.get_time_between(generatedPVcurve[0][1], generatedPVcurve[-1:][0][1])
-                PD_workingHours = PD.days * workingHours_inDay + round(PD.seconds / 3600)  # represent Project Duration in workinghours
-                AT_duration = project_object.agenda.get_time_between(generatedPVcurve[0][1], tracking_period.tracking_period_statusdate)
-                AT_duration_workingHours = AT_duration.days * workingHours_inDay + round(AT_duration.seconds / 3600)  # represent AT duration since project start in workinghours
-                ES_duration = project_object.agenda.get_time_between(generatedPVcurve[0][1], ES)
-                ES_duration_workingHours = ES_duration.days * workingHours_inDay + round(ES_duration.seconds / 3600)  # represents the ES duration since project start in workinghours
+            #if excel_version == ExcelVersion.EXTENDED:
+            workingHours_inDay = project_object.agenda.get_working_hours_in_a_day()
+            BAC = generatedPVcurve[-1][0]  # last PV cumsum point corresponds to BAC
+            PD = project_object.agenda.get_time_between(generatedPVcurve[0][1], generatedPVcurve[-1:][0][1])
+            PD_workingHours = PD.days * workingHours_inDay + round(PD.seconds / 3600)  # represent Project Duration in workinghours
+            AT_duration = project_object.agenda.get_time_between(generatedPVcurve[0][1], tracking_period.tracking_period_statusdate)
+            AT_duration_workingHours = AT_duration.days * workingHours_inDay + round(AT_duration.seconds / 3600)  # represent AT duration since project start in workinghours
+            ES_duration = project_object.agenda.get_time_between(generatedPVcurve[0][1], ES)
+            ES_duration_workingHours = ES_duration.days * workingHours_inDay + round(ES_duration.seconds / 3600)  # represents the ES duration since project start in workinghours
 
-                # write EAC(t) - Planned Value method (PF = 1)
-                PVrate = BAC / float(PD_workingHours) if bool(PD_workingHours) else 0
-                TV = sv / PVrate if bool(PVrate) else 0  # Time variance
-                EAC_t_pv1 = PD_workingHours - TV
-                EAC_t_pv1_days = int(EAC_t_pv1 / workingHours_inDay)
-                overview_worksheet.write_datetime(counter, 14, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv1_days, round(EAC_t_pv1 - EAC_t_pv1_days * workingHours_inDay)), date_green_cell)
+            # write EAC(t) - Planned Value method (PF = 1)
+            PVrate = BAC / float(PD_workingHours) if bool(PD_workingHours) else 0
+            TV = sv / PVrate if bool(PVrate) else 0  # Time variance
+            EAC_t_pv1 = PD_workingHours - TV
+            EAC_t_pv1_days = int(EAC_t_pv1 / workingHours_inDay)
+            overview_worksheet.write_datetime(counter, 14, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv1_days, round(EAC_t_pv1 - EAC_t_pv1_days * workingHours_inDay)), date_green_cell)
 
-                # write EAC(t) - Planned Value method (PF = spi)
-                EAC_t_pv2 = PD_workingHours / spi if bool(spi)  else 0
-                EAC_t_pv2_days = int(EAC_t_pv2 / workingHours_inDay)
-                overview_worksheet.write_datetime(counter, 15, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv2_days, round(EAC_t_pv2 - EAC_t_pv2_days * workingHours_inDay)), date_green_cell)
+            # write EAC(t) - Planned Value method (PF = spi)
+            EAC_t_pv2 = PD_workingHours / spi if bool(spi)  else 0
+            EAC_t_pv2_days = int(EAC_t_pv2 / workingHours_inDay)
+            overview_worksheet.write_datetime(counter, 15, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv2_days, round(EAC_t_pv2 - EAC_t_pv2_days * workingHours_inDay)), date_green_cell)
 
-                # write EAC(t) - Planned Value method (PF = SCI = SPI * CPI)
-                EAC_t_pv3 = PD_workingHours / (spi * cpi) if bool(spi * cpi)  else 0
-                EAC_t_pv3_days = int(EAC_t_pv3 / workingHours_inDay)
-                overview_worksheet.write_datetime(counter, 16, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv3_days, round(EAC_t_pv3 - EAC_t_pv3_days * workingHours_inDay)), date_green_cell)
+            # write EAC(t) - Planned Value method (PF = SCI = SPI * CPI)
+            EAC_t_pv3 = PD_workingHours / (spi * cpi) if bool(spi * cpi)  else 0
+            EAC_t_pv3_days = int(EAC_t_pv3 / workingHours_inDay)
+            overview_worksheet.write_datetime(counter, 16, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv3_days, round(EAC_t_pv3 - EAC_t_pv3_days * workingHours_inDay)), date_green_cell)
 
-                # write EAC(t) - Earned duration method (PF = 1)
-                ED = AT_duration_workingHours * spi
-                EAC_t_ed1 = AT_duration_workingHours + (max(PD_workingHours, AT_duration_workingHours) - ED)
-                EAC_t_ed1_days = int(EAC_t_ed1 / workingHours_inDay)
-                overview_worksheet.write_datetime(counter, 17, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed1_days, round(EAC_t_ed1 - EAC_t_ed1_days * workingHours_inDay)), date_green_cell)
+            # write EAC(t) - Earned duration method (PF = 1)
+            ED = AT_duration_workingHours * spi
+            EAC_t_ed1 = AT_duration_workingHours + (max(PD_workingHours, AT_duration_workingHours) - ED)
+            EAC_t_ed1_days = int(EAC_t_ed1 / workingHours_inDay)
+            overview_worksheet.write_datetime(counter, 17, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed1_days, round(EAC_t_ed1 - EAC_t_ed1_days * workingHours_inDay)), date_green_cell)
 
-                # write EAC(t) - Earned duration method (PF = spi)
-                if bool(spi):
-                    EAC_t_ed2 = AT_duration_workingHours + (max(PD_workingHours, AT_duration_workingHours) - ED) / spi
-                else:
-                    EAC_t_ed2 = AT_duration_workingHours
-                EAC_t_ed2_days = int(EAC_t_ed2 / workingHours_inDay)
-                overview_worksheet.write_datetime(counter, 18, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed2_days, round(EAC_t_ed2 - EAC_t_ed2_days * workingHours_inDay)), date_green_cell)
+            # write EAC(t) - Earned duration method (PF = spi)
+            if bool(spi):
+                EAC_t_ed2 = AT_duration_workingHours + (max(PD_workingHours, AT_duration_workingHours) - ED) / spi
+            else:
+                EAC_t_ed2 = AT_duration_workingHours
+            EAC_t_ed2_days = int(EAC_t_ed2 / workingHours_inDay)
+            overview_worksheet.write_datetime(counter, 18, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed2_days, round(EAC_t_ed2 - EAC_t_ed2_days * workingHours_inDay)), date_green_cell)
 
-                # write EAC(t) - Earned duration method (PF = SCI = SPI * CPI)
-                if bool(spi) and bool(cpi) :
-                    EAC_t_ed3 = AT_duration_workingHours + (max(PD_workingHours, AT_duration_workingHours) - ED) / (spi * cpi)
-                else:
-                    EAC_t_ed3 = AT_duration_workingHours
-                EAC_t_ed3_days = int(EAC_t_ed3 / workingHours_inDay)
-                overview_worksheet.write_datetime(counter, 19, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed3_days, round(EAC_t_ed3 - EAC_t_ed3_days * workingHours_inDay)), date_green_cell)
-                
-                # write EAC(t) - Earned schedule method (PF = 1)
-                EAC_t_es1 = AT_duration_workingHours + (PD_workingHours - ES_duration_workingHours)
-                EAC_t_es1_days = int(EAC_t_es1 / workingHours_inDay)
-                overview_worksheet.write_datetime(counter, 20, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_es1_days, round(EAC_t_es1 - EAC_t_es1_days * workingHours_inDay)), date_green_cell)
+            # write EAC(t) - Earned duration method (PF = SCI = SPI * CPI)
+            if bool(spi) and bool(cpi) :
+                EAC_t_ed3 = AT_duration_workingHours + (max(PD_workingHours, AT_duration_workingHours) - ED) / (spi * cpi)
+            else:
+                EAC_t_ed3 = AT_duration_workingHours
+            EAC_t_ed3_days = int(EAC_t_ed3 / workingHours_inDay)
+            overview_worksheet.write_datetime(counter, 19, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed3_days, round(EAC_t_ed3 - EAC_t_ed3_days * workingHours_inDay)), date_green_cell)
 
-                # write EAC(t) - Earned schedule method (PF = spi_t)
-                if bool(spi_t):
-                    EAC_t_es2 = AT_duration_workingHours + (PD_workingHours - ES_duration_workingHours) / spi_t
-                else:
-                    EAC_t_es2 = AT_duration_workingHours
-                EAC_t_es2_days = int(EAC_t_es2 / workingHours_inDay)
-                overview_worksheet.write_datetime(counter, 21, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_es2_days, round(EAC_t_es2 - EAC_t_es2_days * workingHours_inDay)), date_green_cell)
+            # write EAC(t) - Earned schedule method (PF = 1)
+            EAC_t_es1 = AT_duration_workingHours + (PD_workingHours - ES_duration_workingHours)
+            EAC_t_es1_days = int(EAC_t_es1 / workingHours_inDay)
+            overview_worksheet.write_datetime(counter, 20, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_es1_days, round(EAC_t_es1 - EAC_t_es1_days * workingHours_inDay)), date_green_cell)
 
-                # write EAC(t) - Earned schedule method (PF = SCI = SPI(t) * CPI)
-                if bool(spi_t) and bool(cpi):
-                    EAC_t_es3 = AT_duration_workingHours + (PD_workingHours - ES_duration_workingHours) / (spi_t * cpi)
-                else:
-                    EAC_t_es3 = AT_duration_workingHours
-                EAC_t_es3_days = int(EAC_t_es3 / workingHours_inDay)
-                overview_worksheet.write_datetime(counter, 22, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_es3_days, round(EAC_t_es3 - EAC_t_es3_days * workingHours_inDay)), date_green_cell)
+            # write EAC(t) - Earned schedule method (PF = spi_t)
+            if bool(spi_t):
+                EAC_t_es2 = AT_duration_workingHours + (PD_workingHours - ES_duration_workingHours) / spi_t
+            else:
+                EAC_t_es2 = AT_duration_workingHours
+            EAC_t_es2_days = int(EAC_t_es2 / workingHours_inDay)
+            overview_worksheet.write_datetime(counter, 21, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_es2_days, round(EAC_t_es2 - EAC_t_es2_days * workingHours_inDay)), date_green_cell)
+
+            # write EAC(t) - Earned schedule method (PF = SCI = SPI(t) * CPI)
+            if bool(spi_t) and bool(cpi):
+                EAC_t_es3 = AT_duration_workingHours + (PD_workingHours - ES_duration_workingHours) / (spi_t * cpi)
+            else:
+                EAC_t_es3 = AT_duration_workingHours
+            EAC_t_es3_days = int(EAC_t_es3 / workingHours_inDay)
+            overview_worksheet.write_datetime(counter, 22, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_es3_days, round(EAC_t_es3 - EAC_t_es3_days * workingHours_inDay)), date_green_cell)
 
 
-                # write EAC(PF = 1)
-                overview_worksheet.write_number(counter, 23, self.calculate_eac(AC, BAC, EV, 1), money_green_cell)
-                # write EAC(PF = cpi)
-                overview_worksheet.write_number(counter, 24, self.calculate_eac(AC,BAC, EV, cpi), money_green_cell)
-                
-                # write EAC(PF = spi)
-                overview_worksheet.write_number(counter, 25, self.calculate_eac(AC, BAC, EV, spi), money_green_cell)
+            # write EAC(PF = 1)
+            overview_worksheet.write_number(counter, 23, self.calculate_eac(AC, BAC, EV, 1), money_green_cell)
+            # write EAC(PF = cpi)
+            overview_worksheet.write_number(counter, 24, self.calculate_eac(AC,BAC, EV, cpi), money_green_cell)
 
-                # write EAC(PF = spi_t)
-                overview_worksheet.write_number(counter, 26, self.calculate_eac(AC, BAC, EV, spi_t), money_green_cell)
+            # write EAC(PF = spi)
+            overview_worksheet.write_number(counter, 25, self.calculate_eac(AC, BAC, EV, spi), money_green_cell)
 
-                # write EAC(PF = SCI = SPI * CPI)
-                overview_worksheet.write_number(counter, 27, self.calculate_eac(AC, BAC, EV, spi * cpi), money_green_cell)
+            # write EAC(PF = spi_t)
+            overview_worksheet.write_number(counter, 26, self.calculate_eac(AC, BAC, EV, spi_t), money_green_cell)
 
-                # write EAC(PF = SCI(t) = SPI(t) * CPI
-                overview_worksheet.write_number(counter, 28, self.calculate_eac(AC, BAC, EV, spi_t * cpi), money_green_cell)
+            # write EAC(PF = SCI = SPI * CPI)
+            overview_worksheet.write_number(counter, 27, self.calculate_eac(AC, BAC, EV, spi * cpi), money_green_cell)
 
-                # write EAC(PF = 0.8*CPI+0.2*SPI)
-                overview_worksheet.write_number(counter, 29, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi), money_green_cell)
+            # write EAC(PF = SCI(t) = SPI(t) * CPI
+            overview_worksheet.write_number(counter, 28, self.calculate_eac(AC, BAC, EV, spi_t * cpi), money_green_cell)
 
-                # write EAC(PF = 0.8*CPI+0.2*SPI(t))
-                overview_worksheet.write_number(counter, 30, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi_t), money_green_cell)
+            # write EAC(PF = 0.8*CPI+0.2*SPI)
+            overview_worksheet.write_number(counter, 29, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi), money_green_cell)
+
+            # write EAC(PF = 0.8*CPI+0.2*SPI(t))
+            overview_worksheet.write_number(counter, 30, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi_t), money_green_cell)
 
 
             counter += 1
@@ -1786,16 +1782,16 @@ class XLSXParser(FileParser):
         if len(resources) > 0:
             for i in range(0, len(resources)-1):
                 to_write += resources[i][0].name
-                if resources[i][1] != 1 or resources[i][2]:  
-                    # if not a unit 1 demand or if fixed assignment: 
+                if resources[i][1] != 1 or resources[i][2]:
+                    # if not a unit 1 demand or if fixed assignment:
                     to_write += "[" +  "{0:.2f}".format(float(resources[i][1]))
                     if resources[i][2]: to_write += "F" # fixed resource assignment
                     to_write += " #" + str(resources[i][0].availability) + "];"
                 else:
                     to_write += ";"
             to_write += resources[-1][0].name
-            if resources[-1][1] != 1 or resources[-1][2]:  
-                # if not a unit 1 demand or if fixed assignment: 
+            if resources[-1][1] != 1 or resources[-1][2]:
+                # if not a unit 1 demand or if fixed assignment:
                 to_write += "[" + "{0:.2f}".format(float(resources[-1][1]))
                 if resources[-1][2]: to_write += "F" # fixed resource assignment
                 to_write += " #" + str(resources[-1][0].availability) + "]"
@@ -1807,7 +1803,7 @@ class XLSXParser(FileParser):
         to_write = ''
         cost = 0
         for activity in activities:
-            for _resource in activity.resources:  
+            for _resource in activity.resources:
                 if resource == _resource[0]:
                     if _resource[1] == 1 and not _resource[2]:
                         to_write += str(activity.activity_id) + ';'
@@ -1817,7 +1813,7 @@ class XLSXParser(FileParser):
                         to_write += ' #' + str(resource.availability) + '];'
 
                     ## calculate cost of the given resource assignment and add it to the total resource cost: # is present in project_object
-                    #cost += (activity.baseline_schedule.duration.days*project_object.agenda.get_working_hours_in_a_day() + 
+                    #cost += (activity.baseline_schedule.duration.days*project_object.agenda.get_working_hours_in_a_day() +
                     #         activity.baseline_schedule.duration.seconds/3600)*(_resource[1]*resource.cost_unit)
         worksheet.write(row, column, to_write, format)
         worksheet.write_number(row, column+1, resource.total_resource_cost, moneyformat)
