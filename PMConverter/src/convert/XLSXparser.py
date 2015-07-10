@@ -838,7 +838,7 @@ class XLSXParser(FileParser):
             res_worksheet.write(counter, 1, resource.name, yellow_cell)
             res_worksheet.write(counter, 2, resource.resource_type.value, yellow_cell)
             # God knows why we write the availability twice, it was like that in the template
-            useless_availability_string = str(resource.availability) + " " + str(resource.name) #update: this used to be resource.availability but needs to be somth else
+            useless_availability_string = str(resource.availability) + " " + str(resource.name) #TODO: this used to be resource.availability but needs to be somth else
             res_worksheet.write(counter, 3, useless_availability_string, yellow_cell)
             res_worksheet.write(counter, 4, resource.cost_use, money_yellow_cell)
             res_worksheet.write(counter, 5, resource.cost_unit, money_yellow_cell)
@@ -1348,7 +1348,7 @@ class XLSXParser(FileParser):
                     else:
                         to_write += str(activity.activity_id) + '[' + "{0:.2f}".format(float(_resource[1]))
                         if _resource[2]: to_write += "F" # fixed resource assignment
-                        to_write += ' ' + str(resource.name) + '];' #update: this used to be resource.availability but needs to be somth else
+                        to_write += ' ' + str(resource.name) + '];' #TODO: this used to be resource.availability but needs to be somth else
 
                     ## calculate cost of the given resource assignment and add it to the total resource cost: # is present in project_object
                     #cost += (activity.baseline_schedule.duration.days*project_object.agenda.get_working_hours_in_a_day() +
