@@ -49,7 +49,6 @@ class Processor(QThread):
         self.parser_to = ""
         self.file_path_from = ""
         self.wantedVisualisations = {}
-        self.excel_version = ExcelVersion.EXTENDED
 
     def run(self):
         " Main running function of processor"
@@ -127,7 +126,7 @@ class Processor(QThread):
         self.emit(self.conversionSucceeded, file_path_to)
         return   
 
-    def setConversionSettings(self, parser_from, parser_to, file_path_from, wantedVisualisations={}, excel_version=ExcelVersion.EXTENDED):
+    def setConversionSettings(self, parser_from, parser_to, file_path_from, wantedVisualisations={}):
         self.parser_from = parser_from
         self.parser_to = parser_to
         self.file_path_from = file_path_from
