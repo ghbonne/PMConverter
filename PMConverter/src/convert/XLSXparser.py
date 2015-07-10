@@ -17,7 +17,6 @@ from objects.riskanalysisdistribution import RiskAnalysisDistribution
 from objects.trackingperiod import TrackingPeriod
 from convert.fileparser import FileParser
 from objects.agenda import Agenda
-from visual.enums import ExcelVersion
 from exceptions import XLSXParseError
 
 
