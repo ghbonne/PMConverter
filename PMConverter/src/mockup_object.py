@@ -20,6 +20,7 @@ from visual.spi_t import SpiT
 
 __author__ = 'gilles'
 
+"""
 dir = "../data_analyse"
 for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
     if file_name.endswith(".p2x"):
@@ -106,6 +107,7 @@ for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
                 v12.draw(workbook, worksheet,po,excel_version)
 
         workbook.close()
+"""
 
 dir = "../data_analyse/output"
 for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
@@ -114,7 +116,6 @@ for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
         input_path = input_path = dir + "/" + file_name
         output_path = dir + "/excel_output/" + file_name[:-5] + "_excel.xlsx"
         xlsx_parser = XLSXParser()
-        excel_version = ExcelVersion.EXTENDED
 
         print("Parsing excel to project object")
         po = xlsx_parser.to_schedule_object(input_path)
