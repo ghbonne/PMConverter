@@ -19,7 +19,7 @@ from visual.cpi import CPI
 from visual.spi_t import SpiT
 
 __author__ = 'gilles'
-
+"""
 dir = "../data_analyse"
 for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
     if file_name.endswith(".p2x"):
@@ -106,10 +106,10 @@ for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
                 v12.draw(workbook, worksheet,po,excel_version)
 
         workbook.close()
-
+"""
 dir = "../data_analyse/output"
 for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
-    if file_name.endswith(".xlsx"):
+    if file_name.endswith(".xlsx") or file_name.endswith(".xls"):
         print(file_name)
         input_path = input_path = dir + "/" + file_name
         output_path = dir + "/excel_output/" + file_name[:-5] + "_excel.xlsx"
@@ -117,6 +117,7 @@ for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
 
         print("Parsing excel to project object")
         po = xlsx_parser.to_schedule_object(input_path)
+        print(po.__dict__)
 
         print("Generating excel output")
         workbook = xlsx_parser.from_schedule_object(po, output_path)

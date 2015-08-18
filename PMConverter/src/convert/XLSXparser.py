@@ -146,6 +146,8 @@ class XLSXParser(FileParser):
             activity_resource_demand_fixed = False  # for consumable resources only
             if len(activity_resource_readString.split("[")) > 1:
                 activity_resource_demand_str = activity_resource_readString.split("[")[1].split(" ")[0]
+                if activity_resource_demand_str[-1] is ']':
+                    activity_resource_demand_str = activity_resource_demand_str[:-1]
                 activity_resource_demand_fixed = activity_resource_demand_str.endswith("F")
                 if activity_resource_demand_fixed:
                     activity_resource_demand_str = activity_resource_demand_str[:-1]
@@ -365,6 +367,7 @@ class XLSXParser(FileParser):
         projectGroupActivity = Activity(0, name=project_name, wbs_id=(1,))
         activities_dict[0] = (first_data_row, projectGroupActivity)
         activityGroups_dict[0] = projectGroupActivity
+        current_wbs = [1]
 
         for curr_row in range(first_data_row + 1, activities_sheet.get_highest_row()+1):
             activity_id = int(activities_sheet.cell(row=curr_row, column=1).value)
@@ -374,7 +377,6 @@ class XLSXParser(FileParser):
                 for number in activities_sheet.cell(row=curr_row, column=3).value.split("."):
                     activity_wbs = activity_wbs + (int(number),)
             else:
-                current_wbs = [1]
                 # check if is activityGroup by var_cost: # NOTE: this is hack to determine if this row belongs to an activityGroup
                 if activities_sheet.cell(row=curr_row, column=13).value is None:
                     # current row belongs to an activityGroup
@@ -389,7 +391,7 @@ class XLSXParser(FileParser):
                         current_wbs = [1,1]
 
                     activityGroupFound = True
-                    activityGroup = Activity(activity_id, name=activity_name, wbs_id= tuple(current_wbs))
+                    activityGroup = Activity(activity_id, name=activity_name, wbs_id=tuple(current_wbs))
                     activityGroups_dict[activity_id] = activityGroup
                     activities_dict[activity_id] = (curr_row, activityGroup)
                     continue
@@ -405,6 +407,7 @@ class XLSXParser(FileParser):
                     else:
                         # previous node was the project root:
                         current_wbs = [1,1]
+                activity_wbs = tuple(current_wbs)
 
             # check if is activityGroup by checking if it has a var_cost
             if activities_sheet.cell(row=curr_row, column=13).value is None:
@@ -416,6 +419,7 @@ class XLSXParser(FileParser):
 
             activity_predecessors = self.process_predecessors(activities_sheet.cell(row=curr_row, column=4).value, agenda)
             activity_successors = self.process_successors(activities_sheet.cell(row=curr_row, column=5).value, agenda)
+
             if activities_sheet.cell(row=curr_row, column=6).value:
                 baseline_start = self.read_date(activities_sheet.cell(row=curr_row, column=6).value)
             else:
