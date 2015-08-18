@@ -33,7 +33,7 @@ class XLSXParser(FileParser):
     def to_schedule_object(self, file_path_input):
         # determine if we're reading a basic or extended version (#columns)
 
-        workbook = openpyxl.load_workbook(file_path_input)
+        workbook = openpyxl.load_workbook(file_path_input, data_only=True)
         project_control_sheets = []
         agenda_sheet = None
         for name in workbook.get_sheet_names():
