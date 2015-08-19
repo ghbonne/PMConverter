@@ -286,6 +286,7 @@ class XMLParser(FileParser):
                 res_type = ResourceType.RENEWABLE if int(resourceNode.find('FIELD769').text) else ResourceType.CONSUMABLE
                 cost_per_use = float(resourceNode.find('FIELD770').text)
                 cost_per_unit = float(resourceNode.find('FIELD771').text)
+                res_unit = resourceNode.find('FIELD778').text
                 # total_resource_cost node can be unavailable?
                 total_resource_cost_Node = resourceNode.find('FIELD776')
                 total_resource_cost = ast.literal_eval(total_resource_cost_Node.text) if total_resource_cost_Node is not None else 0.0
@@ -296,7 +297,8 @@ class XMLParser(FileParser):
                     name = "None resource" + str(resourceNone_nr)
                     resourceNone_nr += 1
 
-                res_dict[res_ID] = Resource(res_ID, name, res_type, availability_default, cost_per_use, cost_per_unit, total_resource_cost, type_check = True)
+                res_dict[res_ID] = Resource(res_ID, name, res_type, availability_default, cost_per_use, cost_per_unit,
+                                            total_resource_cost, resource_unit=res_unit, type_check = True)
                 
 
         ### Risk Analysis ###

@@ -330,14 +330,19 @@ class XLSXParser(FileParser):
             res_type = resource_sheet.cell(row=curr_row, column=3).value
             if res_type != ResourceType.CONSUMABLE:
                 # Had to cast string -> float -> int (silly Python!)
-                res_ava = int(float(resource_sheet.cell(row=curr_row, column=4).value.split(" ")[0]
-                          .translate(str.maketrans(",", "."))))
+                ava_str_split = resource_sheet.cell(row=curr_row, column=4).value.split(" ")
+                res_ava = int(float(ava_str_split[0].translate(str.maketrans(",", "."))))
+                if len(ava_str_split) > 1:
+                    res_unit = ava_str_split[1]
+                else:
+                    res_unit = ""
             else:
                 res_ava = 0
             res_cost_use = float(resource_sheet.cell(row=curr_row, column=5).value)
             res_cost_unit = float(resource_sheet.cell(row=curr_row, column=6).value)
             resources_dict[res_name] = Resource(resource_id=res_id, name=res_name, resource_type=res_type,
-                                                availability=res_ava, cost_use=res_cost_use, cost_unit=res_cost_unit)
+                                                availability=res_ava, cost_use=res_cost_use, cost_unit=res_cost_unit,
+                                                resource_unit=res_unit)
         return resources_dict
 
     def process_risk_analysis(self, risk_analysis_sheet):
@@ -842,7 +847,7 @@ class XLSXParser(FileParser):
             res_worksheet.write(counter, 1, resource.name, yellow_cell)
             res_worksheet.write(counter, 2, resource.resource_type.value, yellow_cell)
             # God knows why we write the availability twice, it was like that in the template
-            useless_availability_string = str(resource.availability) + " " + str(resource.name) #TODO: this used to be resource.availability but needs to be somth else
+            useless_availability_string = str(resource.availability) + " " + str(resource.resource_unit)
             res_worksheet.write(counter, 3, useless_availability_string, yellow_cell)
             res_worksheet.write(counter, 4, resource.cost_use, money_yellow_cell)
             res_worksheet.write(counter, 5, resource.cost_unit, money_yellow_cell)
