@@ -21,7 +21,7 @@ class ActualCost(Visualization):
     """
 
     def __init__(self):
-        self.title = "PC vs AC"
+        self.title = "BC vs AC"
         self.description = "A bar chart is generated on every tracking period tab indicating for each work package or activity its actual cost w.r.t. its baseline cost. "\
                             +"Also the percentage completed of the tasks at that tracking period moment is indicated."
         self.parameters = {"level_of_detail": [LevelOfDetail.WORK_PACKAGES, LevelOfDetail.ACTIVITIES],
@@ -48,7 +48,7 @@ class ActualCost(Visualization):
         percentage_completed = "=("
         height = 150  # calculate 20 pixels per element in barchart
 
-        i = 0
+        i = 1
         start = 5
         while i < len(activities):
             isActivityGroup = Activity.is_not_lowest_level_activity(activities[i], activities)

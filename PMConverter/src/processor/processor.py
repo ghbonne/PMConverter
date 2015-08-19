@@ -36,7 +36,7 @@ class Processor(QThread):
                                "Resources' visualisations", ResourceDistribution(),
                                "Risk analysis' visualisations", RiskAnalysis(),
                                "Tracking periods' visualisations", ActualDuration(), ActualCost(),
-                               "Tracking overview's visualisations", CostValueMetrics(), Performance(), SpiTvsPfactor(), SvT(), CV(), CPI(), SpiT()]
+                               "Tracking overview's visualisations", CostValueMetrics(), Performance(), SpiTvsPfactor(), CV(), SvT(), CPI(), SpiT()]
         self.file_parsers = []
         self.inputFiletypes = {"Excel": ".xlsx", "ProTrack": ".p2x"}
 

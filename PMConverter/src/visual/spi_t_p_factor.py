@@ -19,8 +19,8 @@ class SpiTvsPfactor(Visualization):
     """
 
     def __init__(self):
-        self.title = "SPI(t), p-factor"
-        self.description = "A line graph showing the Schedule Performance Index as (earned schedule / actual duration) and the p-factor of the project, based on the available tracking periods."
+        self.title = "SPI, SPI(t), p-factor"
+        self.description = "A line graph showing the Schedule Performance Index, the Schedule Performance Index as (earned schedule / actual duration) and the p-factor of the project, based on the available tracking periods."
         self.parameters = {"x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
         self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
@@ -45,6 +45,10 @@ class SpiTvsPfactor(Visualization):
 
         data_series = [
             ["SPI(t)",
+             names,
+             ['Tracking Overview', 2, 31, (1+tp_size), 31]
+             ],
+            ["SPI",
              names,
              ['Tracking Overview', 2, 33, (1+tp_size), 33]
              ],
@@ -74,13 +78,15 @@ class SpiTvsPfactor(Visualization):
                                       'border': 1, 'font_size': 8})
         calculation = workbook.add_format({'bg_color': '#FFF2CC', 'text_wrap': True, 'border': 1, 'font_size': 8})
 
-        worksheet.write('AH2', 'SPI(t)', header)
+        worksheet.write('AF2', 'SPI(t)', header)
+        worksheet.write('AH2', 'SPI', header)
         worksheet.write('AI2', 'p-factor', header)
 
         counter = 2
 
         for tp in project_object.tracking_periods:
-            worksheet.write_number(counter, 33, tp.spi_t, calculation)
+            worksheet.write_number(counter, 31, tp.spi_t, calculation)
+            worksheet.write_number(counter, 33, tp.spi, calculation)
             worksheet.write_number(counter, 34, tp.p_factor, calculation)
             counter += 1
 

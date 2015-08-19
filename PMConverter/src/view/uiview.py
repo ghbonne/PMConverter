@@ -23,6 +23,7 @@ class UIView(QDialog, Ui_UIView):
 
     :var possibleVisualisations: dict, keys are the visualisation names and the corresponding value is an object instance of that visualisation type
     :var chosenVisualisations: list, list of names of the visualisations that are added
+    :var possibleVisualisationsStructured: dict, translation dict of visualisation to its corresponding header, contains item.title as keys and their header as a value
     
     """
 
@@ -33,6 +34,10 @@ class UIView(QDialog, Ui_UIView):
         self.lineEditStep1_InputFilename.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
         self.ddlStep2_VisualisationType.blockSignals(True)  # avoid signalling when initing GUI
         self.listStep2_ChosenVisualisations.setDragDropMode(QAbstractItemView.InternalMove)  # enable dragging and dropping of list items
+        # connect signal of listStep2_ChosenVisualisations to notify when order of items changed:
+        list_model = self.listStep2_ChosenVisualisations.model()
+        list_model.layoutChanged.connect(self.on_listStep2_ChosenVisualisations_LayoutChanged)
+
         self.lblStep2_ParamsSaved.setVisible(False)  # Message label to show when parameters are saved
         self.lblFinished_OutputFilename.setWordWrap(True)
         self.lblStep2_VisualisationDescription.setWordWrap(True)
@@ -352,6 +357,15 @@ class UIView(QDialog, Ui_UIView):
             chosenDllIndex = self.ddlStep2_VisualisationType.findText(selectedItems[0].text(), Qt.MatchExactly)
             self.ddlStep2_VisualisationType.setCurrentIndex(chosenDllIndex)
     
+        return
+
+    @pyqtSlot()
+    def on_listStep2_ChosenVisualisations_LayoutChanged(self):
+        """
+        This function handles the change of order of the list of chosen visualisations by the user such that the output Excel file its tabs follow the same order.
+        """
+        # copy the new order of chosen visualisations to the chosenVisualisations list
+        self.chosenVisualisations = [self.listStep2_ChosenVisualisations.item(row).text() for row in range(self.listStep2_ChosenVisualisations.count())]
         return
 
     @pyqtSlot("bool")
