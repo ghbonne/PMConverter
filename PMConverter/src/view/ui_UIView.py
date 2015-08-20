@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'UIView.ui'
 #
-# Created: Sat May 16 13:09:21 2015
+# Created: Thu Aug 20 13:01:05 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -140,14 +140,6 @@ class Ui_UIView(object):
         self.lblStep1_InputFormat.setMargin(5)
         self.lblStep1_InputFormat.setObjectName(_fromUtf8("lblStep1_InputFormat"))
         self.frmLayoutStep1.setWidget(1, QtGui.QFormLayout.LabelRole, self.lblStep1_InputFormat)
-        self.lblStep1_OutputFormat = QtGui.QLabel(self.pageStep1)
-        self.lblStep1_OutputFormat.setMargin(5)
-        self.lblStep1_OutputFormat.setObjectName(_fromUtf8("lblStep1_OutputFormat"))
-        self.frmLayoutStep1.setWidget(2, QtGui.QFormLayout.LabelRole, self.lblStep1_OutputFormat)
-        self.chkStep1_ExcelExtendedVersion = QtGui.QCheckBox(self.pageStep1)
-        self.chkStep1_ExcelExtendedVersion.setEnabled(False)
-        self.chkStep1_ExcelExtendedVersion.setObjectName(_fromUtf8("chkStep1_ExcelExtendedVersion"))
-        self.frmLayoutStep1.setWidget(3, QtGui.QFormLayout.FieldRole, self.chkStep1_ExcelExtendedVersion)
         self.horizontalLayout_21 = QtGui.QHBoxLayout()
         self.horizontalLayout_21.setObjectName(_fromUtf8("horizontalLayout_21"))
         self.ddlStep1_InputFormat = QtGui.QComboBox(self.pageStep1)
@@ -163,6 +155,10 @@ class Ui_UIView(object):
         spacerItem7 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout_21.addItem(spacerItem7)
         self.frmLayoutStep1.setLayout(1, QtGui.QFormLayout.FieldRole, self.horizontalLayout_21)
+        self.lblStep1_OutputFormat = QtGui.QLabel(self.pageStep1)
+        self.lblStep1_OutputFormat.setMargin(5)
+        self.lblStep1_OutputFormat.setObjectName(_fromUtf8("lblStep1_OutputFormat"))
+        self.frmLayoutStep1.setWidget(2, QtGui.QFormLayout.LabelRole, self.lblStep1_OutputFormat)
         self.horizontalLayout_22 = QtGui.QHBoxLayout()
         self.horizontalLayout_22.setObjectName(_fromUtf8("horizontalLayout_22"))
         self.ddlStep1_OutputFormat = QtGui.QComboBox(self.pageStep1)
@@ -294,6 +290,7 @@ class Ui_UIView(object):
         self.lblStep2_Param_StartingThreshold.setObjectName(_fromUtf8("lblStep2_Param_StartingThreshold"))
         self.formLayout.setWidget(3, QtGui.QFormLayout.LabelRole, self.lblStep2_Param_StartingThreshold)
         self.dblspnbxStep2_Param_StartThresholdValue = QtGui.QDoubleSpinBox(self.grpbxStep2_VisualisationParameters)
+        self.dblspnbxStep2_Param_StartThresholdValue.setSingleStep(0.01)
         self.dblspnbxStep2_Param_StartThresholdValue.setObjectName(_fromUtf8("dblspnbxStep2_Param_StartThresholdValue"))
         self.formLayout.setWidget(3, QtGui.QFormLayout.FieldRole, self.dblspnbxStep2_Param_StartThresholdValue)
         self.lblStep2_Param_EndingThreshold = QtGui.QLabel(self.grpbxStep2_VisualisationParameters)
@@ -301,6 +298,7 @@ class Ui_UIView(object):
         self.lblStep2_Param_EndingThreshold.setObjectName(_fromUtf8("lblStep2_Param_EndingThreshold"))
         self.formLayout.setWidget(5, QtGui.QFormLayout.LabelRole, self.lblStep2_Param_EndingThreshold)
         self.dblspnbxStep2_Param_EndThresholdValue = QtGui.QDoubleSpinBox(self.grpbxStep2_VisualisationParameters)
+        self.dblspnbxStep2_Param_EndThresholdValue.setSingleStep(0.01)
         self.dblspnbxStep2_Param_EndThresholdValue.setObjectName(_fromUtf8("dblspnbxStep2_Param_EndThresholdValue"))
         self.formLayout.setWidget(5, QtGui.QFormLayout.FieldRole, self.dblspnbxStep2_Param_EndThresholdValue)
         self.verticalLayout_10.addLayout(self.formLayout)
@@ -466,8 +464,7 @@ class Ui_UIView(object):
         UIView.setTabOrder(self.cmdStep0_Start, self.btnStep1_InputFile)
         UIView.setTabOrder(self.btnStep1_InputFile, self.ddlStep1_InputFormat)
         UIView.setTabOrder(self.ddlStep1_InputFormat, self.ddlStep1_OutputFormat)
-        UIView.setTabOrder(self.ddlStep1_OutputFormat, self.chkStep1_ExcelExtendedVersion)
-        UIView.setTabOrder(self.chkStep1_ExcelExtendedVersion, self.cmdStep1_Next)
+        UIView.setTabOrder(self.ddlStep1_OutputFormat, self.cmdStep1_Next)
         UIView.setTabOrder(self.cmdStep1_Next, self.ddlStep2_VisualisationType)
         UIView.setTabOrder(self.ddlStep2_VisualisationType, self.ddlStep2_Param_LevelOfDetail)
         UIView.setTabOrder(self.ddlStep2_Param_LevelOfDetail, self.chkStep2_Param_RelativeValues)
@@ -494,7 +491,6 @@ class Ui_UIView(object):
         self.btnStep1_InputFile.setText(_translate("UIView", "File...", None))
         self.lblStep1_InputFormat.setText(_translate("UIView", "From:", None))
         self.lblStep1_OutputFormat.setText(_translate("UIView", "To:", None))
-        self.chkStep1_ExcelExtendedVersion.setText(_translate("UIView", "Extended version", None))
         self.cmdStep1_Next.setText(_translate("UIView", "Next", None))
         self.lblStep2_Title.setText(_translate("UIView", "<html><head/><body><p><span style=\" font-size:20pt;\">Step 2: add visualisations</span></p></body></html>", None))
         self.btnStep2_ImportSettings.setText(_translate("UIView", "Import", None))

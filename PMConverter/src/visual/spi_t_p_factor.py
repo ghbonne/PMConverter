@@ -1,6 +1,6 @@
 __author__ = 'Eveline'
 from visual.visualization import Visualization
-from visual.enums import XAxis, ExcelVersion
+from visual.enums import XAxis
 from visual.charts.linechart import LineChart
 
 
@@ -12,7 +12,6 @@ class SpiTvsPfactor(Visualization):
     :var title: str, title of the graph
     :var description, str description of the graph
     :var parameters: dict, the present keys indicate which parameters should be available for the user
-    :var supported: list of ExcelVersion, containing the version that are supported
 
     Settings:
     :var x_axis: XAxis, x-axis of the chart can be expressed in status dates or in tracking periods
@@ -23,9 +22,8 @@ class SpiTvsPfactor(Visualization):
         self.description = "A line graph showing the Schedule Performance Index, the Schedule Performance Index as (earned schedule / actual duration) and the p-factor of the project, based on the available tracking periods."
         self.parameters = {"x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
-        self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
 
-    def draw(self, workbook, worksheet, project_object, excel_version):
+    def draw(self, workbook, worksheet, project_object):
         #todo: axis ranges aanpassen?
         if not self.x_axis:
             raise Exception("Please first set var x_axis")
