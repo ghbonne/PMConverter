@@ -31,7 +31,7 @@ class XLSXParser(FileParser):
 
     """ ---------------------- MAIN FUNCTION TO READ FROM EXCEL ------------------------- """
     def to_schedule_object(self, file_path_input):
-        # determine if we're reading a basic or extended version (#columns)
+        """Reads an Excel file and loads its data in a project object."""
 
         workbook = openpyxl.load_workbook(file_path_input, data_only=True)
         project_control_sheets = []
@@ -48,8 +48,7 @@ class XLSXParser(FileParser):
             elif "Agenda" in name:
                 agenda_sheet = workbook.get_sheet_by_name(name)
 
-        # We are processing an extended version
-        # Process the agenda sheet first to have an agenda to parse all dates in in the other sheets
+        # Process the agenda sheet first to have an agenda to parse all dates in the other sheets
         if agenda_sheet:
             agenda = self.process_agenda(agenda_sheet)
         else:
@@ -118,12 +117,17 @@ class XLSXParser(FileParser):
 
     @staticmethod
     def get_nr_of_header_lines(sheet):
+        """
+        Counts the number of rows from the top until a digit (ID number) is found in the first column.
+        :return: int, number of first row with a digit
+        """
         header_lines = 1
         while sheet.cell(row=header_lines, column=1).value is None \
                 or (type(sheet.cell(row=header_lines, column=1).value) is not int
                     and not sheet.cell(row=header_lines, column=1).value.isdigit()):
             header_lines += 1
             if header_lines == 100:  # An after-deadline hack to avoid infinite loops
+                print("Error:XLSXParser:get_nr_of_header_lines: After-deadline hack to avoid infinite loops was needed!")
                 break
         return header_lines
 
@@ -170,6 +174,10 @@ class XLSXParser(FileParser):
 
     """ SHEET PROCESSING FUNCTIONS """
     def process_agenda(self, agenda_sheet):
+        """
+        Reads an Excel Agenda tab
+        :return: Agenda object
+        """
         working_days = [0]*7
         working_hours = [0]*24
         holidays = []
@@ -321,23 +329,54 @@ class XLSXParser(FileParser):
         return tracking_periods
 
     def process_resources(self, resource_sheet):
+        """
+        Reads an Excel Resources tab
+        :return: dict: the resources in a dict, with as index the resource name
+        """
         # We store the resources  in a dict, with as index the resource name, to access them easily later when we
         # are processing the activities.
         resources_dict = {}
         for curr_row in range(self.get_nr_of_header_lines(resource_sheet), resource_sheet.get_highest_row()+1):
             res_id = int(resource_sheet.cell(row=curr_row, column=1).value)
             res_name = resource_sheet.cell(row=curr_row, column=2).value
-            res_type = resource_sheet.cell(row=curr_row, column=3).value
+            # check if this resource name is already present:
+            if res_name in resources_dict:
+                raise XLSXParseError("""An error occurred while processing the Excel Resources sheet at row {0} and column B\n 
+                    No duplicate resource names allowed: {1} is already defined!""".format(curr_row, res_name))
+
+            # parse resource type
+            res_type_string = resource_sheet.cell(row=curr_row, column=3).value
+            if res_type_string.lower() == ResourceType.CONSUMABLE.lower():
+                res_type = ResourceType.CONSUMABLE
+            elif res_type_string.lower() == ResourceType.RENEWABLE.lower():
+                res_type = ResourceType.RENEWABLE
+            else:
+                raise XLSXParseError("""An error occurred while processing the Excel Resources sheet at row {0} and column C\n 
+                    Unkown resource type: {1}\n
+                    NOTE: Only "Renewable" or "Consumable" are defined.""".format(curr_row, res_type_string))
+
             if res_type != ResourceType.CONSUMABLE:
                 # Had to cast string -> float -> int (silly Python!)
                 ava_str_split = resource_sheet.cell(row=curr_row, column=4).value.split(" ")
-                res_ava = int(float(ava_str_split[0].translate(str.maketrans(",", "."))))
-                if len(ava_str_split) > 1:
-                    res_unit = ava_str_split[1]
-                else:
-                    res_unit = ""
-            else:
+                # Try to read the availability number and unit:
                 res_ava = 0
+                res_unit = ""
+                try:
+                    res_ava = int(float(ava_str_split[0].translate(str.maketrans(",", "."))))
+                    if len(ava_str_split) > 1:
+                        res_unit = ava_str_split[1]
+                        # append words back to the unit string if spaces would be present in the unit string
+                        for i in range(2, len(ava_str_split)):
+                            res_unit += " " + ava_str_split[i]
+                    else:
+                        res_unit = ""
+                except ValueError:
+                    raise XLSXParseError("""An error occurred while processing the Excel Resources sheet at row {0} and column D\n 
+                            Can't figure out the availability number and/or resource unit from: {1}\n 
+                            NOTE: A space is needed between the resource availability and resource unit.""".format(curr_row, resource_sheet.cell(row=curr_row, column=4).value))
+
+            else:
+                res_ava = -1
             res_cost_use = float(resource_sheet.cell(row=curr_row, column=5).value)
             res_cost_unit = float(resource_sheet.cell(row=curr_row, column=6).value)
             resources_dict[res_name] = Resource(resource_id=res_id, name=res_name, resource_type=res_type,
