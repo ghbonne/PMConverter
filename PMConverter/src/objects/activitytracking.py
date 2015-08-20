@@ -123,7 +123,7 @@ class ActivityTrackingRecord(object):
             earned_value = 0.
         else:
             # activity running:
-            earned_value = activity.baseline_schedule.fixed_cost + percentageComplete/100.0 * (activity.baseline_schedule.var_cost + activity.resource_cost)
+            earned_value = activity.baseline_schedule.fixed_cost + percentageComplete/100.0 * (activity.baseline_schedule.var_cost + activity.resource_cost) # TODO: resource cost is handled completely as a total variable cost for EV: OK?
         
         # Calculate PV:
         if statusdate_datetime >= activity.baseline_schedule.end:
@@ -183,8 +183,10 @@ class ActivityTrackingRecord(object):
                     # activity is definitely not finished yet
                     childActivity_latestDate = current_status_date
                 elif childActivityTrackingRecord.actual_start.date() < datetime.datetime.max.date():
+                    # activity is started and finished
                     childActivity_latestDate = agenda.get_end_date(childActivityTrackingRecord.actual_start, childActivityTrackingRecord.actual_duration.days, round(childActivityTrackingRecord.actual_duration.seconds / 3600.0))
                 else:
+                    # unreachable case?
                     childActivity_latestDate = current_status_date
 
                 if childActivity_latestDate > latest_finish:
