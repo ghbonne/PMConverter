@@ -61,7 +61,7 @@ class XLSXParser(FileParser):
         risk_analysis_dict = self.process_risk_analysis(risk_analysis_sheet)
 
         # Finally, the sheet with activities is processed, using the dicts we created above.
-        # Again, a new dict is created, to process all tracking periods more easily
+        # Again, new dicts are created, to process all tracking periods more easily
         activities_dict, activityGroups_dict, activityGroup_to_childActivities_dict, project_name = self.process_baseline_schedule(activities_sheet, resources_dict, risk_analysis_dict, agenda)
         tracking_periods = self.process_project_controls(project_control_sheets, activities_dict, activityGroups_dict, activityGroup_to_childActivities_dict, agenda)
 
@@ -442,24 +442,56 @@ class XLSXParser(FileParser):
         return risk_analysis_dict
 
     def process_baseline_schedule(self, activities_sheet, resources_dict, risk_analysis_dict, agenda):
+        """
+        Reads an Excel Baseline Schedule tab
+        :return: tuple: (activities_dict, activityGroups_dict, activityGroup_to_childActivities_dict, project_name)
+        activities_dict: dict of all activities and activitygroups with 'key: value' = 'activityId: (row, Activity)'
+        activityGroups_dict: dict of only activitygroups with 'key: value' = 'activityId: Activity'
+        activityGroup_to_childActivities_dict: dict which links an activitygroupId to its child activities' ID, 'key: value' = 'activityId: [ActivityId1, ActivityId2,...]'
+        project_name: string
+        """
         activities_dict = {}  # contains all activities and group, activityId: (row, Activity)
         activityGroups_dict = {} # contains only groups, activityId: Activity
         # process the first project line manually:
         first_data_row = self.get_nr_of_header_lines(activities_sheet)
         project_name = activities_sheet.cell(row=first_data_row, column=2).value
-        projectGroupActivity = Activity(0, name=project_name, wbs_id=(1,))
+        # try to read the project WBS:
+        project_wbs_str = str(activities_sheet.cell(row=first_data_row, column=3).value)
+        if project_wbs_str and project_wbs_str.strip():
+            current_wbs = ()
+            for number in project_wbs_str.split("."):
+                    current_wbs = current_wbs + (int(number),)
+        else:
+            # default project wbs when no wbs id given for the project:
+            current_wbs = (1,)
+
+        projectGroupActivity = Activity(0, name=project_name, wbs_id=current_wbs)
         activities_dict[0] = (first_data_row, projectGroupActivity)
         activityGroups_dict[0] = projectGroupActivity
-        current_wbs = [1]
+        current_wbs = list(current_wbs)
+        activityGroupFound = False
 
         for curr_row in range(first_data_row + 1, activities_sheet.get_highest_row()+1):
-            activity_id = int(activities_sheet.cell(row=curr_row, column=1).value)
+            activity_id = -1
+            try:
+                # try to cast this string to an int
+                activity_id = int(activities_sheet.cell(row=curr_row, column=1).value)
+            except:
+                # This row has no valid ID number => skip this row
+                print("XLSXparser:process_baseline_schedule: Invalid activity ID at row {0}".format(curr_row))
+                continue
+            
             activity_name = activities_sheet.cell(row=curr_row, column=2).value
-            if activities_sheet.cell(row=curr_row, column=3).value:
-                activity_wbs = ()
-                for number in activities_sheet.cell(row=curr_row, column=3).value.split("."):
+            activity_wbs = ()
+            # check if WBS field is not None and not empty or only spaces:
+            if activities_sheet.cell(row=curr_row, column=3).value and str(activities_sheet.cell(row=curr_row, column=3).value).strip():
+                # WBS id given:
+                for number in str(activities_sheet.cell(row=curr_row, column=3).value).split("."):
                     activity_wbs = activity_wbs + (int(number),)
+                # update current_wbs:
+                current_wbs = list(activity_wbs)
             else:
+                # auto generate WBS id:
                 # check if is activityGroup by var_cost: # NOTE: this is hack to determine if this row belongs to an activityGroup
                 if activities_sheet.cell(row=curr_row, column=13).value is None:
                     # current row belongs to an activityGroup
@@ -471,7 +503,7 @@ class XLSXParser(FileParser):
                         current_wbs[1] += 1
                     else:
                         # previous node was the project root:
-                        current_wbs = [1,1]
+                        current_wbs.append(1)
 
                     activityGroupFound = True
                     activityGroup = Activity(activity_id, name=activity_name, wbs_id=tuple(current_wbs))
@@ -489,12 +521,13 @@ class XLSXParser(FileParser):
                         current_wbs[-1] += 1
                     else:
                         # previous node was the project root:
-                        current_wbs = [1,1]
+                        current_wbs.append(1)
                 activity_wbs = tuple(current_wbs)
 
             # check if is activityGroup by checking if it has a var_cost
             if activities_sheet.cell(row=curr_row, column=13).value is None:
                 # current row belongs to activityGroup; don't read any further, calculate its aggregate value later on
+                activityGroupFound = True
                 activityGroup = Activity(activity_id, name=activity_name, wbs_id=activity_wbs)
                 activityGroups_dict[activity_id] = activityGroup
                 activities_dict[activity_id] = (curr_row, activityGroup)
