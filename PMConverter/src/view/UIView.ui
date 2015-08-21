@@ -283,26 +283,6 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="lblStep1_OutputFormat">
-             <property name="text">
-              <string>To:</string>
-             </property>
-             <property name="margin">
-              <number>5</number>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="1">
-            <widget class="QCheckBox" name="chkStep1_ExcelExtendedVersion">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="text">
-              <string>Extended version</string>
-             </property>
-            </widget>
-           </item>
            <item row="1" column="1">
             <layout class="QHBoxLayout" name="horizontalLayout_21">
              <item>
@@ -338,6 +318,16 @@
               </spacer>
              </item>
             </layout>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="lblStep1_OutputFormat">
+             <property name="text">
+              <string>To:</string>
+             </property>
+             <property name="margin">
+              <number>5</number>
+             </property>
+            </widget>
            </item>
            <item row="2" column="1">
             <layout class="QHBoxLayout" name="horizontalLayout_22">
@@ -635,7 +625,11 @@
                  </widget>
                 </item>
                 <item row="3" column="1">
-                 <widget class="QDoubleSpinBox" name="dblspnbxStep2_Param_StartThresholdValue"/>
+                 <widget class="QDoubleSpinBox" name="dblspnbxStep2_Param_StartThresholdValue">
+                  <property name="singleStep">
+                   <double>0.010000000000000</double>
+                  </property>
+                 </widget>
                 </item>
                 <item row="5" column="0">
                  <widget class="QLabel" name="lblStep2_Param_EndingThreshold">
@@ -648,7 +642,11 @@
                  </widget>
                 </item>
                 <item row="5" column="1">
-                 <widget class="QDoubleSpinBox" name="dblspnbxStep2_Param_EndThresholdValue"/>
+                 <widget class="QDoubleSpinBox" name="dblspnbxStep2_Param_EndThresholdValue">
+                  <property name="singleStep">
+                   <double>0.010000000000000</double>
+                  </property>
+                 </widget>
                 </item>
                </layout>
               </item>
@@ -1078,7 +1076,6 @@
   <tabstop>btnStep1_InputFile</tabstop>
   <tabstop>ddlStep1_InputFormat</tabstop>
   <tabstop>ddlStep1_OutputFormat</tabstop>
-  <tabstop>chkStep1_ExcelExtendedVersion</tabstop>
   <tabstop>cmdStep1_Next</tabstop>
   <tabstop>ddlStep2_VisualisationType</tabstop>
   <tabstop>ddlStep2_Param_LevelOfDetail</tabstop>

@@ -24,6 +24,8 @@ class Resource(object):
 
     def __init__(self, resource_id, name="", resource_type=ResourceType.RENEWABLE, availability=0, cost_use=0.0,
                  cost_unit=0.0, total_resource_cost=0, resource_unit="", type_check = True):
+        if self.resource_unit is None:
+            self.resource_unit = ""
         if type_check:
             if not isinstance(resource_id, int):
                 raise TypeError('Resource: resource_id should be an integer')
@@ -44,6 +46,8 @@ class Resource(object):
                 raise TypeError('Resource: cost_unit should be an float')
             if not isinstance(total_resource_cost, (float, int)):
                 raise TypeError('Resource: total_resource_cost should be an integer or float')
+            if not isinstance(resource_unit, str):
+                raise TypeError('Resource: resource_unit should be a string')
 
         self.resource_id = resource_id
         self.name = name
@@ -53,8 +57,7 @@ class Resource(object):
         self.cost_unit = cost_unit
         self.total_resource_cost = total_resource_cost
         self.resource_unit = resource_unit
-        if self.resource_unit is None:
-            self.resource_unit = ""
+        
 
     @staticmethod
     def calculate_resource_assignment_cost(resource, demand, isFixed, duration_hours):

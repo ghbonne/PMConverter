@@ -1,6 +1,6 @@
 __author__ = 'Eveline'
 from visual.visualization import Visualization
-from visual.enums import XAxis, ExcelVersion
+from visual.enums import XAxis
 from visual.charts.linechart import LineChart
 
 
@@ -12,7 +12,6 @@ class SpiT(Visualization):
     :var title: str, title of the graph
     :var description, str description of the graph
     :var parameters: dict, the present keys indicate which parameters should be available for the user
-    :var supported: list of ExcelVersion, containing the version that are supported
 
     Settings:
     :var x_axis: XAxis, x-axis of the chart can be expressed in status dates or in tracking periods
@@ -29,9 +28,8 @@ class SpiT(Visualization):
         self.x_axis = None
         self.threshold = None
         self.thresholdValues = None
-        self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
 
-    def draw(self, workbook, worksheet, project_object, excel_version):
+    def draw(self, workbook, worksheet, project_object):
         if not self.x_axis:
             raise Exception("Please first set var x_axis")
 
@@ -79,6 +77,13 @@ class SpiT(Visualization):
     Private methods
     """
     def calculate_threshold(self, workbook, worksheet, tp_size):
+        """
+        Calculate the values for the treshold
+        :param workbook:
+        :param worksheet:
+        :param tp_size:
+        :return:
+        """
         header = workbook.add_format({'bold': True, 'bg_color': '#316AC5', 'font_color': 'white', 'text_wrap': True,
                                       'border': 1, 'font_size': 8})
         calculation = workbook.add_format({'bg_color': '#FFF2CC', 'text_wrap': True, 'border': 1, 'font_size': 8})
@@ -86,14 +91,11 @@ class SpiT(Visualization):
         worksheet.write('AN2', 'SPI(t) threshold', header)
 
         start = 2
-        if self.thresholdValues[0] == self.thresholdValues[1] or tp_size <= 1:
+        if self.thresholdValues[0] == self.thresholdValues[1] or tp_size <= 1: #constant threshold
             for i in range(0, tp_size):
                 worksheet.write(start + i, 39, self.thresholdValues[0], calculation)
         else:
-            if self.thresholdValues[0] > self.thresholdValues[1]:
-                value = (self.thresholdValues[0] - self.thresholdValues[1])/(tp_size - 1)
-            else:
-                value = (self.thresholdValues[1] - self.thresholdValues[0])/(tp_size - 1)
+            value = (self.thresholdValues[1] - self.thresholdValues[0])/(tp_size - 1)
             for i in range(0, tp_size):
                 worksheet.write(start + i, 39, self.thresholdValues[0] + (i * value), calculation)
 

@@ -1,7 +1,6 @@
 __author__ = 'Eveline'
 from visual.visualization import Visualization
-from visual.charts.granttchart import GanttChart
-from visual.enums import ExcelVersion
+from visual.charts.ganttchart import GanttChart
 
 
 class BaselineSchedule(Visualization):
@@ -12,27 +11,22 @@ class BaselineSchedule(Visualization):
     :var title: str, title of the graph
     :var description, str description of the graph
     :var parameters: dict, the present keys indicate which parameters should be available for the user
-    :var supported: list of ExcelVersion, containing the version that are supported
     """
 
     def __init__(self):
         self.title = "Baseline Schedule"
         self.description = "Baseline Schedule is a gantt chart on which the baseline schedule of every activity and work package is shown."
         self.parameters = {}
-        self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
 
-    def draw(self, workbook, worksheet, project_object, excel_version):
+    def draw(self, workbook, worksheet, project_object):
         size = self.calculate_values(workbook, worksheet, project_object)
 
         chartsheet = workbook.add_worksheet("Gantt chart")
         self.change_order(workbook)
 
-        names = "='" + worksheet.get_name() + "'!$B$3:$B$" + str(size)
-        if excel_version == ExcelVersion.EXTENDED:
-            baseline_start = "='" + worksheet.get_name() + "'!$F$3:$F$" + str(size)
-        else:
-            baseline_start = "='" + worksheet.get_name() + "'!$E$3:$E$" + str(size)
-        baseline_duration = "='" + worksheet.get_name() + "'!$Q$3:$Q$" + str(size)
+        names = "='" + worksheet.get_name() + "'!$B$4:$B$" + str(size)
+        baseline_start = "='" + worksheet.get_name() + "'!$F$4:$F$" + str(size)
+        baseline_duration = "='" + worksheet.get_name() + "'!$Q$4:$Q$" + str(size)
 
         data_series = [
             ["Baseline start",
@@ -73,7 +67,7 @@ class BaselineSchedule(Visualization):
         for activity in project_object.activities:
             begin_date = activity.baseline_schedule.start
             end_date = activity.baseline_schedule.end
-            delta = self.get_duration(end_date-begin_date)
+            delta = self.get_duration(end_date-begin_date) # delta is the difference in calendar days
             worksheet.write(counter, 16, delta, calculation)
             counter += 1
 
@@ -111,7 +105,7 @@ class BaselineSchedule(Visualization):
 
     def change_order(self, workbook):
         """
-        Changes the order of the worksheets such that the Gantt chart is de second worksheet
+        Changes the order of the worksheets such that the Gantt chart is the second worksheet
         :param workbook:
         """
         worksheets = workbook.worksheets_objs

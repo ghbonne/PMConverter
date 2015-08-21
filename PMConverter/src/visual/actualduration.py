@@ -1,6 +1,6 @@
 __author__ = 'Eveline'
 from visual.visualization import Visualization
-from visual.enums import LevelOfDetail, DataType, ExcelVersion
+from visual.enums import LevelOfDetail, DataType
 from visual.charts.barchart import BarChart
 from objects.activity import Activity
 
@@ -13,7 +13,6 @@ class ActualDuration(Visualization):
     :var title: str, title of the graph
     :var description, str description of the graph
     :var parameters: dict, the present keys indicate which parameters should be available for the user
-    :var supported: list of ExcelVersion, containing the version that are supported
 
     Settings:
     :var level_of_detail: LevelOfDetail, graph can be shown for workpackages or activities
@@ -21,7 +20,7 @@ class ActualDuration(Visualization):
     """
 
     def __init__(self):
-        self.title = "PD vs AD"
+        self.title = "BD vs AD"
         self.description = "A bar chart is generated on every tracking period tab indicating for each work package or activity its actual duration w.r.t. its baseline duration. "\
                             +"Also the percentage completed of the tasks at that tracking period moment is indicated."
         self.parameters = {"level_of_detail": [LevelOfDetail.WORK_PACKAGES, LevelOfDetail.ACTIVITIES],
@@ -29,9 +28,8 @@ class ActualDuration(Visualization):
         self.level_of_detail = None
         self.data_type = None
         self.tp = 0
-        self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
 
-    def draw(self, workbook, worksheet, project_object, excel_version):
+    def draw(self, workbook, worksheet, project_object):
         if not self.level_of_detail:
             raise Exception("Please first set var level_of_detail")
         if not self.data_type:
@@ -48,7 +46,7 @@ class ActualDuration(Visualization):
         percentage_completed = "=("
         height = 150  # calculate 20 pixels per element in barchart
 
-        i = 0
+        i = 1
         start = 5
         while i < len(activities):
             isActivityGroup = Activity.is_not_lowest_level_activity(activities[i], activities)
@@ -158,8 +156,8 @@ class ActualDuration(Visualization):
         if delta:
             if delta.seconds != 0:
                 days = delta.days
-                hours = delta.seconds / (3600.0 * agenda.get_working_hours_in_a_day()) #hours expressed in workingdays
-                duration = days + hours
+                days_hours = delta.seconds / (3600.0 * agenda.get_working_hours_in_a_day()) #hours expressed in workingdays
+                duration = days + days_hours
             else:
                 duration = delta.days
             return duration

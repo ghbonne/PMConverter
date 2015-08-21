@@ -11,6 +11,8 @@ class TrackingPeriod(object):
     :var tracking_period_name: string
     :var tracking_period_statusdate: datetime
     :var tracking_period_records: List of ActivityTrackingRecords, which are nonzero or contain changes w.r.t. previous tracking period
+
+    extra variables only for excel visualisations purposes: their correct value is only set in the XLSXParser.from_schedule_object
     :var spi
     :var cpi
     :var spi_t

@@ -1,7 +1,6 @@
 __author__ = 'ghbonne'
 __license__ = "GPL"
 
-#from processor.processor import Processor
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from view.ui_UIView import Ui_UIView
@@ -15,14 +14,16 @@ import ast # ast.literal_eval(node_or_string)
 import time
 
 
-#from processor import Processor
-
 class UIView(QDialog, Ui_UIView):
     """
     This is the main dialog window of the GUI controlling the PMConverter application.
 
+    :var inputFilename: string, contains the filename of the file to process
     :var possibleVisualisations: dict, keys are the visualisation names and the corresponding value is an object instance of that visualisation type
+    :var possibleVisualisationsStructured: dict, translation dict of visualisation to its corresponding header, contains item.title as keys and their header as a value
     :var chosenVisualisations: list, list of names of the visualisations that are added
+    :var processor: Processor object, backend of PMConverter
+    :var inputFiletypes: dict, links an application name (Excel, ProTrack) with its file extension
     
     """
 
@@ -33,6 +34,10 @@ class UIView(QDialog, Ui_UIView):
         self.lineEditStep1_InputFilename.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
         self.ddlStep2_VisualisationType.blockSignals(True)  # avoid signalling when initing GUI
         self.listStep2_ChosenVisualisations.setDragDropMode(QAbstractItemView.InternalMove)  # enable dragging and dropping of list items
+        # connect signal of listStep2_ChosenVisualisations to notify when order of items changed:
+        list_model = self.listStep2_ChosenVisualisations.model()
+        list_model.layoutChanged.connect(self.on_listStep2_ChosenVisualisations_LayoutChanged)
+
         self.lblStep2_ParamsSaved.setVisible(False)  # Message label to show when parameters are saved
         self.lblFinished_OutputFilename.setWordWrap(True)
         self.lblStep2_VisualisationDescription.setWordWrap(True)
@@ -48,7 +53,6 @@ class UIView(QDialog, Ui_UIView):
          # custom Application inits
         self.inputFilename = ""
         self.processor = Processor()
-        self.excel_version = None
 
         # connect signals from Processor with GUI
         self.connect(self.processor, self.processor.conversionSucceeded, self.ConversionSucceeded)
@@ -80,7 +84,6 @@ class UIView(QDialog, Ui_UIView):
     def on_cmdStep0_Start_clicked(self, clicked):
         "This function handles clicked events on the start button of the GUI"
         self.btnStep1_InputFile.setDefault(True)
-        self.chkStep1_ExcelExtendedVersion.setVisible(False)
 
         self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageStep1))
 
@@ -94,7 +97,7 @@ class UIView(QDialog, Ui_UIView):
 
         #if(fileWindow.exec_()):
             #self.inputFilename = fileWindow.selectedFiles()[0]
-        filename = QFileDialog.getOpenFileName(self, "Choose an input file...", filter = "ProTrack files (*.p2x);;Excel files (*.xlsx)")
+        filename = QFileDialog.getOpenFileName(self, "Choose an input file...", filter = "ProTrack files (*.p2x);;Excel files (*.xlsx)") # EVT: make filter dynamic with self.inputFiletypes
 
         if filename:
             self.inputFilename = filename
@@ -113,9 +116,7 @@ class UIView(QDialog, Ui_UIView):
             self.ddlStep1_InputFormat.setEnabled(True)
 
             self.ddlStep1_OutputFormat.clear()
-            # allow only to convert to other formats than inputformat
-            #self.ddlStep1_OutputFormat.addItems([type for type in self.inputFiletypes.keys() if self.inputFiletypes[type] != fileExtension])
-            # Else: allow to convert to any format:
+            # allow to convert to any format:
             possibleInputTypes = [type for type in self.inputFiletypes.keys()]
             self.ddlStep1_OutputFormat.addItems(possibleInputTypes)
             # auto enable the first other format:
@@ -123,10 +124,6 @@ class UIView(QDialog, Ui_UIView):
             self.ddlStep1_OutputFormat.setCurrentIndex(possibleInputTypes.index(otherFormats[0]))
             
             self.ddlStep1_OutputFormat.setEnabled(True)
-
-            #if output file format == Excel => enable chkbox
-            self.chkStep1_ExcelExtendedVersion.setVisible(self.ddlStep1_OutputFormat.currentText() == "Excel")
-            self.chkStep1_ExcelExtendedVersion.setEnabled(self.ddlStep1_OutputFormat.currentText() == "Excel")
 
             self.cmdStep1_Next.setEnabled(True)
 
@@ -136,20 +133,19 @@ class UIView(QDialog, Ui_UIView):
             self.cmdStep1_Next.setDefault(True)
             self.cmdStep1_Next.setFocus()
 
-    @pyqtSlot("int")
-    def on_ddlStep1_OutputFormat_currentIndexChanged(self, index):
-        "This function handles index changed events from combobox outputFormat from step 1"
-        self.chkStep1_ExcelExtendedVersion.setVisible(self.ddlStep1_OutputFormat.currentText() == "Excel")
-        self.chkStep1_ExcelExtendedVersion.setEnabled(self.ddlStep1_OutputFormat.currentText() == "Excel")
+    #@pyqtSlot("int")
+    #def on_ddlStep1_OutputFormat_currentIndexChanged(self, index):
+    #    "This function handles index changed events from combobox outputFormat from step 1"
+    #    self.chkStep1_ExcelExtendedVersion.setVisible(self.ddlStep1_OutputFormat.currentText() == "Excel")
+    #    self.chkStep1_ExcelExtendedVersion.setEnabled(self.ddlStep1_OutputFormat.currentText() == "Excel")
 
     @pyqtSlot("bool")
     def on_cmdStep1_Next_clicked(self, clicked):
         "This function handles click events on the next button of step 1."
         if self.ddlStep1_OutputFormat.currentText() == "Excel":
-            self.excel_version = ExcelVersion.EXTENDED if self.chkStep1_ExcelExtendedVersion.isChecked() else ExcelVersion.BASIC
             self.ddlStep2_VisualisationType.blockSignals(True)
             currentHeader = "TOPHEADER"
-            for item in self.processor.get_supported_visualisations(self.excel_version):
+            for item in self.processor.get_supported_visualisations():
                 if type(item) == str:
                     # insert header here
                     self.ddlStep2_VisualisationType.addParentItem(item)
@@ -354,6 +350,15 @@ class UIView(QDialog, Ui_UIView):
     
         return
 
+    @pyqtSlot()
+    def on_listStep2_ChosenVisualisations_LayoutChanged(self):
+        """
+        This function handles the change of order of the list of chosen visualisations by the user such that the output Excel file its tabs follow the same order.
+        """
+        # copy the new order of chosen visualisations to the chosenVisualisations list
+        self.chosenVisualisations = [self.listStep2_ChosenVisualisations.item(row).text() for row in range(self.listStep2_ChosenVisualisations.count())]
+        return
+
     @pyqtSlot("bool")
     def on_btnStep2_AddVisualisation_clicked(self, clicked):
         "This function handles click events of the Add button of step 2"
@@ -529,7 +534,7 @@ class UIView(QDialog, Ui_UIView):
 
         # start conversion here to excel
         # start thread here
-        self.processor.setConversionSettings(self.ddlStep1_InputFormat.currentText(), self.ddlStep1_OutputFormat.currentText(), self.inputFilename, wantedVisualisations,self.excel_version)
+        self.processor.setConversionSettings(self.ddlStep1_InputFormat.currentText(), self.ddlStep1_OutputFormat.currentText(), self.inputFilename, wantedVisualisations)
         self.processor.start()
 
         self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageConverting))

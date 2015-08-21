@@ -23,7 +23,6 @@ from visual.spi_t import SpiT
 from visual.spi_t_p_factor import SpiTvsPfactor
 from visual.performance import Performance
 from visual.budget import CV
-from visual.enums import ExcelVersion
 import traceback
 
 
@@ -36,7 +35,7 @@ class Processor(QThread):
                                "Resources' visualisations", ResourceDistribution(),
                                "Risk analysis' visualisations", RiskAnalysis(),
                                "Tracking periods' visualisations", ActualDuration(), ActualCost(),
-                               "Tracking overview's visualisations", CostValueMetrics(), Performance(), SpiTvsPfactor(), SvT(), CV(), CPI(), SpiT()]
+                               "Tracking overview's visualisations", CostValueMetrics(), Performance(), SpiTvsPfactor(), CV(), SvT(), CPI(), SpiT()]
         self.file_parsers = []
         self.inputFiletypes = {"Excel": ".xlsx", "ProTrack": ".p2x"}
 
@@ -81,30 +80,30 @@ class Processor(QThread):
         if self.parser_to == "Excel":
             try:
                 xlsx_parser = XLSXParser()
-                workbook = xlsx_parser.from_schedule_object(project_object, file_path_to, self.excel_version)
+                workbook = xlsx_parser.from_schedule_object(project_object, file_path_to)
                 if self.wantedVisualisations:
                     current_tp = 0
                     for worksheet in workbook.worksheets():
                         if worksheet.get_name() == "Baseline Schedule":
                             for visualisation in self.wantedVisualisations["Baseline schedule's visualisations"]:
-                                visualisation.draw(workbook, worksheet, project_object, self.excel_version)
+                                visualisation.draw(workbook, worksheet, project_object)
                         if worksheet.get_name() == "Resources":
                             for visualisation in self.wantedVisualisations["Resources' visualisations"]:
-                                visualisation.draw(workbook, worksheet, project_object, self.excel_version)
+                                visualisation.draw(workbook, worksheet, project_object)
                         if worksheet.get_name() == "Risk Analysis":
                             for visualisation in self.wantedVisualisations["Risk analysis' visualisations"]:
-                                visualisation.draw(workbook, worksheet, project_object, self.excel_version)
+                                visualisation.draw(workbook, worksheet, project_object)
                         if "TP" in worksheet.get_name():
                             #tp = int(re.search(r'\d+', worksheet.get_name()).group())
                             for visualisation in self.wantedVisualisations["Tracking periods' visualisations"]:
                                 visualisation.tp = current_tp
-                                visualisation.draw(workbook, worksheet, project_object, self.excel_version)
+                                visualisation.draw(workbook, worksheet, project_object)
                             current_tp += 1
                         if worksheet.get_name() == "Tracking Overview":
                             for visualisation in self.wantedVisualisations["Tracking overview's visualisations"]:
-                                visualisation.draw(workbook, worksheet, project_object, self.excel_version)
+                                visualisation.draw(workbook, worksheet, project_object)
                 #try:
-                    workbook.close()
+                workbook.close() # should be closed in any case
                 #except Exception:
                 #    #todo: back to gui: "Can't write to file_path_to, please first close Excel and try again"
                 #    pass
@@ -131,25 +130,20 @@ class Processor(QThread):
         self.parser_to = parser_to
         self.file_path_from = file_path_from
         self.wantedVisualisations = wantedVisualisations
-        self.excel_version = excel_version
     
     def create_all_file_parsers(self):
         self.file_parsers.append(XLSXParser())
         self.file_parsers.append(XMLParser())
 
-    def get_supported_visualisations(self, excel_version):
+    def get_supported_visualisations(self):
         supported_visualisations = []
-        # build new list
-        for item in self.visualizations:
-            if isinstance(item, Visualization):
-                if excel_version in item.support:
-                    supported_visualisations.append(item)
-            else:
-                supported_visualisations.append(item)
+        # build new list: can apply filtering here
+        supported_visualisations = copy.deepcopy(self.visualizations)
+
         # check for empty headers
         supported_copy = copy.deepcopy(supported_visualisations)
         previous_str = isinstance(supported_copy[0], str)
-        previous_item = None
+        previous_item = None if not previous_str else supported_copy[0]
         for i in range(1, len(supported_copy)):  #skip first element
             item = supported_copy[i]
             if isinstance(item, str):
