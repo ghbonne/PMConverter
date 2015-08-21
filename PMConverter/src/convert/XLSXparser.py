@@ -406,21 +406,39 @@ class XLSXParser(FileParser):
         return resources_dict
 
     def process_risk_analysis(self, risk_analysis_sheet):
+        """
+        Reads an Excel Risk Analysis tab
+        :return: dict: the risk analysis distributions in a dict, with as index the activity_id
+        """
         risk_analysis_dict = {}
         col = 4
         for curr_row in range(self.get_nr_of_header_lines(risk_analysis_sheet), risk_analysis_sheet.get_highest_row()+1):
-            if risk_analysis_sheet.cell(row=curr_row, column=col).value is not None:
-                risk_ana_dist_type = risk_analysis_sheet.cell(row=curr_row, column=col).value.split(" - ")[0].strip()  # remove leading and trailing whitespace
-                risk_ana_dist_units = risk_analysis_sheet.cell(row=curr_row, column=col).value.split(" - ")[1].strip()  # remove leading and trailing whitespace
-                risk_ana_opt_duration = int(risk_analysis_sheet.cell(row=curr_row, column=col+1).value)
-                risk_ana_prob_duration = int(risk_analysis_sheet.cell(row=curr_row, column=col+2).value)
-                risk_ana_pess_duration = int(risk_analysis_sheet.cell(row=curr_row, column=col+3).value)
-                dict_id = int(risk_analysis_sheet.cell(row=curr_row, column=1).value)
-                risk_analysis_dict[dict_id] = RiskAnalysisDistribution(distribution_type=risk_ana_dist_type,
-                                                                       distribution_units=risk_ana_dist_units,
-                                                                       optimistic_duration=risk_ana_opt_duration,
-                                                                       probable_duration=risk_ana_prob_duration,
-                                                                       pessimistic_duration=risk_ana_pess_duration)
+            # check if description is not None and not empty or only spaces
+            if risk_analysis_sheet.cell(row=curr_row, column=col).value is not None and risk_analysis_sheet.cell(row=curr_row, column=col).value.strip():
+                try:
+                    risk_ana_dist_descript = risk_analysis_sheet.cell(row=curr_row, column=col).value.split("-")
+                    if len(risk_ana_dist_descript) != 2:
+                        raise XLSXParseError(("An error occurred while reading the Risk Analysis sheet on row {0} column {1}!\n" + \
+                            "Expects a string in a format like  'manual - absolute' and not: {2}").format(curr_row, col, risk_analysis_sheet.cell(row=curr_row, column=col).value))
+
+                    risk_ana_dist_type = risk_ana_dist_descript[0].strip()  # remove leading and trailing whitespace
+                    risk_ana_dist_units = risk_ana_dist_descript[1].strip()  # remove leading and trailing whitespace
+                    risk_ana_opt_duration = int(risk_analysis_sheet.cell(row=curr_row, column=col+1).value)
+                    risk_ana_prob_duration = int(risk_analysis_sheet.cell(row=curr_row, column=col+2).value)
+                    risk_ana_pess_duration = int(risk_analysis_sheet.cell(row=curr_row, column=col+3).value)
+                    dict_id = int(risk_analysis_sheet.cell(row=curr_row, column=1).value)
+                    risk_analysis_dict[dict_id] = RiskAnalysisDistribution(distribution_type=risk_ana_dist_type,
+                                                                           distribution_units=risk_ana_dist_units,
+                                                                           optimistic_duration=risk_ana_opt_duration,
+                                                                           probable_duration=risk_ana_prob_duration,
+                                                                           pessimistic_duration=risk_ana_pess_duration)
+                except XLSXParseError:
+                    # rethrow custom XLSXParseError exceptions
+                    raise
+                except:
+                    raise XLSXParseError(("An error occurred while reading the Risk Analysis sheet on row {0}.\n" + \
+                            "Check the input file and change row {0} to accomodate for the expected input format.").format(curr_row))
+
         return risk_analysis_dict
 
     def process_baseline_schedule(self, activities_sheet, resources_dict, risk_analysis_dict, agenda):
