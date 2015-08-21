@@ -4,7 +4,7 @@ __credits__ = ["John McNamara"]
 
 import xlsxwriter
 import openpyxl
-import re
+import re, sys
 import datetime
 from operator import attrgetter
 
@@ -336,52 +336,73 @@ class XLSXParser(FileParser):
         # We store the resources  in a dict, with as index the resource name, to access them easily later when we
         # are processing the activities.
         resources_dict = {}
-        for curr_row in range(self.get_nr_of_header_lines(resource_sheet), resource_sheet.get_highest_row()+1):
-            res_id = int(resource_sheet.cell(row=curr_row, column=1).value)
-            res_name = resource_sheet.cell(row=curr_row, column=2).value
-            # check if this resource name is already present:
-            if res_name in resources_dict:
-                raise XLSXParseError("""An error occurred while processing the Excel Resources sheet at row {0} and column B\n 
-                    No duplicate resource names allowed: {1} is already defined!""".format(curr_row, res_name))
-
-            # parse resource type
-            res_type_string = resource_sheet.cell(row=curr_row, column=3).value
-            if res_type_string.lower() == ResourceType.CONSUMABLE.lower():
-                res_type = ResourceType.CONSUMABLE
-            elif res_type_string.lower() == ResourceType.RENEWABLE.lower():
-                res_type = ResourceType.RENEWABLE
-            else:
-                raise XLSXParseError("""An error occurred while processing the Excel Resources sheet at row {0} and column C\n 
-                    Unkown resource type: {1}\n
-                    NOTE: Only "Renewable" or "Consumable" are defined.""".format(curr_row, res_type_string))
-
-            if res_type != ResourceType.CONSUMABLE:
-                # Had to cast string -> float -> int (silly Python!)
-                ava_str_split = resource_sheet.cell(row=curr_row, column=4).value.split(" ")
-                # Try to read the availability number and unit:
-                res_ava = 0
-                res_unit = ""
+        try:
+            for curr_row in range(self.get_nr_of_header_lines(resource_sheet), resource_sheet.get_highest_row()+1):
+                res_id_str = resource_sheet.cell(row=curr_row, column=1).value
+                res_id = -1
                 try:
-                    res_ava = int(float(ava_str_split[0].translate(str.maketrans(",", "."))))
-                    if len(ava_str_split) > 1:
-                        res_unit = ava_str_split[1]
-                        # append words back to the unit string if spaces would be present in the unit string
-                        for i in range(2, len(ava_str_split)):
-                            res_unit += " " + ava_str_split[i]
-                    else:
-                        res_unit = ""
-                except ValueError:
-                    raise XLSXParseError("""An error occurred while processing the Excel Resources sheet at row {0} and column D\n 
-                            Can't figure out the availability number and/or resource unit from: {1}\n 
-                            NOTE: A space is needed between the resource availability and resource unit.""".format(curr_row, resource_sheet.cell(row=curr_row, column=4).value))
+                    # try to cast this string to an int
+                    res_id = int(res_id_str)
+                except:
+                    # This row has no valid ID number => skip this row
+                    print("XLSXparser:process_resources: Invalid resource ID at row {0}".format(curr_row))
+                    continue
 
-            else:
-                res_ava = -1
-            res_cost_use = float(resource_sheet.cell(row=curr_row, column=5).value)
-            res_cost_unit = float(resource_sheet.cell(row=curr_row, column=6).value)
-            resources_dict[res_name] = Resource(resource_id=res_id, name=res_name, resource_type=res_type,
-                                                availability=res_ava, cost_use=res_cost_use, cost_unit=res_cost_unit,
-                                                resource_unit=res_unit)
+                res_name = resource_sheet.cell(row=curr_row, column=2).value
+                # check if this resource name is already present:
+                if not res_name:
+                    raise XLSXParseError(("An error occurred while processing the Excel Resources sheet at row {0} and column B\n" + \
+                        "No empty resource names allowed!").format(curr_row))
+                elif res_name in resources_dict:
+                    raise XLSXParseError(("An error occurred while processing the Excel Resources sheet at row {0} and column B\n" + \
+                        "No duplicate resource names allowed: {1} is already defined!").format(curr_row, res_name))
+
+                # parse resource type
+                res_type_string = resource_sheet.cell(row=curr_row, column=3).value
+                if res_type_string and res_type_string.lower() == ResourceType.CONSUMABLE.value.lower():
+                    res_type = ResourceType.CONSUMABLE
+                elif res_type_string and res_type_string.lower() == ResourceType.RENEWABLE.value.lower():
+                    res_type = ResourceType.RENEWABLE
+                else:
+                    raise XLSXParseError(("An error occurred while processing the Excel Resources sheet at row {0} and column C\n" + \
+                        "Unkown resource type: {1}\n" + \
+                        "NOTE: Only 'Renewable' or 'Consumable' are defined.").format(curr_row, res_type_string if res_type_string else "None"))
+
+                if res_type != ResourceType.CONSUMABLE:
+                    # Had to cast string -> float -> int (silly Python!)
+                    ava_str_split = str(resource_sheet.cell(row=curr_row, column=4).value).split(" ")
+                    # Try to read the availability number and unit:
+                    res_ava = 0
+                    res_unit = ""
+                    try:
+                        res_ava = int(float(ava_str_split[0].translate(str.maketrans(",", "."))))
+                        if len(ava_str_split) > 1:
+                            res_unit = ava_str_split[1]
+                            # append words back to the unit string if spaces would be present in the unit string
+                            for i in range(2, len(ava_str_split)):
+                                res_unit += " " + ava_str_split[i]
+                        else:
+                            res_unit = ""
+                    except ValueError:
+                        raise XLSXParseError(("An error occurred while processing the Excel Resources sheet at row {0} and column D\n" + \
+                                "Can't figure out the availability number and/or resource unit from: {1}\n" + \
+                                "NOTE: A space is needed between the resource availability and resource unit.").format(curr_row, resource_sheet.cell(row=curr_row, column=4).value))
+
+                else:
+                    res_ava = -1
+                res_cost_use = float(resource_sheet.cell(row=curr_row, column=5).value)
+                res_cost_unit = float(resource_sheet.cell(row=curr_row, column=6).value)
+                resources_dict[res_name] = Resource(resource_id=res_id, name=res_name, resource_type=res_type,
+                                                    availability=res_ava, cost_use=res_cost_use, cost_unit=res_cost_unit,
+                                                    resource_unit=res_unit)
+        except XLSXParseError as exception:
+            # rethrow same exception:
+            raise
+        except:
+            # Any other non caught exception:
+            raise XLSXParseError("""An error occurred while processing the Excel Resources sheet.\nCheck the input file if all necessary fields are entered.""")
+
+
         return resources_dict
 
     def process_risk_analysis(self, risk_analysis_sheet):

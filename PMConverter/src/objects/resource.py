@@ -24,8 +24,8 @@ class Resource(object):
 
     def __init__(self, resource_id, name="", resource_type=ResourceType.RENEWABLE, availability=0, cost_use=0.0,
                  cost_unit=0.0, total_resource_cost=0, resource_unit="", type_check = True):
-        if self.resource_unit is None:
-            self.resource_unit = ""
+        if resource_unit is None:
+            resource_unit = ""
         if type_check:
             if not isinstance(resource_id, int):
                 raise TypeError('Resource: resource_id should be an integer')
