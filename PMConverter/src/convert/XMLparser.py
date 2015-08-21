@@ -1059,7 +1059,7 @@ class XMLParser(FileParser):
         customValues_dict = {}
         customValues_dict["FIELD0"] = str(resource.resource_id)
         customValues_dict["FIELD1"] = self.xml_escape(resource.name)
-        customValues_dict["FIELD778"] = "#{0}".format(resource.availability) if resource.resource_type == ResourceType.RENEWABLE else "#Inf"
+        customValues_dict["FIELD778"] = "{0}".format(resource.resource_unit) if resource.resource_type == ResourceType.RENEWABLE else "#Inf"
         customValues_dict["FIELD769"] = "1" if resource.resource_type == ResourceType.RENEWABLE else "0"
         customValues_dict["FIELD770"] = str(resource.cost_use)
         customValues_dict["FIELD771"] = str(resource.cost_unit)

@@ -1044,6 +1044,22 @@ class XLSXParser(FileParser):
                 agenda_worksheet.write(i+1, 4, "Yes", green_cell)
             else:
                 agenda_worksheet.write(i+1, 4, "No", red_cell)
+        agenda_worksheet.conditional_format('B2:B25', { 'type':     'cell',
+                                                        'criteria': '==',
+                                                        'value':    '"Yes"',
+                                                        'format':   green_cell})
+        agenda_worksheet.conditional_format('B2:B25', { 'type':     'cell',
+                                                        'criteria': '==',
+                                                        'value':    '"No"',
+                                                        'format':   red_cell})
+        agenda_worksheet.conditional_format('E2:E8', { 'type':     'cell',
+                                                        'criteria': '==',
+                                                        'value':    '"Yes"',
+                                                        'format':   green_cell})
+        agenda_worksheet.conditional_format('E2:E8', { 'type':     'cell',
+                                                        'criteria': '==',
+                                                        'value':    '"No"',
+                                                        'format':   red_cell})
         counter = 1
         for holiday in project_object.agenda.holidays:
             agenda_worksheet.write(counter, 6, holiday, holiday_yellow_cell)
