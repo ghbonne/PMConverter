@@ -259,7 +259,7 @@ class Agenda(object):
 
     def convert_durationString_to_workingHours(self, duration_string):
         """
-        This function converts a duration from a string to a timedelta of workingdays and workinghours
+        This function converts a duration from a string to an int of workinghours
         :param duration_string: string with working duration formatted in weeks, days and hours
         :return: int, workinghours
         """

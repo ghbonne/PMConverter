@@ -72,14 +72,19 @@ class XLSXParser(FileParser):
     """ READING PRIVATE FUNCTIONS """
     @staticmethod
     def process_predecessors(predecessors, agenda):
-        if predecessors:
+        """
+        Reads an Excel Baseline Schedule tab's predecessors field
+        :return: list of [(predecessor_activity_id, predecessor_relation, predecessor_lag), ...]
+        """
+        if predecessors and predecessors.strip():
             activity_predecessors = []
             for predecessor in predecessors.split(";"):
                 temp = re.split('\-|\+', predecessor)
                 # The last two characters are the relation type (e.g. xFS or xxFS), activity can be variable
                 # number of digits
-                predecessor_activity = int(temp[0][0:-2])
-                predecessor_relation = temp[0][-2:]
+                predecessor_part = temp[0].strip() # remove excess spaces
+                predecessor_activity_id = int(predecessor_part[0:-2])
+                predecessor_relation = predecessor_part[-2:]
                 if len(temp) == 2:
                     # Was it a + or -?
                     minus_plus = predecessor.split("-")
@@ -91,27 +96,35 @@ class XLSXParser(FileParser):
                         predecessor_lag = agenda.convert_durationString_to_workingHours(temp[1]) #extract workinghours from string
                 else:
                     predecessor_lag = 0
-                activity_predecessors.append((predecessor_activity, predecessor_relation, predecessor_lag))
+                activity_predecessors.append((predecessor_activity_id, predecessor_relation, predecessor_lag))
             return activity_predecessors
         return []
 
     @staticmethod
     def process_successors(successors, agenda):
-        if successors:
+        """
+        Reads an Excel Baseline Schedule tab's successors field
+        :return: list of [(successor_activity_id, successor_relation, successor_lag), ...]
+        """
+        if successors and successors.strip():
             activity_successors = []
             for successor in successors.split(";"):
                 temp = re.split('\-|\+', successor)
-                successor_activity = int(temp[0][2:])
-                successor_relation = temp[0][0:2]
+                # The first two characters are the relation type (e.g. FSx or FSxx), activity can be variable number of digits
+                successor_part = temp[0].strip() # remove excess spaces
+                successor_activity_id = int(successor_part[2:])
+                successor_relation = successor_part[0:2]
                 if len(temp) == 2:
                     minus_plus = successor.split("-")
                     if len(minus_plus) == 2:
-                        successor_lag = -agenda.convert_durationString_to_workingHours(temp[1])
+                        # It was a -
+                        successor_lag = -agenda.convert_durationString_to_workingHours(temp[1]) #extract workinghours from string
                     else:
-                        successor_lag = agenda.convert_durationString_to_workingHours(temp[1])
+                        # It was a +
+                        successor_lag = agenda.convert_durationString_to_workingHours(temp[1]) #extract workinghours from string
                 else:
                     successor_lag = 0
-                activity_successors.append((successor_activity, successor_relation, successor_lag))
+                activity_successors.append((successor_activity_id, successor_relation, successor_lag))
             return activity_successors
         return []
 
@@ -456,10 +469,11 @@ class XLSXParser(FileParser):
         first_data_row = self.get_nr_of_header_lines(activities_sheet)
         project_name = activities_sheet.cell(row=first_data_row, column=2).value
         # try to read the project WBS:
-        project_wbs_str = str(activities_sheet.cell(row=first_data_row, column=3).value)
-        if project_wbs_str and project_wbs_str.strip():
+        project_wbs_str = activities_sheet.cell(row=first_data_row, column=3).value
+        if project_wbs_str and str(project_wbs_str).strip():
             current_wbs = ()
-            for number in project_wbs_str.split("."):
+            for number in str(project_wbs_str).split("."):
+                if number: # check if non-empty string follows the '.'
                     current_wbs = current_wbs + (int(number),)
         else:
             # default project wbs when no wbs id given for the project:
@@ -468,9 +482,10 @@ class XLSXParser(FileParser):
         projectGroupActivity = Activity(0, name=project_name, wbs_id=current_wbs)
         activities_dict[0] = (first_data_row, projectGroupActivity)
         activityGroups_dict[0] = projectGroupActivity
-        current_wbs = list(current_wbs)
-        activityGroupFound = False
+        current_wbs = list(current_wbs) # current_wbs needs to be a list for further easy incrementing
+        activityGroupFound = False # boolean for constructing auto generated WBS
 
+        # loop over all rows, except the project row parsed before
         for curr_row in range(first_data_row + 1, activities_sheet.get_highest_row()+1):
             activity_id = -1
             try:
@@ -487,7 +502,8 @@ class XLSXParser(FileParser):
             if activities_sheet.cell(row=curr_row, column=3).value and str(activities_sheet.cell(row=curr_row, column=3).value).strip():
                 # WBS id given:
                 for number in str(activities_sheet.cell(row=curr_row, column=3).value).split("."):
-                    activity_wbs = activity_wbs + (int(number),)
+                    if number:
+                        activity_wbs = activity_wbs + (int(number),)
                 # update current_wbs:
                 current_wbs = list(activity_wbs)
             else:
@@ -533,8 +549,18 @@ class XLSXParser(FileParser):
                 activities_dict[activity_id] = (curr_row, activityGroup)
                 continue
 
-            activity_predecessors = self.process_predecessors(activities_sheet.cell(row=curr_row, column=4).value, agenda)
-            activity_successors = self.process_successors(activities_sheet.cell(row=curr_row, column=5).value, agenda)
+            activity_predecessors = None
+            activity_successors = None
+            try:
+                activity_predecessors = self.process_predecessors(activities_sheet.cell(row=curr_row, column=4).value, agenda)
+            except:
+                raise XLSXParseError(("An error occurred while reading the predecessors of row {0} with value: {1}\n" + \
+                            "Check if the input format is valid.").format(curr_row, activities_sheet.cell(row=curr_row, column=4).value))
+            try:
+                activity_successors = self.process_successors(activities_sheet.cell(row=curr_row, column=5).value, agenda)
+            except:
+                raise XLSXParseError(("An error occurred while reading the successors of row {0} with value: {1}\n" + \
+                            "Check if the input format is valid.").format(curr_row, activities_sheet.cell(row=curr_row, column=5).value))
 
             if activities_sheet.cell(row=curr_row, column=6).value:
                 baseline_start = self.read_date(activities_sheet.cell(row=curr_row, column=6).value)
