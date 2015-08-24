@@ -146,10 +146,18 @@ class XLSXParser(FileParser):
 
     @staticmethod
     def read_date(date):
+        """
+        Processes an Excel string to a datetime
+        :return: datetime
+        """
+        date_raw = None
         if type(date) is not datetime.datetime:
-            return datetime.datetime.utcfromtimestamp(((date - 25569)*86400)).date()  # ugly hack to convert
+            date_raw = datetime.datetime.utcfromtimestamp(((date - 25569)*86400)).date()  # ugly hack to convert
         else:
-            return date
+            date_raw = date
+
+        # round input dates to the hour:
+        return datetime.datetime(year= date_raw.year, month= date_raw.month, day= date_raw.day, hour= date_raw.hour if date_raw.minute < 30 else date_raw.hour + 1)
 
     @staticmethod
     def process_activity_resource_assignments(activity_assignment_str, activity_resources, resources_dict, activity_baseline_duration_workingHours):
@@ -565,7 +573,7 @@ class XLSXParser(FileParser):
             if activities_sheet.cell(row=curr_row, column=6).value:
                 baseline_start = self.read_date(activities_sheet.cell(row=curr_row, column=6).value)
             else:
-                raise XLSXParseError("No baseline start date was given in the baseline schedule")
+                raise XLSXParseError("No baseline start date was given on row {0} of the baseline schedule.".format(curr_row))
 
             # check if duration is given to calculate baseline end:
             baseline_duration = 0
@@ -574,18 +582,19 @@ class XLSXParser(FileParser):
             baseline_end_field = activities_sheet.cell(row=curr_row, column=7).value
             baseline_duration_field = activities_sheet.cell(row=curr_row, column=8).value
 
-            if baseline_duration_field is not None and baseline_duration_field != "":
+            if baseline_duration_field and baseline_duration_field.strip(): # if not empty or not only spaces
                 # baseline duration is given
                 baseline_duration_workingHours = agenda.convert_durationString_to_workingHours(baseline_duration_field)
                 baseline_duration = agenda.get_workingDuration_timedelta(baseline_duration_workingHours)
                 # calculate baseline end:
                 baseline_end = agenda.get_end_date(baseline_start, baseline_duration.days, baseline_duration_workingHours - baseline_duration.days * agenda.get_working_hours_in_a_day())
-            elif baseline_end_field is not None and baseline_end_field != "":
+            elif baseline_end_field and str(baseline_end_field).strip(): # if not empty or not only spaces
                 baseline_end = self.read_date(baseline_end_field)
                 # calculate baseline duration:
                 baseline_duration = agenda.get_time_between(baseline_start, baseline_end)
+                baseline_duration_workingHours = agenda.get_workingDuration_workingHours(baseline_duration)
             else:
-                raise XLSXParseError("process_baseline_schedule:Acitivity on row {0}, has no basline duration or baseline end!".format(curr_row))
+                raise XLSXParseError("process_baseline_schedule:Activity on row {0}, has no basline duration or baseline end!".format(curr_row))
 
             # process resource demand:
             activity_resources = []
