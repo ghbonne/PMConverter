@@ -161,12 +161,15 @@ class XLSXParser(FileParser):
 
     @staticmethod
     def process_activity_resource_assignments(activity_assignment_str, activity_resources, resources_dict, activity_baseline_duration_workingHours):
-        ":returns: total cost of resource assignments and implicitly add resource assignments to the activity.resources"
+        """
+        Processes the activity resource assignment field of the Baseline schedule table.
+        :return: total cost of resource assignments and implicitly add resource assignments to the activity.resources
+        """
         resources_cost = 0.0
         for activity_resource_readString in activity_assignment_str.split(';'):
-            if not activity_resource_readString:
+            if not activity_resource_readString or not activity_resource_readString.strip():
                 continue  # if empty string => continue
-            activity_resource = resources_dict[activity_resource_readString.split("[")[0]]
+            activity_resource = resources_dict[(activity_resource_readString.split("[")[0]).strip()]
             activity_resource_demand = 1.0
             activity_resource_demand_fixed = False  # for consumable resources only
             if len(activity_resource_readString.split("[")) > 1:
@@ -369,7 +372,7 @@ class XLSXParser(FileParser):
                     print("XLSXparser:process_resources: Invalid resource ID at row {0}".format(curr_row))
                     continue
 
-                res_name = resource_sheet.cell(row=curr_row, column=2).value
+                res_name = str(resource_sheet.cell(row=curr_row, column=2).value).strip() # strip leading and ending spaces
                 # check if this resource name is already present:
                 if not res_name:
                     raise XLSXParseError(("An error occurred while processing the Excel Resources sheet at row {0} and column B\n" + \
@@ -471,7 +474,7 @@ class XLSXParser(FileParser):
         activityGroup_to_childActivities_dict: dict which links an activitygroupId to its child activities' ID, 'key: value' = 'activityId: [ActivityId1, ActivityId2,...]'
         project_name: string
         """
-        activities_dict = {}  # contains all activities and group, activityId: (row, Activity)
+        activities_dict = {}  # contains all activities and group, activityId: (row, Activity) # TODO: why also store the row?
         activityGroups_dict = {} # contains only groups, activityId: Activity
         # process the first project line manually:
         first_data_row = self.get_nr_of_header_lines(activities_sheet)
@@ -603,7 +606,7 @@ class XLSXParser(FileParser):
                 activity_resource_cost = self.process_activity_resource_assignments(activities_sheet.cell(row=curr_row, column=9).value, activity_resources, resources_dict, baseline_duration_workingHours)
 
             baseline_fixed_cost = 0.0
-            if activities_sheet.cell(row=curr_row, column=11).value:
+            if activities_sheet.cell(row=curr_row, column=11).value and str(activities_sheet.cell(row=curr_row, column=11).value).strip():
                 baseline_fixed_cost = float(activities_sheet.cell(row=curr_row, column=11).value)
 
             # check if cost/hour or variable cost is given to calculate values:
@@ -613,16 +616,18 @@ class XLSXParser(FileParser):
             baseline_hourly_cost_field = activities_sheet.cell(row=curr_row, column=12).value
             baseline_var_cost_field = activities_sheet.cell(row=curr_row, column=13).value
 
-            if baseline_hourly_cost_field is not None and baseline_hourly_cost_field != "":
-                baseline_hourly_cost = float(baseline_hourly_cost_field)
-                # calculate var_cost:
-                baseline_var_cost = baseline_hourly_cost * baseline_duration_workingHours
-            elif baseline_var_cost_field is not None and baseline_var_cost_field != "":
+            # first check if var_cost is given, else try to use the hourly cost:
+            if baseline_var_cost_field is not None and str(baseline_var_cost_field).strip():
                 baseline_var_cost = float(baseline_var_cost_field)
                 # calculate hourly cost:
                 baseline_hourly_cost = baseline_var_cost / baseline_duration_workingHours if baseline_duration_workingHours != 0 else 0
+
+            elif baseline_hourly_cost_field is not None and str(baseline_hourly_cost_field).strip():
+                baseline_hourly_cost = float(baseline_hourly_cost_field)
+                # calculate var_cost:
+                baseline_var_cost = baseline_hourly_cost * baseline_duration_workingHours
             else:
-                raise XLSXParseError("process_baseline_schedule:Acitivity on row {0}, has no baseline hourly cost or baseline variable cost given!".format(curr_row))
+                raise XLSXParseError("process_baseline_schedule:Acitivity on row {0}, has no baseline variable cost or baseline hourly cost given!".format(curr_row))
 
             # calculate total_cost:
             baseline_total_cost = baseline_fixed_cost + baseline_var_cost + activity_resource_cost
@@ -643,6 +648,8 @@ class XLSXParser(FileParser):
                                                baseline_schedule=activity_baseline_schedule,
                                                resource_cost=activity_resource_cost,
                                                risk_analysis=activity_risk_analysis, resources=activity_resources))
+        # Recheck if read activityGroups have subactivities and if activities don't have subactivities:
+        Activity.check_lists_activities_groups(activities_dict, activityGroups_dict) # adds activities which appear to have subactivities to the activityGroups
 
         # get a dict, linking each activityId to a list of all its child activityId's:
         activityGroups = list(activityGroups_dict.values())
