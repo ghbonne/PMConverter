@@ -232,6 +232,15 @@ class XLSXParser(FileParser):
         return Agenda(working_hours=working_hours, working_days=working_days, holidays=holidays)
 
     def process_project_controls(self, project_control_sheets, activities_dict, activityGroups_dict, activityGroup_to_childActivities_dict, agenda):
+        """
+        Reads Excel Tracking period tabs
+        :paarm project_control_sheets: list of openpyxl worksheets of tracking periods
+        :param activities_dict: dict of all activities and activitygroups with 'key: value' = 'activityId: (row, Activity)'
+        :param activityGroups_dict: dict of only activitygroups with 'key: value' = 'activityId: Activity'
+        :param activityGroup_to_childActivities_dict: dict which links an activitygroupId to its child activities' ID, 'key: value' = 'activityId: [ActivityId1, ActivityId2,...]'
+        :param agenda: Agenda object
+        :return: list of trackingperiod objects
+        """
         tracking_periods = []
 
         for project_control_sheet in project_control_sheets:
@@ -241,7 +250,7 @@ class XLSXParser(FileParser):
                 raise XLSXParseError("process_project_controls: No status date found on tracking period sheet: {0}".format(project_control_sheet.title))
 
             tp_name = project_control_sheet.cell(row=1, column=6).value
-            if not tp_name:
+            if not tp_name or not str(tp_name).strip():
                 # no TP name was given, we can take the title of the sheet as default value
                 tp_name = project_control_sheet.title
 
@@ -251,11 +260,18 @@ class XLSXParser(FileParser):
             for curr_row in range(self.get_nr_of_header_lines(project_control_sheet), project_control_sheet.get_highest_row()+1):
                 # don't read activityGroups, add them later
                 activity_id_field = project_control_sheet.cell(row=curr_row, column=1).value
-                if activity_id_field is not None:
+                if activity_id_field is not None and str(activity_id_field).strip(): # if not None or empty or only spaces
                     # check if activity_id field corresponds with an activityGroup
                     if int(activity_id_field) in activityGroups_dict:
                         # process groups later
                         continue
+                    elif int(activity_id_field) not in activities_dict:
+                        raise XLSXParseError(("An error occurred while processing tracking period sheet: {0}\n" + \
+                                "Unknown activity ID {1} found on row {2}.\n").format(project_control_sheet.title, activity_id_field, curr_row))
+                else:
+                    # Eliminate empty rows below the actual table => do not throw an exception for this:
+                    print("XLSXparser:process_project_controls: Row {0} in TP sheet ({1}) does not contain a valid activity ID: {2}".format(curr_row, project_control_sheet.title, activity_id_field))
+                    continue
 
                 # processing an activity tracking record
                 activity_id = int(activity_id_field)
@@ -263,24 +279,24 @@ class XLSXParser(FileParser):
                 actual_start = datetime.datetime.max  # Set a default value in case there is nothing in that cell
                 actual_duration = datetime.timedelta(0) # default
                 actual_duration_hours = 0 # default
-                if project_control_sheet.cell(row=curr_row, column=12).value is not None:
-                    actual_start = project_control_sheet.cell(row=curr_row, column=12).value
+                if project_control_sheet.cell(row=curr_row, column=12).value is not None and str(project_control_sheet.cell(row=curr_row, column=12).value).strip():
+                    actual_start = self.read_date(project_control_sheet.cell(row=curr_row, column=12).value)
 
                 actualDuration_field = project_control_sheet.cell(row=curr_row, column=13).value
-                if actualDuration_field is not None and isinstance(actualDuration_field, str):
+                if actualDuration_field is not None and isinstance(actualDuration_field, str) and actualDuration_field.strip():
                     actual_duration_hours = agenda.convert_durationString_to_workingHours(project_control_sheet.cell(row=curr_row, column=13).value)
                     actual_duration = agenda.get_workingDuration_timedelta(actual_duration_hours)
 
                 prc_dev = 0.0
-                if project_control_sheet.cell(row=curr_row, column=18).value:
+                if project_control_sheet.cell(row=curr_row, column=18).value and str(project_control_sheet.cell(row=curr_row, column=18).value).strip():
                     prc_dev = float(project_control_sheet.cell(row=curr_row, column=18).value)
 
                 actual_cost = 0.0
-                if project_control_sheet.cell(row=curr_row, column=19).value:
+                if project_control_sheet.cell(row=curr_row, column=19).value and str(project_control_sheet.cell(row=curr_row, column=19).value).strip():
                     actual_cost = float(project_control_sheet.cell(row=curr_row, column=19).value)
 
                 percentage_completed_str = project_control_sheet.cell(row=curr_row, column=21).value  # always given
-                if percentage_completed_str is None or percentage_completed_str == "":
+                if percentage_completed_str is None or not str(percentage_completed_str).strip():
                     raise XLSXParseError("process_project_controls: No percentage completed found on row {0} of sheet {1}".format(curr_row, project_control_sheet.title))
 
                 # In the test file, some percentages are strings, some are ints, some are floats (#YOLO)
@@ -300,10 +316,10 @@ class XLSXParser(FileParser):
                     percentage_completed = 100.0
 
                 # convert percentage completed to remaining duration
-                if percentage_completed > 0:
+                if percentage_completed > 1e-5 and actual_duration_hours > 0:
                     remainingDuration_hours = round(actual_duration_hours / float(percentage_completed) * 100 - actual_duration_hours)
                 else:
-                    remainingDuration_hours = round(currentActivity.baseline_schedule.duration.days * agenda.get_working_hours_in_a_day() + currentActivity.baseline_schedule.duration.seconds / 3600)
+                    remainingDuration_hours = round(currentActivity.baseline_schedule.duration.days * agenda.get_working_hours_in_a_day() + currentActivity.baseline_schedule.duration.seconds / 3600.0)
 
                 remaining_duration = agenda.get_workingDuration_timedelta(remainingDuration_hours)
 
@@ -332,6 +348,13 @@ class XLSXParser(FileParser):
                                                           planned_value=planned_value)
                 act_track_records.append(act_track_record)
                 currentTrackingPeriod_records_dict[activity_id] = act_track_record
+
+            # check if activityTrackingRecords found for every activity:
+            for act_id in activities_dict.keys():
+                # if a low level activity has no tracking record => exception
+                if act_id not in activityGroups_dict and act_id not in currentTrackingPeriod_records_dict:
+                    raise XLSXParseError(("An error occurred while processing the tracking period sheet: {0}\n" + \
+                        "Could not find a row with tracking info about the activity with id:{1}\n").format(project_control_sheet.title, act_id))
 
             currentTrackingPeriod = TrackingPeriod(tracking_period_name=tp_name, tracking_period_statusdate=tp_date,
                                                    tracking_period_records=act_track_records)
