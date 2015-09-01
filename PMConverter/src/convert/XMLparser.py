@@ -690,6 +690,9 @@ class XMLParser(FileParser):
         agendaNode = ET.fromstring(defaultFormat)
 
         startDate = self.get_date_string(projectStartdatetime, datetimeFormat) if projectStartdatetime < datetime.max else self.get_date_string(datetime.now(), datetimeFormat)
+        # BUG: ProTrack does not expect hour info in this field:
+        startDate = startDate[:-4] + "0000"
+
         XMLParser.find_xmlNode_and_set_text(agendaNode, "StartDate", startDate)
         # Non workinghours:
         for i in range(0,24):
