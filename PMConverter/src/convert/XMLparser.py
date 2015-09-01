@@ -35,7 +35,8 @@ class XMLParser(FileParser):
                     year=int(datestring[4:8])
                     hour=int(datestring[8:10])
                     minute=int(datestring[10:12])
-                    return datetime(year, month, day, hour, minute)
+                    # Round datetimes to the nearest hour for PMConverter
+                    return datetime(year, month, day, hour if minute <30 else hour + 1, 0)
                 elif len(datestring) == 8:
                     day=int(datestring[:2])
                     month=int(datestring[2:4])
@@ -51,7 +52,8 @@ class XMLParser(FileParser):
                     year=int(datestring[4:8])
                     hour=int(datestring[8:10])
                     minute=int(datestring[10:12])
-                    return datetime(year, month, day, hour, minute)
+                    # Round datetimes to the nearest hour for PMConverter
+                    return datetime(year, month, day, hour if minute < 30 else hour + 1, 0)
                 elif len(datestring) == 8:
                     month=int(datestring[:2])
                     day=int(datestring[2:4])
@@ -286,7 +288,7 @@ class XMLParser(FileParser):
                 res_type = ResourceType.RENEWABLE if int(resourceNode.find('FIELD769').text) else ResourceType.CONSUMABLE
                 cost_per_use = float(resourceNode.find('FIELD770').text)
                 cost_per_unit = float(resourceNode.find('FIELD771').text)
-                res_unit = resourceNode.find('FIELD778').text
+                res_unit = resourceNode.find('FIELD778').text if resourceNode.find('FIELD778').text else ""
                 # total_resource_cost node can be unavailable?
                 total_resource_cost_Node = resourceNode.find('FIELD776')
                 total_resource_cost = ast.literal_eval(total_resource_cost_Node.text) if total_resource_cost_Node is not None else 0.0
