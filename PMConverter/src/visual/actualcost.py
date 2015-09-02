@@ -1,6 +1,6 @@
 __author__ = 'Eveline'
 from visual.visualization import Visualization
-from visual.enums import DataType, LevelOfDetail, ExcelVersion
+from visual.enums import DataType, LevelOfDetail
 from visual.charts.barchart import BarChart
 from objects.activity import Activity
 
@@ -13,7 +13,6 @@ class ActualCost(Visualization):
     :var title: str, title of the graph
     :var description, str description of the graph
     :var parameters: dict, the present keys indicate which parameters should be available for the user
-    :var supported: list of ExcelVersion, containing the version that are supported
 
     Settings:
     :var level_of_detail: LevelOfDetail, graph can be shown for workpackages or activities
@@ -29,9 +28,8 @@ class ActualCost(Visualization):
         self.level_of_detail = None
         self.data_type = None
         self.tp = 0
-        self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
 
-    def draw(self, workbook, worksheet, project_object, excel_version):
+    def draw(self, workbook, worksheet, project_object):
         if not self.level_of_detail:
             raise Exception("Please first set var level_of_detail")
         if not self.data_type:
