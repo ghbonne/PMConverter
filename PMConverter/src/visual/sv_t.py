@@ -19,7 +19,7 @@ class SvT(Visualization):
 
     def __init__(self):
         self.title = "SV(t)"
-        self.description = "Shows the schedule variance expressed in time units of the project, based on the available tracking periods."
+        self.description = "Line graph showing the schedule variance (based on earned schedule) over the different tracking periods or on an absolute time scale."
         self.parameters = {"x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
 

@@ -21,8 +21,7 @@ class SpiT(Visualization):
 
     def __init__(self):
         self.title = "SPI(t)"
-        self.description = "Shows the project's time performance (earned schedule / actual duration), based on the available tracking periods. "\
-                            + "For control purposes it's possible to display a threshold line on the graph."
+        self.description = "Line graph showing the schedule performance index (based on earned schedule) over the different tracking periods or on an absolute time scale, with the ability to add a threshold line."
         self.parameters = {"threshold": True,
                            "x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None

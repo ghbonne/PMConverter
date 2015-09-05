@@ -19,7 +19,7 @@ class CostValueMetrics(Visualization):
 
     def __init__(self):
         self.title = "AC, EV, PV"
-        self.description = "A cumulative graph of the actual cost, earned value and planned value of the project, based on the available tracking periods."
+        self.description = "Line graph showing the cumulative actual cost, earned value and planned value over the different tracking periods or on an absolute time scale."
         self.parameters = {"x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
 
