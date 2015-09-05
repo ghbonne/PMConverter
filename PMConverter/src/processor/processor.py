@@ -31,11 +31,11 @@ class Processor(QThread):
 
     def __init__(self, parent = None):
         super(Processor, self).__init__(parent)
-        self.visualizations = ["Baseline schedule's visualisations", BaselineSchedule(),
-                               "Resources' visualisations", ResourceDistribution(),
-                               "Risk analysis' visualisations", RiskAnalysis(),
-                               "Tracking periods' visualisations", ActualDuration(), ActualCost(),
-                               "Tracking overview's visualisations", CostValueMetrics(), Performance(), SpiTvsPfactor(), CV(), SvT(), CPI(), SpiT()]
+        self.visualizations = ["Baseline schedule's visualizations", BaselineSchedule(),
+                               "Resources' visualizations", ResourceDistribution(),
+                               "Risk analysis' visualizations", RiskAnalysis(),
+                               "Tracking periods' visualizations", ActualDuration(), ActualCost(),
+                               "Tracking overview's visualizations", CostValueMetrics(), Performance(), SpiTvsPfactor(), CV(), SvT(), CPI(), SpiT()]
         self.file_parsers = []
         self.inputFiletypes = {"Excel": ".xlsx", "ProTrack": ".p2x"}
 
@@ -85,22 +85,22 @@ class Processor(QThread):
                     current_tp = 0
                     for worksheet in workbook.worksheets():
                         if worksheet.get_name() == "Baseline Schedule":
-                            for visualisation in self.wantedVisualisations["Baseline schedule's visualisations"]:
+                            for visualisation in self.wantedVisualisations["Baseline schedule's visualizations"]:
                                 visualisation.draw(workbook, worksheet, project_object)
                         if worksheet.get_name() == "Resources":
-                            for visualisation in self.wantedVisualisations["Resources' visualisations"]:
+                            for visualisation in self.wantedVisualisations["Resources' visualizations"]:
                                 visualisation.draw(workbook, worksheet, project_object)
                         if worksheet.get_name() == "Risk Analysis":
-                            for visualisation in self.wantedVisualisations["Risk analysis' visualisations"]:
+                            for visualisation in self.wantedVisualisations["Risk analysis' visualizations"]:
                                 visualisation.draw(workbook, worksheet, project_object)
                         if "TP" in worksheet.get_name():
                             #tp = int(re.search(r'\d+', worksheet.get_name()).group())
-                            for visualisation in self.wantedVisualisations["Tracking periods' visualisations"]:
+                            for visualisation in self.wantedVisualisations["Tracking periods' visualizations"]:
                                 visualisation.tp = current_tp
                                 visualisation.draw(workbook, worksheet, project_object)
                             current_tp += 1
                         if worksheet.get_name() == "Tracking Overview":
-                            for visualisation in self.wantedVisualisations["Tracking overview's visualisations"]:
+                            for visualisation in self.wantedVisualisations["Tracking overview's visualizations"]:
                                 visualisation.draw(workbook, worksheet, project_object)
                 #try:
                 workbook.close() # should be closed in any case
