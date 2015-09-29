@@ -46,7 +46,7 @@ class CPI(Visualization):
             names = ['Tracking Overview', 2, 2, (1+tp_size), 2]
 
         if self.threshold:
-            self.calculate_threshold(workbook, worksheet, tp_size)
+            self.calculate_threshold(workbook, worksheet, project_object)
             data_series = [
                 ["CPI",
                  names,
@@ -74,7 +74,7 @@ class CPI(Visualization):
     """
     Private methods
     """
-    def calculate_threshold(self, workbook, worksheet, tp_size):
+    def calculate_threshold(self, workbook, worksheet, project_object):
         """
         Calculate the values for the treshold
         :param workbook:
@@ -88,14 +88,28 @@ class CPI(Visualization):
 
         worksheet.write('AL2', 'CPI threshold', header)
 
+        tp_size = len(project_object.tracking_periods)
+
         start = 2
-        if self.thresholdValues[0] == self.thresholdValues[1] or tp_size <= 1:
-            for i in range(0, tp_size):
-                worksheet.write(start + i, 37, self.thresholdValues[0], calculation)
-        else:
-            value = (self.thresholdValues[1] - self.thresholdValues[0])/(tp_size - 1)
-            for i in range(0, tp_size):
-                worksheet.write(start + i, 37, self.thresholdValues[0] + (i * value), calculation)
+        if self.x_axis == XAxis.TRACKING_PERIOD:
+            if self.thresholdValues[0] == self.thresholdValues[1] or tp_size <= 1:
+                for i in range(0, tp_size):
+                    worksheet.write(start + i, 37, self.thresholdValues[0], calculation)
+            else:
+                value = (self.thresholdValues[1] - self.thresholdValues[0])/(tp_size - 1)
+                for i in range(0, tp_size):
+                    worksheet.write(start + i, 37, self.thresholdValues[0] + (i * value), calculation)
+        elif self.x_axis == XAxis.DATE:
+            if self.thresholdValues[0] == self.thresholdValues[1] or tp_size <= 1:
+                for i in range(0, tp_size):
+                    worksheet.write(start + i, 37, self.thresholdValues[0], calculation)
+            else:
+                start_date = project_object.tracking_periods[0].tracking_period_statusdate
+                end_date = project_object.tracking_periods[tp_size-1].tracking_period_statusdate
+                value = (self.thresholdValues[1] - self.thresholdValues[0])/(end_date.timestamp() - start_date.timestamp())
+                for i in range(0, tp_size):
+                    worksheet.write(start + i, 37, self.thresholdValues[0] + (project_object.tracking_periods[i].tracking_period_statusdate.timestamp()-start_date.timestamp())*value, calculation)
+
 
     def calculate_values(self, workbook, worksheet, project_object):
         """

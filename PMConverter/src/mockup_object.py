@@ -95,12 +95,12 @@ for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
                 v10.x_axis = XAxis.TRACKING_PERIOD
                 v10.draw(workbook, worksheet,po)
                 v11 = CPI()
-                v11.x_axis = XAxis.TRACKING_PERIOD
+                v11.x_axis = XAxis.DATE
                 v11.threshold = True
                 v11.thresholdValues = (0.2, 0.5)
                 v11.draw(workbook, worksheet,po)
                 v12 = SpiT()
-                v12.x_axis = XAxis.TRACKING_PERIOD
+                v12.x_axis = XAxis.DATE
                 v12.threshold = True
                 v12.thresholdValues = (0.1, 0.7)
                 v12.draw(workbook, worksheet,po)
