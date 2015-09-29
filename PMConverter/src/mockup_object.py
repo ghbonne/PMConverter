@@ -21,6 +21,7 @@ from visual.spi_t import SpiT
 __author__ = 'gilles'
 
 dir = "../data_analyse"
+"""
 for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
     if file_name.endswith(".p2x"):
         print(file_name)
@@ -105,23 +106,30 @@ for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
                 v12.draw(workbook, worksheet,po)
 
         workbook.close()
-
+"""
 dir = "../data_analyse/output"
 for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
     if file_name.endswith(".xlsx") or file_name.endswith(".xls"):
         print(file_name)
         input_path = input_path = dir + "/" + file_name
         output_path = dir + "/excel_output/" + file_name[:-5] + "_excel.xlsx"
+        xml_output_path = dir + "/excel_output/" + file_name[:-4] + "_xml.p2x"
         xlsx_parser = XLSXParser()
+        xml_parser = XMLParser()
 
         print("Parsing excel to project object")
         po = xlsx_parser.to_schedule_object(input_path)
-        print(po.__dict__)
+        print(po.activities[3].name)
+        print(po.activities[3].baseline_schedule.start)
+        print(po.activities[3].baseline_schedule.end)
 
         print("Generating excel output")
         workbook = xlsx_parser.from_schedule_object(po, output_path)
+        print("Generating XML output")
+        xml_parser.from_schedule_object(po, xml_output_path)
 
         workbook.close()
     print("--DONE--\n")
+
 
 
