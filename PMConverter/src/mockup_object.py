@@ -21,7 +21,7 @@ from visual.spi_t import SpiT
 __author__ = 'gilles'
 
 dir = "../data_analyse"
-"""
+
 for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
     if file_name.endswith(".p2x"):
         print(file_name)
@@ -106,7 +106,7 @@ for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
                 v12.draw(workbook, worksheet,po)
 
         workbook.close()
-"""
+
 dir = "../data_analyse/output"
 for file_name in os.listdir(os.path.join(os.path.dirname(__file__), dir)):
     if file_name.endswith(".xlsx") or file_name.endswith(".xls"):
