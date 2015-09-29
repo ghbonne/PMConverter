@@ -1470,9 +1470,9 @@ class XLSXParser(FileParser):
                     duration = "-" + str(delta.days) + "d " + str(round(delta.seconds / 3600.0)) + "h"
             elif delta.seconds != 0:
                 if not negativeValue:
-                    duration = "0d " + str(round(delta.seconds / 3600.0)) + "h"
+                    duration = str(round(delta.seconds / 3600.0)) + "h"
                 else:
-                    duration = "0d -" + str(round(delta.seconds / 3600.0)) + "h"
+                    duration = "-" + str(round(delta.seconds / 3600.0)) + "h"
             else:
                 if not negativeValue:
                     duration = str(delta.days) + "d"
