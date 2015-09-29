@@ -199,7 +199,7 @@ class Agenda(object):
         """
         Converts an int of workinghours to a timedelta of workingdays and workinghours
         :param duration_hours: integer; Working hours needed to complete activity
-        :return: timedelta; working days + remaing working hours
+        :return: timedelta; working days + remaining working hours
         """
         working_hours_per_day = self.get_working_hours_in_a_day()
         working_days = int(duration_hours / working_hours_per_day)

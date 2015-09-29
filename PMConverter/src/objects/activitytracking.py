@@ -133,7 +133,7 @@ class ActivityTrackingRecord(object):
             # activity is not yet started according to baselineschedule
             planned_value = 0.
         else:
-            # activity is running
+            # activity should be running
             activityRunningDuration = agenda.get_time_between(activity.baseline_schedule.start, statusdate_datetime)
             activityRunningDuration_workingHours = activityRunningDuration.days * agenda.get_working_hours_in_a_day() + activityRunningDuration.seconds / 3600
         

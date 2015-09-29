@@ -130,6 +130,15 @@ class Activity(object):
 
         for activityGroup in activityGroups_list:
             childActivityIds = activityGroup_to_childActivities_dict[activityGroup.activity_id]
+            # clear activityGroup values: (necessary for non propper given activityGroups via Activity.check_lists_activities_groups)
+            activityGroup.baseline_schedule.fixed_cost = 0
+            activityGroup.baseline_schedule.total_cost = 0
+            activityGroup.baseline_schedule.hourly_cost = 0
+            activityGroup.baseline_schedule.var_cost = None # identifies an activityGroup
+            activityGroup.successors = []
+            activityGroup.predecessors = []
+            activityGroup.resources = []
+            activityGroup.resource_cost = 0
 
             earliestStart = datetime.max
             latestFinish = datetime.min
@@ -150,6 +159,34 @@ class Activity(object):
                 activityGroup.baseline_schedule.duration = agenda.get_time_between(earliestStart, latestFinish)
                 activityGroup.baseline_schedule.start = earliestStart
                 activityGroup.baseline_schedule.end = latestFinish
+
+    @staticmethod
+    def check_lists_activities_groups(activities_dict, activityGroups_dict):
+        """
+        Checks if all activityGroups have subactivities, else exception.
+        Checks if all activities with subactivities are added to the activityGroups_dict
+        """
+        found_activityGroup_ids = []
+        for row, activity in activities_dict.values():
+            current_wbs = activity.wbs_id
+            current_wbs_level = len(current_wbs)
+            current_id = activity.activity_id
+            # check if subactivities found based on wbs:
+            for row2, activity2 in activities_dict.values():
+                if activity2.wbs_id > current_wbs and activity2.wbs_id[:current_wbs_level] == current_wbs:
+                    # subactivity found:
+                    found_activityGroup_ids.append(current_id)
+                    # check if already present in the activityGroups_dict:
+                    if current_id not in activityGroups_dict:
+                        # if not yet present: add to groups dict
+                        print("Activity:check_lists_activities_groups: An activityGroup (id = {0}) found which was not present in the activityGroups_dict!".format(current_id))
+                        activityGroups_dict[current_id] = activity
+                    break
+        # check if no activityGroups without subactivities:
+        for activityGroup_id in activityGroups_dict.keys():
+            if activityGroup_id not in found_activityGroup_ids:
+                raise Exception("Activity: An activityGroup (id = {0}) was found which has no subactivities!".format(activityGroup_id))
+        return    
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):

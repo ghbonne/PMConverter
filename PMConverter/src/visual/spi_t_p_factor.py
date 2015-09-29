@@ -19,7 +19,7 @@ class SpiTvsPfactor(Visualization):
 
     def __init__(self):
         self.title = "SPI, SPI(t), p-factor"
-        self.description = "A line graph showing the Schedule Performance Index, the Schedule Performance Index as (earned schedule / actual duration) and the p-factor of the project, based on the available tracking periods."
+        self.description = "Line graph showing the schedule performance indexes (based on earned value and on earned schedule) and the p-factor over the different tracking periods or on an absolute time scale."
         self.parameters = {"x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
 

@@ -161,12 +161,15 @@ class XLSXParser(FileParser):
 
     @staticmethod
     def process_activity_resource_assignments(activity_assignment_str, activity_resources, resources_dict, activity_baseline_duration_workingHours):
-        ":returns: total cost of resource assignments and implicitly add resource assignments to the activity.resources"
+        """
+        Processes the activity resource assignment field of the Baseline schedule table.
+        :return: total cost of resource assignments and implicitly add resource assignments to the activity.resources
+        """
         resources_cost = 0.0
         for activity_resource_readString in activity_assignment_str.split(';'):
-            if not activity_resource_readString:
+            if not activity_resource_readString or not activity_resource_readString.strip():
                 continue  # if empty string => continue
-            activity_resource = resources_dict[activity_resource_readString.split("[")[0]]
+            activity_resource = resources_dict[(activity_resource_readString.split("[")[0]).strip()]
             activity_resource_demand = 1.0
             activity_resource_demand_fixed = False  # for consumable resources only
             if len(activity_resource_readString.split("[")) > 1:
@@ -229,6 +232,15 @@ class XLSXParser(FileParser):
         return Agenda(working_hours=working_hours, working_days=working_days, holidays=holidays)
 
     def process_project_controls(self, project_control_sheets, activities_dict, activityGroups_dict, activityGroup_to_childActivities_dict, agenda):
+        """
+        Reads Excel Tracking period tabs
+        :paarm project_control_sheets: list of openpyxl worksheets of tracking periods
+        :param activities_dict: dict of all activities and activitygroups with 'key: value' = 'activityId: (row, Activity)'
+        :param activityGroups_dict: dict of only activitygroups with 'key: value' = 'activityId: Activity'
+        :param activityGroup_to_childActivities_dict: dict which links an activitygroupId to its child activities' ID, 'key: value' = 'activityId: [ActivityId1, ActivityId2,...]'
+        :param agenda: Agenda object
+        :return: list of trackingperiod objects
+        """
         tracking_periods = []
 
         for project_control_sheet in project_control_sheets:
@@ -238,7 +250,7 @@ class XLSXParser(FileParser):
                 raise XLSXParseError("process_project_controls: No status date found on tracking period sheet: {0}".format(project_control_sheet.title))
 
             tp_name = project_control_sheet.cell(row=1, column=6).value
-            if not tp_name:
+            if not tp_name or not str(tp_name).strip():
                 # no TP name was given, we can take the title of the sheet as default value
                 tp_name = project_control_sheet.title
 
@@ -248,11 +260,18 @@ class XLSXParser(FileParser):
             for curr_row in range(self.get_nr_of_header_lines(project_control_sheet), project_control_sheet.get_highest_row()+1):
                 # don't read activityGroups, add them later
                 activity_id_field = project_control_sheet.cell(row=curr_row, column=1).value
-                if activity_id_field is not None:
+                if activity_id_field is not None and str(activity_id_field).strip(): # if not None or empty or only spaces
                     # check if activity_id field corresponds with an activityGroup
                     if int(activity_id_field) in activityGroups_dict:
                         # process groups later
                         continue
+                    elif int(activity_id_field) not in activities_dict:
+                        raise XLSXParseError(("An error occurred while processing tracking period sheet: {0}\n" + \
+                                "Unknown activity ID {1} found on row {2}.\n").format(project_control_sheet.title, activity_id_field, curr_row))
+                else:
+                    # Eliminate empty rows below the actual table => do not throw an exception for this:
+                    print("XLSXparser:process_project_controls: Row {0} in TP sheet ({1}) does not contain a valid activity ID: {2}".format(curr_row, project_control_sheet.title, activity_id_field))
+                    continue
 
                 # processing an activity tracking record
                 activity_id = int(activity_id_field)
@@ -260,24 +279,24 @@ class XLSXParser(FileParser):
                 actual_start = datetime.datetime.max  # Set a default value in case there is nothing in that cell
                 actual_duration = datetime.timedelta(0) # default
                 actual_duration_hours = 0 # default
-                if project_control_sheet.cell(row=curr_row, column=12).value is not None:
-                    actual_start = project_control_sheet.cell(row=curr_row, column=12).value
+                if project_control_sheet.cell(row=curr_row, column=12).value is not None and str(project_control_sheet.cell(row=curr_row, column=12).value).strip():
+                    actual_start = self.read_date(project_control_sheet.cell(row=curr_row, column=12).value)
 
                 actualDuration_field = project_control_sheet.cell(row=curr_row, column=13).value
-                if actualDuration_field is not None and isinstance(actualDuration_field, str):
+                if actualDuration_field is not None and isinstance(actualDuration_field, str) and actualDuration_field.strip():
                     actual_duration_hours = agenda.convert_durationString_to_workingHours(project_control_sheet.cell(row=curr_row, column=13).value)
                     actual_duration = agenda.get_workingDuration_timedelta(actual_duration_hours)
 
                 prc_dev = 0.0
-                if project_control_sheet.cell(row=curr_row, column=18).value:
+                if project_control_sheet.cell(row=curr_row, column=18).value and str(project_control_sheet.cell(row=curr_row, column=18).value).strip():
                     prc_dev = float(project_control_sheet.cell(row=curr_row, column=18).value)
 
                 actual_cost = 0.0
-                if project_control_sheet.cell(row=curr_row, column=19).value:
+                if project_control_sheet.cell(row=curr_row, column=19).value and str(project_control_sheet.cell(row=curr_row, column=19).value).strip():
                     actual_cost = float(project_control_sheet.cell(row=curr_row, column=19).value)
 
                 percentage_completed_str = project_control_sheet.cell(row=curr_row, column=21).value  # always given
-                if percentage_completed_str is None or percentage_completed_str == "":
+                if percentage_completed_str is None or not str(percentage_completed_str).strip():
                     raise XLSXParseError("process_project_controls: No percentage completed found on row {0} of sheet {1}".format(curr_row, project_control_sheet.title))
 
                 # In the test file, some percentages are strings, some are ints, some are floats (#YOLO)
@@ -297,10 +316,10 @@ class XLSXParser(FileParser):
                     percentage_completed = 100.0
 
                 # convert percentage completed to remaining duration
-                if percentage_completed > 0:
+                if percentage_completed > 1e-5 and actual_duration_hours > 0:
                     remainingDuration_hours = round(actual_duration_hours / float(percentage_completed) * 100 - actual_duration_hours)
                 else:
-                    remainingDuration_hours = round(currentActivity.baseline_schedule.duration.days * agenda.get_working_hours_in_a_day() + currentActivity.baseline_schedule.duration.seconds / 3600)
+                    remainingDuration_hours = round(currentActivity.baseline_schedule.duration.days * agenda.get_working_hours_in_a_day() + currentActivity.baseline_schedule.duration.seconds / 3600.0)
 
                 remaining_duration = agenda.get_workingDuration_timedelta(remainingDuration_hours)
 
@@ -329,6 +348,13 @@ class XLSXParser(FileParser):
                                                           planned_value=planned_value)
                 act_track_records.append(act_track_record)
                 currentTrackingPeriod_records_dict[activity_id] = act_track_record
+
+            # check if activityTrackingRecords found for every activity:
+            for act_id in activities_dict.keys():
+                # if a low level activity has no tracking record => exception
+                if act_id not in activityGroups_dict and act_id not in currentTrackingPeriod_records_dict:
+                    raise XLSXParseError(("An error occurred while processing the tracking period sheet: {0}\n" + \
+                        "Could not find a row with tracking info about the activity with id:{1}\n").format(project_control_sheet.title, act_id))
 
             currentTrackingPeriod = TrackingPeriod(tracking_period_name=tp_name, tracking_period_statusdate=tp_date,
                                                    tracking_period_records=act_track_records)
@@ -369,7 +395,7 @@ class XLSXParser(FileParser):
                     print("XLSXparser:process_resources: Invalid resource ID at row {0}".format(curr_row))
                     continue
 
-                res_name = resource_sheet.cell(row=curr_row, column=2).value
+                res_name = str(resource_sheet.cell(row=curr_row, column=2).value).strip() # strip leading and ending spaces
                 # check if this resource name is already present:
                 if not res_name:
                     raise XLSXParseError(("An error occurred while processing the Excel Resources sheet at row {0} and column B\n" + \
@@ -471,7 +497,7 @@ class XLSXParser(FileParser):
         activityGroup_to_childActivities_dict: dict which links an activitygroupId to its child activities' ID, 'key: value' = 'activityId: [ActivityId1, ActivityId2,...]'
         project_name: string
         """
-        activities_dict = {}  # contains all activities and group, activityId: (row, Activity)
+        activities_dict = {}  # contains all activities and group, activityId: (row, Activity) # TODO: why also store the row?
         activityGroups_dict = {} # contains only groups, activityId: Activity
         # process the first project line manually:
         first_data_row = self.get_nr_of_header_lines(activities_sheet)
@@ -603,7 +629,7 @@ class XLSXParser(FileParser):
                 activity_resource_cost = self.process_activity_resource_assignments(activities_sheet.cell(row=curr_row, column=9).value, activity_resources, resources_dict, baseline_duration_workingHours)
 
             baseline_fixed_cost = 0.0
-            if activities_sheet.cell(row=curr_row, column=11).value:
+            if activities_sheet.cell(row=curr_row, column=11).value and str(activities_sheet.cell(row=curr_row, column=11).value).strip():
                 baseline_fixed_cost = float(activities_sheet.cell(row=curr_row, column=11).value)
 
             # check if cost/hour or variable cost is given to calculate values:
@@ -613,16 +639,18 @@ class XLSXParser(FileParser):
             baseline_hourly_cost_field = activities_sheet.cell(row=curr_row, column=12).value
             baseline_var_cost_field = activities_sheet.cell(row=curr_row, column=13).value
 
-            if baseline_hourly_cost_field is not None and baseline_hourly_cost_field != "":
-                baseline_hourly_cost = float(baseline_hourly_cost_field)
-                # calculate var_cost:
-                baseline_var_cost = baseline_hourly_cost * baseline_duration_workingHours
-            elif baseline_var_cost_field is not None and baseline_var_cost_field != "":
+            # first check if var_cost is given, else try to use the hourly cost:
+            if baseline_var_cost_field is not None and str(baseline_var_cost_field).strip():
                 baseline_var_cost = float(baseline_var_cost_field)
                 # calculate hourly cost:
                 baseline_hourly_cost = baseline_var_cost / baseline_duration_workingHours if baseline_duration_workingHours != 0 else 0
+
+            elif baseline_hourly_cost_field is not None and str(baseline_hourly_cost_field).strip():
+                baseline_hourly_cost = float(baseline_hourly_cost_field)
+                # calculate var_cost:
+                baseline_var_cost = baseline_hourly_cost * baseline_duration_workingHours
             else:
-                raise XLSXParseError("process_baseline_schedule:Acitivity on row {0}, has no baseline hourly cost or baseline variable cost given!".format(curr_row))
+                raise XLSXParseError("process_baseline_schedule:Acitivity on row {0}, has no baseline variable cost or baseline hourly cost given!".format(curr_row))
 
             # calculate total_cost:
             baseline_total_cost = baseline_fixed_cost + baseline_var_cost + activity_resource_cost
@@ -643,6 +671,8 @@ class XLSXParser(FileParser):
                                                baseline_schedule=activity_baseline_schedule,
                                                resource_cost=activity_resource_cost,
                                                risk_analysis=activity_risk_analysis, resources=activity_resources))
+        # Recheck if read activityGroups have subactivities and if activities don't have subactivities:
+        Activity.check_lists_activities_groups(activities_dict, activityGroups_dict) # adds activities which appear to have subactivities to the activityGroups
 
         # get a dict, linking each activityId to a list of all its child activityId's:
         activityGroups = list(activityGroups_dict.values())
@@ -862,23 +892,27 @@ class XLSXParser(FileParser):
         # Lots of formats
         header = workbook.add_format({'bold': True, 'bg_color': '#316AC5', 'font_color': 'white', 'text_wrap': True,
                                       'border': 1, 'font_size': 8})
-        yellow_cell = workbook.add_format({'bg_color': 'yellow', 'text_wrap': True, 'border': 1, 'font_size': 8})
-        green_cell = workbook.add_format({'bg_color': '#00CD00', 'text_wrap': True, 'border': 1, 'font_size': 8})
-        red_cell = workbook.add_format({'bg_color': 'red', 'text_wrap': True, 'border': 1, 'font_size': 8})
+        yellow_cell = workbook.add_format({'bg_color': '#FFFF00', 'text_wrap': True, 'border': 1, 'font_size': 8})
+        green_cell = workbook.add_format({'bg_color': '#9BBB59', 'text_wrap': True, 'border': 1, 'font_size': 8})
+        red_cell_agenda = workbook.add_format({'bg_color': '#FFC7CE', 'text_wrap': True, 'border': 1, 'font_size': 8, 'font_color': '#9C0006'})
+        green_cell_agenda = workbook.add_format({'bg_color': '#C6EFCE', 'text_wrap': True, 'border': 1, 'font_size': 8, 'font_color': '#006100'})
         gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1, 'font_size': 8})
-        date_green_cell = workbook.add_format({'bg_color': '#00CD00', 'text_wrap': True, 'border': 1,
-                                              'num_format': 'dd/mm/yyyy H:MM', 'font_size': 8})
-        date_gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1,
-                                              'num_format': 'dd/mm/yyyy H:MM', 'font_size': 8})
-        money_green_cell = workbook.add_format({'bg_color': '#00CD00', 'text_wrap': True, 'border': 1,
-                                              'num_format': '#,##0.00' + u"\u20AC", 'font_size': 8})
-        money_yellow_cell = workbook.add_format({'bg_color': 'yellow', 'text_wrap': True, 'border': 1,
-                                              'num_format': '#,##0.00' + u"\u20AC", 'font_size': 8})
-        money_gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1,
-                                              'num_format': '#,##0.00' + u"\u20AC", 'font_size': 8})
-        percent_green_cell = workbook.add_format({'bg_color': '#00CD00', 'text_wrap': True, 'border': 1, 'font_size': 8,'num_format': '0%'})
+        blue_cell = workbook.add_format({'bg_color': '#D9EAF7', 'text_wrap': True, 'border': 1, 'font_size': 8})
+        
+        date_green_cell = workbook.add_format({'bg_color': '#9BBB59', 'text_wrap': True, 'border': 1, 'num_format': 'dd/mm/yyyy H:MM', 'font_size': 8})
+        date_gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1, 'num_format': 'dd/mm/yyyy H:MM', 'font_size': 8})
+        date_blue_cell = workbook.add_format({'bg_color': '#D9EAF7', 'text_wrap': True, 'border': 1, 'num_format': 'dd/mm/yyyy H:MM', 'font_size': 8})
+        holiday_yellow_cell = workbook.add_format({'bg_color': '#FFFF00', 'text_wrap': True, 'border': 1, 'num_format': 'dd/mm/yyyy', 'font_size': 8,})
+        
+        money_green_cell = workbook.add_format({'bg_color': '#9BBB59', 'text_wrap': True, 'border': 1, 'num_format': '#,##0.00' + u"\u20AC", 'font_size': 8})
+        money_yellow_cell = workbook.add_format({'bg_color': '#FFFF00', 'text_wrap': True, 'border': 1, 'num_format': '#,##0.00' + u"\u20AC", 'font_size': 8})
+        money_gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1, 'num_format': '#,##0.00' + u"\u20AC", 'font_size': 8})
+        money_blue_cell = workbook.add_format({'bg_color': '#D9EAF7', 'text_wrap': True, 'border': 1, 'num_format': '#,##0.00' + u"\u20AC", 'font_size': 8})
+
+        percent_green_cell = workbook.add_format({'bg_color': '#9BBB59', 'text_wrap': True, 'border': 1, 'font_size': 8,'num_format': '0%'})
         percent_gray_cell = workbook.add_format({'bg_color': '#D4D0C8', 'text_wrap': True, 'border': 1, 'font_size': 8,'num_format': '0%'})
-        holiday_yellow_cell = workbook.add_format({'bg_color': 'yellow', 'text_wrap': True, 'border': 1, 'font_size': 8, 'num_format': 'dd/mm/yyyy'})
+        percent_blue_cell = workbook.add_format({'bg_color': '#D9EAF7', 'text_wrap': True, 'border': 1, 'font_size': 8,'num_format': '0%'})
+        
 
         # Worksheets
         bsch_worksheet = workbook.add_worksheet("Baseline Schedule")
@@ -948,20 +982,25 @@ class XLSXParser(FileParser):
                 bsch_worksheet.write_number(counter, 13, activity.baseline_schedule.total_cost, money_gray_cell)
             else:
                 # Write aggregated activity
-                bsch_worksheet.write_number(counter, 0, activity.activity_id, yellow_cell)
-                bsch_worksheet.write(counter, 1, str(activity.name), yellow_cell)
+                if activity.activity_id == 0:
+                    # project group:
+                    bsch_worksheet.write_number(counter, 0, activity.activity_id, blue_cell)
+                    bsch_worksheet.write(counter, 1, str(activity.name), green_cell)
+                else:
+                    bsch_worksheet.write_number(counter, 0, activity.activity_id, yellow_cell)
+                    bsch_worksheet.write(counter, 1, str(activity.name), yellow_cell)
                 self.write_wbs(bsch_worksheet, counter, 2, activity.wbs_id, yellow_cell)
-                self.write_predecessors(bsch_worksheet, counter, 3, activity.predecessors, gray_cell, project_object.agenda)
-                self.write_successors(bsch_worksheet, counter, 4, activity.successors, gray_cell, project_object.agenda)
-                bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.start, date_gray_cell)
-                bsch_worksheet.write_datetime(counter, 6, activity.baseline_schedule.end, date_gray_cell)
-                bsch_worksheet.write(counter, 7, self.get_duration_str(activity.baseline_schedule.duration), gray_cell)
-                self.write_resources(bsch_worksheet, counter, 8, activity.resources, gray_cell)
-                bsch_worksheet.write(counter, 9, "", money_gray_cell)
-                bsch_worksheet.write_number(counter, 10, activity.baseline_schedule.fixed_cost, money_gray_cell)
-                bsch_worksheet.write(counter, 11, "", money_gray_cell)
-                bsch_worksheet.write(counter, 12, "", money_gray_cell)
-                bsch_worksheet.write_number(counter, 13, activity.baseline_schedule.total_cost, money_gray_cell)
+                self.write_predecessors(bsch_worksheet, counter, 3, activity.predecessors, blue_cell, project_object.agenda) # normally empty
+                self.write_successors(bsch_worksheet, counter, 4, activity.successors, blue_cell, project_object.agenda) # normally empty
+                bsch_worksheet.write_datetime(counter, 5, activity.baseline_schedule.start, date_blue_cell)
+                bsch_worksheet.write_datetime(counter, 6, activity.baseline_schedule.end, date_blue_cell)
+                bsch_worksheet.write(counter, 7, self.get_duration_str(activity.baseline_schedule.duration), blue_cell)
+                self.write_resources(bsch_worksheet, counter, 8, activity.resources, blue_cell) # normally empty
+                bsch_worksheet.write(counter, 9, "", money_blue_cell)
+                bsch_worksheet.write_number(counter, 10, activity.baseline_schedule.fixed_cost, money_blue_cell)
+                bsch_worksheet.write(counter, 11, "", money_blue_cell)
+                bsch_worksheet.write(counter, 12, "", money_blue_cell)
+                bsch_worksheet.write_number(counter, 13, activity.baseline_schedule.total_cost, money_blue_cell)
 
             counter += 1
 
@@ -1004,7 +1043,7 @@ class XLSXParser(FileParser):
         # Write the risk analysis sheet
 
         # Adjust some column widths
-        ra_worksheet.set_column(0, 0, 3)
+        ra_worksheet.set_column(0, 0, 5)
         ra_worksheet.set_column(1, 1, 18)
         ra_worksheet.set_column(3, 3, 15)
         ra_worksheet.set_column(4, 6, 12)
@@ -1026,15 +1065,17 @@ class XLSXParser(FileParser):
         counter = 2
         for activity in project_object.activities:
             if Activity.is_not_lowest_level_activity(activity, project_object.activities):
-                ra_worksheet.write_number(counter, 0, activity.activity_id, gray_cell)
+                # activity group
+                ra_worksheet.write_number(counter, 0, activity.activity_id, yellow_cell)
                 ra_worksheet.write(counter, 1, str(activity.name), gray_cell)
-                ra_worksheet.write(counter, 2, self.get_duration_hours_str(activity.baseline_schedule.duration, project_object.agenda.get_working_hours_in_a_day()), gray_cell)
-                ra_worksheet.write(counter, 3, "", yellow_cell)
-                ra_worksheet.write(counter, 4, "", yellow_cell)
-                ra_worksheet.write(counter, 5, "", yellow_cell)
-                ra_worksheet.write(counter, 6, "", yellow_cell)
+                ra_worksheet.write(counter, 2, self.get_duration_hours_str(activity.baseline_schedule.duration, project_object.agenda.get_working_hours_in_a_day()), blue_cell)
+                ra_worksheet.write(counter, 3, "", blue_cell)
+                ra_worksheet.write(counter, 4, "", blue_cell)
+                ra_worksheet.write(counter, 5, "", blue_cell)
+                ra_worksheet.write(counter, 6, "", blue_cell)
             else:
-                ra_worksheet.write_number(counter, 0, activity.activity_id, gray_cell)
+                # activity
+                ra_worksheet.write_number(counter, 0, activity.activity_id, yellow_cell)
                 ra_worksheet.write(counter, 1, str(activity.name), gray_cell)
                 ra_worksheet.write(counter, 2, self.get_duration_hours_str(activity.baseline_schedule.duration, project_object.agenda.get_working_hours_in_a_day()), gray_cell)
                 description = str(activity.risk_analysis.distribution_type.value) + " - " \
@@ -1053,7 +1094,7 @@ class XLSXParser(FileParser):
                 tracking_period_worksheet = workbook.add_worksheet("TP" + str(i+1))
 
             # Set column widths and create headers
-            tracking_period_worksheet.set_column(0, 0, 3)
+            tracking_period_worksheet.set_column(0, 0, 5)
             tracking_period_worksheet.set_column(1, 1, 18)
             tracking_period_worksheet.set_column(2, 3, 13)
             tracking_period_worksheet.set_column(4, 4, 6)
@@ -1109,33 +1150,37 @@ class XLSXParser(FileParser):
             for atr in project_object.tracking_periods[i].tracking_period_records:  # atr = ActivityTrackingRecord
                 if Activity.is_not_lowest_level_activity(atr.activity, project_object.activities):
                     # work package here:
-                    tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, gray_cell)
+                    if atr.activity.activity_id == 0:
+                        # project group:
+                        tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, blue_cell)
+                    else:
+                        tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, gray_cell)
                     tracking_period_worksheet.write(counter, 1, atr.activity.name, gray_cell)
-                    tracking_period_worksheet.write_datetime(counter, 2, atr.activity.baseline_schedule.start, date_gray_cell)
-                    tracking_period_worksheet.write_datetime(counter, 3, atr.activity.baseline_schedule.end, date_gray_cell)
-                    tracking_period_worksheet.write(counter, 4, self.get_duration_str(atr.activity.baseline_schedule.duration), gray_cell)
-                    tracking_period_worksheet.write(counter, 5, "", gray_cell) # not printed for workpackages
-                    tracking_period_worksheet.write(counter, 6, "", money_gray_cell) # not printed for workpackages
-                    tracking_period_worksheet.write_number(counter, 7, atr.activity.baseline_schedule.fixed_cost, money_gray_cell)
-                    tracking_period_worksheet.write(counter, 8, "", money_gray_cell) # not printed for workpackages
-                    tracking_period_worksheet.write(counter, 9, "", money_gray_cell)
-                    tracking_period_worksheet.write_number(counter, 10, atr.activity.baseline_schedule.total_cost, money_gray_cell)
+                    tracking_period_worksheet.write_datetime(counter, 2, atr.activity.baseline_schedule.start, date_blue_cell)
+                    tracking_period_worksheet.write_datetime(counter, 3, atr.activity.baseline_schedule.end, date_blue_cell)
+                    tracking_period_worksheet.write(counter, 4, self.get_duration_str(atr.activity.baseline_schedule.duration), blue_cell)
+                    tracking_period_worksheet.write(counter, 5, "", blue_cell) # not printed for workpackages
+                    tracking_period_worksheet.write(counter, 6, "", money_blue_cell) # not printed for workpackages
+                    tracking_period_worksheet.write_number(counter, 7, atr.activity.baseline_schedule.fixed_cost, money_blue_cell)
+                    tracking_period_worksheet.write(counter, 8, "", money_blue_cell) # not printed for workpackages
+                    tracking_period_worksheet.write(counter, 9, "", money_blue_cell)
+                    tracking_period_worksheet.write_number(counter, 10, atr.activity.baseline_schedule.total_cost, money_blue_cell)
 
-                    tracking_period_worksheet.write(counter, 11, '', gray_cell) # not printed for workpackages
-                    tracking_period_worksheet.write(counter, 12, self.get_duration_str(atr.actual_duration), gray_cell)
-                    tracking_period_worksheet.write(counter, 13, "", money_gray_cell) # not printed for workpackages
-                    tracking_period_worksheet.write(counter, 14, "", money_gray_cell) # not printed for workpackages
-                    tracking_period_worksheet.write(counter, 15, "", gray_cell) # NECESSARY EMPTY field for workpackages!
-                    tracking_period_worksheet.write(counter, 16, "", money_gray_cell) # not printed for workpackages
-                    tracking_period_worksheet.write(counter, 17, "", money_gray_cell) # not printed for workpackages
+                    tracking_period_worksheet.write(counter, 11, '', blue_cell) # not printed for workpackages
+                    tracking_period_worksheet.write(counter, 12, self.get_duration_str(atr.actual_duration), blue_cell)
+                    tracking_period_worksheet.write(counter, 13, "", money_blue_cell) # not printed for workpackages
+                    tracking_period_worksheet.write(counter, 14, "", money_blue_cell) # not printed for workpackages
+                    tracking_period_worksheet.write(counter, 15, "", blue_cell) # NECESSARY EMPTY field for workpackages!
+                    tracking_period_worksheet.write(counter, 16, "", money_blue_cell) # not printed for workpackages
+                    tracking_period_worksheet.write(counter, 17, "", money_blue_cell) # not printed for workpackages
 
-                    tracking_period_worksheet.write_number(counter, 18, atr.actual_cost, money_gray_cell)
-                    tracking_period_worksheet.write(counter, 19, "", money_gray_cell) # not printed for workpackages
+                    tracking_period_worksheet.write_number(counter, 18, atr.actual_cost, money_blue_cell)
+                    tracking_period_worksheet.write(counter, 19, "", money_blue_cell) # not printed for workpackages
                     #percentage_completed = str(atr.percentage_completed) + "%"
-                    tracking_period_worksheet.write(counter, 20, atr.percentage_completed / 100.0, percent_gray_cell)
-                    tracking_period_worksheet.write(counter, 21, "", gray_cell) # not printed for workpackages
-                    tracking_period_worksheet.write_number(counter, 22, atr.earned_value, money_gray_cell)
-                    tracking_period_worksheet.write_number(counter, 23, atr.planned_value, money_gray_cell)
+                    tracking_period_worksheet.write(counter, 20, atr.percentage_completed / 100.0, percent_blue_cell)
+                    tracking_period_worksheet.write(counter, 21, "", blue_cell) # not printed for workpackages
+                    tracking_period_worksheet.write_number(counter, 22, atr.earned_value, money_blue_cell)
+                    tracking_period_worksheet.write_number(counter, 23, atr.planned_value, money_blue_cell)
                 else:
                     # activity:
                     tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, gray_cell)
@@ -1158,7 +1203,7 @@ class XLSXParser(FileParser):
                     tracking_period_worksheet.write_number(counter, 13, atr.planned_actual_cost, money_gray_cell)
                     tracking_period_worksheet.write_number(counter, 14, atr.planned_remaining_cost, money_gray_cell)
                     tracking_period_worksheet.write(counter, 15, self.get_duration_str(atr.remaining_duration), gray_cell)
-                    tracking_period_worksheet.write_number(counter, 16, atr.deviation_pac, money_green_cell)
+                    tracking_period_worksheet.write_number(counter, 16, atr.deviation_pac, money_gray_cell)
                     tracking_period_worksheet.write_number(counter, 17, atr.deviation_prc, money_yellow_cell)
                     tracking_period_worksheet.write_number(counter, 18, atr.actual_cost, money_green_cell)
                     tracking_period_worksheet.write_number(counter, 19, atr.remaining_cost, money_gray_cell)
@@ -1170,7 +1215,7 @@ class XLSXParser(FileParser):
 
         # Write the agenda
         agenda_worksheet = workbook.add_worksheet("Agenda")
-        agenda_worksheet.set_column(0, 0, 8)
+        agenda_worksheet.set_column(0, 0, 12)
         agenda_worksheet.set_column(3, 3, 8)
         agenda_worksheet.set_column(6, 6, 12)
         agenda_worksheet.merge_range('A1:B1', 'Working Hours', header)
@@ -1179,33 +1224,33 @@ class XLSXParser(FileParser):
         days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         for i in range(0, 24):
             hour_string = str(i) + ":00 - " + str((i+1)%24) + ":00"
-            agenda_worksheet.write(i+1, 0, hour_string, green_cell)
+            agenda_worksheet.write(i+1, 0, hour_string, gray_cell)
             if project_object.agenda.working_hours[i]:
-                agenda_worksheet.write(i+1, 1, "Yes", green_cell)
+                agenda_worksheet.write(i+1, 1, "Yes", green_cell_agenda)
             else:
-                agenda_worksheet.write(i+1, 1, "No", red_cell)
+                agenda_worksheet.write(i+1, 1, "No", red_cell_agenda)
         for i in range(0, 7):
-            agenda_worksheet.write(i+1, 3, days[i], green_cell)
+            agenda_worksheet.write(i+1, 3, days[i], gray_cell)
             if project_object.agenda.working_days[i]:
-                agenda_worksheet.write(i+1, 4, "Yes", green_cell)
+                agenda_worksheet.write(i+1, 4, "Yes", green_cell_agenda)
             else:
-                agenda_worksheet.write(i+1, 4, "No", red_cell)
+                agenda_worksheet.write(i+1, 4, "No", red_cell_agenda)
         agenda_worksheet.conditional_format('B2:B25', { 'type':     'cell',
                                                         'criteria': '==',
                                                         'value':    '"Yes"',
-                                                        'format':   green_cell})
+                                                        'format':   green_cell_agenda})
         agenda_worksheet.conditional_format('B2:B25', { 'type':     'cell',
                                                         'criteria': '==',
                                                         'value':    '"No"',
-                                                        'format':   red_cell})
+                                                        'format':   red_cell_agenda})
         agenda_worksheet.conditional_format('E2:E8', { 'type':     'cell',
                                                         'criteria': '==',
                                                         'value':    '"Yes"',
-                                                        'format':   green_cell})
+                                                        'format':   green_cell_agenda})
         agenda_worksheet.conditional_format('E2:E8', { 'type':     'cell',
                                                         'criteria': '==',
                                                         'value':    '"No"',
-                                                        'format':   red_cell})
+                                                        'format':   red_cell_agenda})
         counter = 1
         for holiday in project_object.agenda.holidays:
             agenda_worksheet.write(counter, 6, holiday, holiday_yellow_cell)
@@ -1259,25 +1304,25 @@ class XLSXParser(FileParser):
 
         counter = 2
         for tracking_period in project_object.tracking_periods:
-            overview_worksheet.write(counter, 0, tracking_period.tracking_period_name, green_cell)
+            overview_worksheet.write(counter, 0, tracking_period.tracking_period_name, gray_cell)
             index = project_object.tracking_periods.index(tracking_period)
             if index == 0:
-                overview_worksheet.write_datetime(counter, 1, min([atr.activity.baseline_schedule.start for atr in tracking_period.tracking_period_records]), date_green_cell)
+                overview_worksheet.write_datetime(counter, 1, min([atr.activity.baseline_schedule.start for atr in tracking_period.tracking_period_records]), date_gray_cell)
             else:
-                overview_worksheet.write_datetime(counter, 1, project_object.tracking_periods[index-1].tracking_period_statusdate, date_green_cell)
-            overview_worksheet.write_datetime(counter, 2, tracking_period.tracking_period_statusdate, date_green_cell)
+                overview_worksheet.write_datetime(counter, 1, project_object.tracking_periods[index-1].tracking_period_statusdate, date_gray_cell)
+            overview_worksheet.write_datetime(counter, 2, tracking_period.tracking_period_statusdate, date_gray_cell)
 
             # calculate the key metrics and write them out
             PV, EV, AC = self.calculate_aggregated_keyMetrics(tracking_period)
-            overview_worksheet.write_number(counter, 3, PV, money_green_cell)
-            overview_worksheet.write_number(counter, 4, EV, money_green_cell)
-            overview_worksheet.write_number(counter, 5, AC, money_green_cell)
+            overview_worksheet.write_number(counter, 3, PV, money_gray_cell)
+            overview_worksheet.write_number(counter, 4, EV, money_gray_cell)
+            overview_worksheet.write_number(counter, 5, AC, money_gray_cell)
             # calculate ES
             ES = self.calculate_es(project_object, generatedPVcurve, EV, tracking_period.tracking_period_statusdate)
-            overview_worksheet.write_datetime(counter, 6, ES, date_green_cell)
+            overview_worksheet.write_datetime(counter, 6, ES, date_gray_cell)
             # calculate SV
             sv = EV - PV
-            overview_worksheet.write_number(counter, 7, sv, money_green_cell)
+            overview_worksheet.write_number(counter, 7, sv, money_gray_cell)
             # calculate SPI
             if not PV:
                 spi = 0.0
@@ -1285,34 +1330,34 @@ class XLSXParser(FileParser):
                 spi = EV / PV
             # save spi value also in tracking_period for visualisations:
             tracking_period.spi = spi
-            overview_worksheet.write(counter, 8, spi, percent_green_cell)
+            overview_worksheet.write(counter, 8, spi, percent_gray_cell)
 
             # calculate CV
             cv = EV - AC
-            overview_worksheet.write_number(counter, 9, cv, money_green_cell)
+            overview_worksheet.write_number(counter, 9, cv, money_gray_cell)
             if not AC:
                 cpi = 0.0
             else:
                 cpi = EV /AC
             # save cpi value also in tracking_period for visualisations:
             tracking_period.cpi = cpi
-            overview_worksheet.write(counter, 10, cpi, percent_green_cell)
+            overview_worksheet.write(counter, 10, cpi, percent_gray_cell)
 
             # calculate SV(t)
             sv_t, sv_t_str = self.calculate_SVt(project_object, ES, tracking_period.tracking_period_statusdate)
             # save SV(t) value also in tracking_period for visualisations:
             tracking_period.sv_t = sv_t
-            overview_worksheet.write(counter, 11, sv_t_str, green_cell)
+            overview_worksheet.write(counter, 11, sv_t_str, gray_cell)
 
             # calculate SPI(t)
             spi_t = self.calculate_SPIt(project_object, ES, tracking_period.tracking_period_statusdate)
             # save spi_t value also in tracking_period for visualisations:
             tracking_period.spi_t = spi_t
-            overview_worksheet.write(counter, 12, spi_t, percent_green_cell)
+            overview_worksheet.write(counter, 12, spi_t, percent_gray_cell)
 
             # calculate p-factor
             p_factor = self.calculate_p_factor(project_object, tracking_period, ES)
-            overview_worksheet.write(counter, 13, p_factor, percent_green_cell)
+            overview_worksheet.write(counter, 13, p_factor, percent_gray_cell)
             # save p_factor value also in tracking_period for visualisations:
             tracking_period.p_factor = p_factor
 
@@ -1330,23 +1375,23 @@ class XLSXParser(FileParser):
             TV = sv / PVrate if bool(PVrate) else 0  # Time variance
             EAC_t_pv1 = PD_workingHours - TV
             EAC_t_pv1_days = int(EAC_t_pv1 / workingHours_inDay)
-            overview_worksheet.write_datetime(counter, 14, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv1_days, round(EAC_t_pv1 - EAC_t_pv1_days * workingHours_inDay)), date_green_cell)
+            overview_worksheet.write_datetime(counter, 14, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv1_days, round(EAC_t_pv1 - EAC_t_pv1_days * workingHours_inDay)), date_gray_cell)
 
             # write EAC(t) - Planned Value method (PF = spi)
             EAC_t_pv2 = PD_workingHours / spi if bool(spi)  else 0
             EAC_t_pv2_days = int(EAC_t_pv2 / workingHours_inDay)
-            overview_worksheet.write_datetime(counter, 15, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv2_days, round(EAC_t_pv2 - EAC_t_pv2_days * workingHours_inDay)), date_green_cell)
+            overview_worksheet.write_datetime(counter, 15, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv2_days, round(EAC_t_pv2 - EAC_t_pv2_days * workingHours_inDay)), date_gray_cell)
 
             # write EAC(t) - Planned Value method (PF = SCI = SPI * CPI)
             EAC_t_pv3 = PD_workingHours / (spi * cpi) if bool(spi * cpi)  else 0
             EAC_t_pv3_days = int(EAC_t_pv3 / workingHours_inDay)
-            overview_worksheet.write_datetime(counter, 16, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv3_days, round(EAC_t_pv3 - EAC_t_pv3_days * workingHours_inDay)), date_green_cell)
+            overview_worksheet.write_datetime(counter, 16, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv3_days, round(EAC_t_pv3 - EAC_t_pv3_days * workingHours_inDay)), date_gray_cell)
 
             # write EAC(t) - Earned duration method (PF = 1)
             ED = AT_duration_workingHours * spi
             EAC_t_ed1 = AT_duration_workingHours + (max(PD_workingHours, AT_duration_workingHours) - ED)
             EAC_t_ed1_days = int(EAC_t_ed1 / workingHours_inDay)
-            overview_worksheet.write_datetime(counter, 17, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed1_days, round(EAC_t_ed1 - EAC_t_ed1_days * workingHours_inDay)), date_green_cell)
+            overview_worksheet.write_datetime(counter, 17, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed1_days, round(EAC_t_ed1 - EAC_t_ed1_days * workingHours_inDay)), date_gray_cell)
 
             # write EAC(t) - Earned duration method (PF = spi)
             if bool(spi):
@@ -1354,7 +1399,7 @@ class XLSXParser(FileParser):
             else:
                 EAC_t_ed2 = AT_duration_workingHours
             EAC_t_ed2_days = int(EAC_t_ed2 / workingHours_inDay)
-            overview_worksheet.write_datetime(counter, 18, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed2_days, round(EAC_t_ed2 - EAC_t_ed2_days * workingHours_inDay)), date_green_cell)
+            overview_worksheet.write_datetime(counter, 18, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed2_days, round(EAC_t_ed2 - EAC_t_ed2_days * workingHours_inDay)), date_gray_cell)
 
             # write EAC(t) - Earned duration method (PF = SCI = SPI * CPI)
             if bool(spi) and bool(cpi) :
@@ -1362,12 +1407,12 @@ class XLSXParser(FileParser):
             else:
                 EAC_t_ed3 = AT_duration_workingHours
             EAC_t_ed3_days = int(EAC_t_ed3 / workingHours_inDay)
-            overview_worksheet.write_datetime(counter, 19, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed3_days, round(EAC_t_ed3 - EAC_t_ed3_days * workingHours_inDay)), date_green_cell)
+            overview_worksheet.write_datetime(counter, 19, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed3_days, round(EAC_t_ed3 - EAC_t_ed3_days * workingHours_inDay)), date_gray_cell)
 
             # write EAC(t) - Earned schedule method (PF = 1)
             EAC_t_es1 = AT_duration_workingHours + (PD_workingHours - ES_duration_workingHours)
             EAC_t_es1_days = int(EAC_t_es1 / workingHours_inDay)
-            overview_worksheet.write_datetime(counter, 20, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_es1_days, round(EAC_t_es1 - EAC_t_es1_days * workingHours_inDay)), date_green_cell)
+            overview_worksheet.write_datetime(counter, 20, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_es1_days, round(EAC_t_es1 - EAC_t_es1_days * workingHours_inDay)), date_gray_cell)
 
             # write EAC(t) - Earned schedule method (PF = spi_t)
             if bool(spi_t):
@@ -1375,7 +1420,7 @@ class XLSXParser(FileParser):
             else:
                 EAC_t_es2 = AT_duration_workingHours
             EAC_t_es2_days = int(EAC_t_es2 / workingHours_inDay)
-            overview_worksheet.write_datetime(counter, 21, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_es2_days, round(EAC_t_es2 - EAC_t_es2_days * workingHours_inDay)), date_green_cell)
+            overview_worksheet.write_datetime(counter, 21, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_es2_days, round(EAC_t_es2 - EAC_t_es2_days * workingHours_inDay)), date_gray_cell)
 
             # write EAC(t) - Earned schedule method (PF = SCI = SPI(t) * CPI)
             if bool(spi_t) and bool(cpi):
@@ -1383,31 +1428,31 @@ class XLSXParser(FileParser):
             else:
                 EAC_t_es3 = AT_duration_workingHours
             EAC_t_es3_days = int(EAC_t_es3 / workingHours_inDay)
-            overview_worksheet.write_datetime(counter, 22, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_es3_days, round(EAC_t_es3 - EAC_t_es3_days * workingHours_inDay)), date_green_cell)
+            overview_worksheet.write_datetime(counter, 22, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_es3_days, round(EAC_t_es3 - EAC_t_es3_days * workingHours_inDay)), date_gray_cell)
 
 
             # write EAC(PF = 1)
-            overview_worksheet.write_number(counter, 23, self.calculate_eac(AC, BAC, EV, 1), money_green_cell)
+            overview_worksheet.write_number(counter, 23, self.calculate_eac(AC, BAC, EV, 1), money_gray_cell)
             # write EAC(PF = cpi)
-            overview_worksheet.write_number(counter, 24, self.calculate_eac(AC,BAC, EV, cpi), money_green_cell)
+            overview_worksheet.write_number(counter, 24, self.calculate_eac(AC,BAC, EV, cpi), money_gray_cell)
 
             # write EAC(PF = spi)
-            overview_worksheet.write_number(counter, 25, self.calculate_eac(AC, BAC, EV, spi), money_green_cell)
+            overview_worksheet.write_number(counter, 25, self.calculate_eac(AC, BAC, EV, spi), money_gray_cell)
 
             # write EAC(PF = spi_t)
-            overview_worksheet.write_number(counter, 26, self.calculate_eac(AC, BAC, EV, spi_t), money_green_cell)
+            overview_worksheet.write_number(counter, 26, self.calculate_eac(AC, BAC, EV, spi_t), money_gray_cell)
 
             # write EAC(PF = SCI = SPI * CPI)
-            overview_worksheet.write_number(counter, 27, self.calculate_eac(AC, BAC, EV, spi * cpi), money_green_cell)
+            overview_worksheet.write_number(counter, 27, self.calculate_eac(AC, BAC, EV, spi * cpi), money_gray_cell)
 
             # write EAC(PF = SCI(t) = SPI(t) * CPI
-            overview_worksheet.write_number(counter, 28, self.calculate_eac(AC, BAC, EV, spi_t * cpi), money_green_cell)
+            overview_worksheet.write_number(counter, 28, self.calculate_eac(AC, BAC, EV, spi_t * cpi), money_gray_cell)
 
             # write EAC(PF = 0.8*CPI+0.2*SPI)
-            overview_worksheet.write_number(counter, 29, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi), money_green_cell)
+            overview_worksheet.write_number(counter, 29, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi), money_gray_cell)
 
             # write EAC(PF = 0.8*CPI+0.2*SPI(t))
-            overview_worksheet.write_number(counter, 30, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi_t), money_green_cell)
+            overview_worksheet.write_number(counter, 30, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi_t), money_gray_cell)
 
 
             counter += 1

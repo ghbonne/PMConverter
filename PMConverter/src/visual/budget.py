@@ -19,7 +19,7 @@ class CV(Visualization):
 
     def __init__(self):
         self.title = "CV"
-        self.description = "A line graph showing the cost variance of the project, based on the available tracking periods."
+        self.description = "Line graph showing the cost variance over the different tracking periods or on an absolute time scale."
         self.parameters = {"x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
 

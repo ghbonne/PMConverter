@@ -20,8 +20,7 @@ class ResourceDistribution(Visualization):
 
     def __init__(self):
         self.title = "Resource costs"
-        self.description = "All resources are presented in a pie chart according to their total cost in the project. "\
-                            +"The values in the pie chart can be chosen to be presented in euros or as percentages."
+        self.description = "Pie chart showing the total cost of all resources, expressed in monetary units or in relative percentages."
         self.parameters = {'data_type': [DataType.ABSOLUTE, DataType.RELATIVE]}
         self.data_type = None
 

@@ -21,8 +21,8 @@ class RiskAnalysis(Visualization):
 
     def __init__(self):
         self.title = "Risk analysis"
-        self.description = "A bar chart presenting of each activity its estimated optimistic, most probable and pessimistic duration. "\
-                            +"The values can be shown in absolute working hours or as percentages w.r.t. the planned baseline duration."
+        self.description = "Bar chart showing the optimistic, most probable and pessimistic durations of all activities,"\
+                            +"expressed in working hours or as relative percentages of the baseline duration."
         self.parameters = {"data_type": [DataType.ABSOLUTE, DataType.RELATIVE]}
         self.data_type = None
 

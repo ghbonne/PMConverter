@@ -21,8 +21,7 @@ class CPI(Visualization):
 
     def __init__(self):
         self.title = "CPI"
-        self.description = "Shows the project's cost performance (earned value/ actual cost), based on the available tracking periods. "\
-                            + "For control purposes it's possible to display a threshold line on the graph."
+        self.description = "Line graph showing the cost performance index over the different tracking periods or on an absolute time scale, with the ability to add a threshold line."
         self.parameters = {"threshold": True,
                            "x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
