@@ -19,6 +19,9 @@ from convert.fileparser import FileParser
 from objects.agenda import Agenda
 from exceptions import XLSXParseError
 
+# DEBUG
+import csv, os
+
 
 class XLSXParser(FileParser):
     """
@@ -437,6 +440,7 @@ class XLSXParser(FileParser):
 
                 else:
                     res_ava = -1
+                    res_unit = ""
                 res_cost_use = float(resource_sheet.cell(row=curr_row, column=5).value)
                 res_cost_unit = float(resource_sheet.cell(row=curr_row, column=6).value)
                 resources_dict[res_name] = Resource(resource_id=res_id, name=res_name, resource_type=res_type,
@@ -746,7 +750,10 @@ class XLSXParser(FileParser):
         return t
 
     def calculate_PVcurve(self, project_object):
-        "This function generates the PV curve of the baseline schedule of the given project."
+        """
+        This function generates the PV curve of the baseline schedule of the given project.
+        return: generated_PVcurve: list of tuples: [(PV, datetime), ...]
+        """
 
         # retrieve only lowest level activities and sort them on their baseline start date and end date
         lowestLevelActivities = [activity for activity in project_object.activities if not Activity.is_not_lowest_level_activity(activity, project_object.activities)]
@@ -1301,6 +1308,12 @@ class XLSXParser(FileParser):
 
         # generate PV curve:
         generatedPVcurve = self.calculate_PVcurve(project_object)
+        # DEBUG
+        workbookFilepath, fileextension = os.path.splitext(file_path_output)
+        with open(workbookFilepath + "-PV.csv", "w", newline='') as csvfile:
+            PVwriter = csv.writer(csvfile, delimiter=';')
+            for PVrow in generatedPVcurve:
+                PVwriter.writerow([PVrow[0], PVrow[1].strftime("%d/%m/%Y %H:%M:%S")])
 
         counter = 2
         for tracking_period in project_object.tracking_periods:
