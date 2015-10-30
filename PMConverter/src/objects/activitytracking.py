@@ -80,7 +80,7 @@ class ActivityTrackingRecord(object):
         """
 
         #if actualDuration_hours > 0:
-        if actualStart.date() < datetime.datetime.max.date(): # if activity not yet started, its actualStart is set to datetime.max
+        if actualStart.date() < datetime.datetime.max.date() and actualDuration_hours > 0: # if activity not yet started, its actualStart is set to datetime.max
             # activity started or already finished: PAC depends on real actual duration!
             planned_actual_cost = activity.baseline_schedule.fixed_cost + actualDuration_hours * activity.baseline_schedule.hourly_cost
             # no fixed starting costs anymore for PRC:
@@ -118,8 +118,8 @@ class ActivityTrackingRecord(object):
         if remainingDuration_hours == 0:
             # activity finished
             earned_value = activity.baseline_schedule.total_cost
-        elif actualDuration_hours == 0:
-            # activity not yet started:
+        elif actualStart >= datetime.datetime.max or percentageComplete<1e-5 : #actualDuration_hours == 0:
+            # activity not yet started or Percentage completed = 0:
             earned_value = 0.
         else:
             # activity running:
