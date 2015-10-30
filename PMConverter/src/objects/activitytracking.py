@@ -123,8 +123,29 @@ class ActivityTrackingRecord(object):
             earned_value = 0.
         else:
             # activity running:
-            earned_value = activity.baseline_schedule.fixed_cost + percentageComplete/100.0 * (activity.baseline_schedule.var_cost + activity.resource_cost) # TODO: resource cost is handled completely as a total variable cost for EV: OK?
-        
+            earned_value = activity.baseline_schedule.fixed_cost + percentageComplete/100.0 * (activity.baseline_schedule.var_cost)
+
+            # total activity duration in hours:
+            activityDuration_hours = agenda.get_workingDuration_workingHours(activity.baseline_schedule.duration)
+            # EV its resource contributions:
+            for resourceTuple in activity.resources:
+                resource = resourceTuple[0]
+                if resource.resource_type == ResourceType.CONSUMABLE:
+                    ## only add once the cost for its use!
+                    # check if fixed resource assignment:
+                    if resourceTuple[2]:
+                        # fixed resource assignment => variable cost is not multiplied by activity duration:
+                        earned_value += resource.cost_use + percentageComplete/100.0 * (resourceTuple[1] * resource.cost_unit)
+                    else:
+                        # non fixed resource assignment:
+                        earned_value += resource.cost_use + percentageComplete/100.0 * (resourceTuple[1] * resource.cost_unit * activityDuration_hours)
+                else:
+                    #resource type is renewable:
+                    #add cost_use and variable cost:
+                    earned_value += resourceTuple[1] * resource.cost_use + percentageComplete/100.0 * (resourceTuple[1] * resource.cost_unit * activityDuration_hours)
+
+            #endFor adding resource costs
+
         # Calculate PV:
         if statusdate_datetime >= activity.baseline_schedule.end:
             # activity should be finished according to baselinschedule
@@ -150,7 +171,7 @@ class ActivityTrackingRecord(object):
                         planned_value += resource.cost_use + resourceTuple[1] * resource.cost_unit
                     else:
                         # non fixed resource assignment:
-                        planned_value += resource.cost_use + resourceTuple[1] * resource.cost_unit * activityRunningDuration_workingHours
+                        planned_value += resource.cost_use + resourceTuple[1] * resource.cost_unit * activityRunningDuration_workingHours  
                 else:
                     #resource type is renewable:
                     #add cost_use and variable cost:
