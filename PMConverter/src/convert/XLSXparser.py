@@ -1160,9 +1160,9 @@ class XLSXParser(FileParser):
                     # work package here:
                     if atr.activity.activity_id == 0:
                         # project group:
-                        tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, blue_cell)
+                        tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, green_cell)
                     else:
-                        tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, gray_cell)
+                        tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, green_cell)
                     tracking_period_worksheet.write(counter, 1, atr.activity.name, gray_cell)
                     tracking_period_worksheet.write_datetime(counter, 2, atr.activity.baseline_schedule.start, date_blue_cell)
                     tracking_period_worksheet.write_datetime(counter, 3, atr.activity.baseline_schedule.end, date_blue_cell)
@@ -1191,7 +1191,7 @@ class XLSXParser(FileParser):
                     tracking_period_worksheet.write_number(counter, 23, atr.planned_value, money_blue_cell)
                 else:
                     # activity:
-                    tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, gray_cell)
+                    tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, green_cell)
                     tracking_period_worksheet.write(counter, 1, atr.activity.name, gray_cell)
                     tracking_period_worksheet.write_datetime(counter, 2, atr.activity.baseline_schedule.start, date_gray_cell)
                     tracking_period_worksheet.write_datetime(counter, 3, atr.activity.baseline_schedule.end, date_gray_cell)

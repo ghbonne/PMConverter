@@ -65,7 +65,7 @@ class BaselineSchedule(Visualization):
                                       'border': 1, 'font_size': 8})
         calculation = workbook.add_format({'bg_color': '#FFF2CC', 'text_wrap': True, 'border': 1, 'font_size': 8})
 
-        worksheet.write('Q2', 'Baseline duration (in days)', header)
+        worksheet.write('Q2', 'Baseline duration (in calendar days)', header)
 
         counter = 2
         isWorkPackage_list = []
