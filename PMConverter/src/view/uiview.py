@@ -1,6 +1,8 @@
 __author__ = 'ghbonne'
 __license__ = "GPL"
 
+__version__ = "1.1"
+
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from view.ui_UIView import Ui_UIView
@@ -581,7 +583,7 @@ class UIView(QDialog, Ui_UIView):
     def ExportChosenVisualisationSettings(self, outputFilename):
         "This function exports the currently chosen visualisation settings in the GUI to a file."
 
-        xmlRoot = ET.Element("PMConverter_Chosen_Visualisation_Settings", {"TimeOfSaving": "{0}".format(time.strftime("%d-%m-%Y_%H-%M-%S")), "PMConverterVersion": "1"})
+        xmlRoot = ET.Element("PMConverter_Chosen_Visualisation_Settings", {"TimeOfSaving": "{0}".format(time.strftime("%d-%m-%Y_%H-%M-%S")), "PMConverterVersion": __version__})
 
         for chosenVisualisationTypeName in self.chosenVisualisations:
             # create a new visualisation item node for each chosen visualisation
