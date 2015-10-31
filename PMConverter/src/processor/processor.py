@@ -76,11 +76,15 @@ class Processor(QThread):
                 return
 
         # Parse from project object
-        file_path_to = inputFilePath + "_converted_" + time.strftime("%d_%H%M%S") + self.inputFiletypes[self.parser_to]
-        if self.parser_to == "Excel":
+        file_path_to = inputFilePath + "_converted_" + time.strftime("%d_%H%M%S") 
+        # conversions to multiple formats are allowed:
+        file_path_to_dict = {}
+
+        if "Excel" in self.parser_to :
+            file_path_to_dict["Excel"] = file_path_to + self.inputFiletypes["Excel"]
             try:
                 xlsx_parser = XLSXParser()
-                workbook = xlsx_parser.from_schedule_object(project_object, file_path_to)
+                workbook = xlsx_parser.from_schedule_object(project_object, file_path_to_dict["Excel"])
                 if self.wantedVisualisations:
                     current_tp = 0
                     for worksheet in workbook.worksheets():
@@ -112,17 +116,26 @@ class Processor(QThread):
                 self.emit(self.conversionFailedErrorMessage, "Failed to convert {0} to Excel\nException of type {1} occurred.\nValue of exception = {2}\n {3}".format(inputfilename, 
                                                     sys.exc_info()[0], sys.exc_info()[1] if sys.exc_info()[1] is not None else "", traceback.format_exc()))
                 return
-        elif self.parser_to == "ProTrack":
+        if "ProTrack" in self.parser_to:
+            file_path_to_dict["ProTrack"] = file_path_to + self.inputFiletypes["ProTrack"]
             try:
                 xml_parser = XMLParser()
-                parsingSuccessful = xml_parser.from_schedule_object(project_object, file_path_to)
+                parsingSuccessful = xml_parser.from_schedule_object(project_object, file_path_to_dict["ProTrack"])
             except:
                 self.emit(self.conversionFailedErrorMessage, "Failed to convert {0} to ProTrack\nException of type {1} occurred.\nValue of exception = {2}\n\n {3}".format(inputfilename, 
                                                                                             sys.exc_info()[0], sys.exc_info()[1] if sys.exc_info()[1] is not None else "", traceback.format_exc()))
                 return
             
         # conversion successful:
-        self.emit(self.conversionSucceeded, file_path_to)
+        outputFilepaths = ""
+        counter = 0
+        for filename in file_path_to_dict.values():
+            outputFilepaths += filename
+            counter += 1
+            if counter != len(file_path_to_dict):
+                outputFilepaths += "\nand\n"
+
+        self.emit(self.conversionSucceeded, outputFilepaths)
         return   
 
     def setConversionSettings(self, parser_from, parser_to, file_path_from, wantedVisualisations={}):

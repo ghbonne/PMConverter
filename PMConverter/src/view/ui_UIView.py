@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'UIView.ui'
 #
-# Created: Thu Aug 20 13:01:05 2015
+# Created: Sat Oct 31 16:57:55 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -149,7 +149,7 @@ class Ui_UIView(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.ddlStep1_InputFormat.sizePolicy().hasHeightForWidth())
         self.ddlStep1_InputFormat.setSizePolicy(sizePolicy)
-        self.ddlStep1_InputFormat.setMinimumSize(QtCore.QSize(100, 0))
+        self.ddlStep1_InputFormat.setMinimumSize(QtCore.QSize(150, 0))
         self.ddlStep1_InputFormat.setObjectName(_fromUtf8("ddlStep1_InputFormat"))
         self.horizontalLayout_21.addWidget(self.ddlStep1_InputFormat)
         spacerItem7 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
@@ -163,7 +163,7 @@ class Ui_UIView(object):
         self.horizontalLayout_22.setObjectName(_fromUtf8("horizontalLayout_22"))
         self.ddlStep1_OutputFormat = QtGui.QComboBox(self.pageStep1)
         self.ddlStep1_OutputFormat.setEnabled(False)
-        self.ddlStep1_OutputFormat.setMinimumSize(QtCore.QSize(100, 0))
+        self.ddlStep1_OutputFormat.setMinimumSize(QtCore.QSize(150, 0))
         self.ddlStep1_OutputFormat.setObjectName(_fromUtf8("ddlStep1_OutputFormat"))
         self.horizontalLayout_22.addWidget(self.ddlStep1_OutputFormat)
         spacerItem8 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
@@ -433,7 +433,7 @@ class Ui_UIView(object):
         self.lblFinished_Message.setObjectName(_fromUtf8("lblFinished_Message"))
         self.verticalLayout_6.addWidget(self.lblFinished_Message)
         self.lblFinished_OutputFilename = QtGui.QLabel(self.pageFinished)
-        self.lblFinished_OutputFilename.setAlignment(QtCore.Qt.AlignCenter)
+        self.lblFinished_OutputFilename.setAlignment(QtCore.Qt.AlignHCenter|QtCore.Qt.AlignTop)
         self.lblFinished_OutputFilename.setMargin(5)
         self.lblFinished_OutputFilename.setObjectName(_fromUtf8("lblFinished_OutputFilename"))
         self.verticalLayout_6.addWidget(self.lblFinished_OutputFilename)
@@ -492,7 +492,7 @@ class Ui_UIView(object):
         self.lblStep1_InputFormat.setText(_translate("UIView", "From:", None))
         self.lblStep1_OutputFormat.setText(_translate("UIView", "To:", None))
         self.cmdStep1_Next.setText(_translate("UIView", "Next", None))
-        self.lblStep2_Title.setText(_translate("UIView", "<html><head/><body><p><span style=\" font-size:20pt;\">Step 2: Add visualizations</span></p></body></html>", None))
+        self.lblStep2_Title.setText(_translate("UIView", "<html><head/><body><p><span style=\" font-size:20pt;\">Step 2: add visualisations</span></p></body></html>", None))
         self.btnStep2_ImportSettings.setText(_translate("UIView", "Import", None))
         self.btnStep2_ExportSettings.setText(_translate("UIView", "Export", None))
         self.grpbxStep2_VisualisationDescription.setTitle(_translate("UIView", "Title of the chosen visualisation", None))

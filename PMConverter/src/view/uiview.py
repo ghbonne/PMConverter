@@ -122,6 +122,14 @@ class UIView(QDialog, Ui_UIView):
             # auto enable the first other format:
             otherFormats = [type for type in possibleInputTypes if self.inputFiletypes[type] != fileExtension]
             self.ddlStep1_OutputFormat.setCurrentIndex(possibleInputTypes.index(otherFormats[0]))
+            # Append combinations:
+            possibleOutputCombinations = []
+            for i in range(0,len(possibleInputTypes)):
+                combination = possibleInputTypes[i] + " and "
+                for j in range(i + 1, len(possibleInputTypes)):
+                    possibleOutputCombinations.append(combination + possibleInputTypes[j])
+            self.ddlStep1_OutputFormat.addItems(possibleOutputCombinations)
+
             
             self.ddlStep1_OutputFormat.setEnabled(True)
 
@@ -142,7 +150,8 @@ class UIView(QDialog, Ui_UIView):
     @pyqtSlot("bool")
     def on_cmdStep1_Next_clicked(self, clicked):
         "This function handles click events on the next button of step 1."
-        if self.ddlStep1_OutputFormat.currentText() == "Excel":
+        if "Excel" in self.ddlStep1_OutputFormat.currentText():
+            # Conversion contains one to Excel
             self.ddlStep2_VisualisationType.blockSignals(True)
             currentHeader = "TOPHEADER"
             for item in self.processor.get_supported_visualisations():
@@ -532,7 +541,7 @@ class UIView(QDialog, Ui_UIView):
             if header not in wantedVisualisations:
                 wantedVisualisations[header] = []
 
-        # start conversion here to excel
+        # start conversion here to excel (and ProTrack)
         # start thread here
         self.processor.setConversionSettings(self.ddlStep1_InputFormat.currentText(), self.ddlStep1_OutputFormat.currentText(), self.inputFilename, wantedVisualisations)
         self.processor.start()
