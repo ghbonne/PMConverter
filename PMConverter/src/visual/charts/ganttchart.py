@@ -3,10 +3,11 @@ from visual.charts.chart import Chart
 
 
 class GanttChart(Chart):
-    def __init__(self, title, labels, data_series, min_date, max_date):
+    def __init__(self, title, labels, data_series, isWorkpackage_list, min_date, max_date):
         self.title = title
         self.labels = labels
         self.data_series = data_series
+        self.isWorkpackage_list = isWorkpackage_list
         self.min_date = min_date
         self.max_date = max_date
 
@@ -20,6 +21,10 @@ class GanttChart(Chart):
         # Create a new chart object.
         chart = workbook.add_chart({'type': 'bar', 'subtype': 'stacked'})
 
+        # Define the formatting of the Workpackages:
+        workpackage_format = {'fill': {'color': '#4F81BD'}}
+        activity_format = {'fill': {'color': '#C0504D'}}
+
         # Configure the series.
         for row in self.data_series:
             x_values = row[1]
@@ -31,6 +36,11 @@ class GanttChart(Chart):
             }
             if row[0] == "Baseline start":
                 data['fill'] = {'none': True}
+            else:
+                # format the workpackages:        
+                data['points'] = [workpackage_format if x == True else activity_format for x in self.isWorkpackage_list]
+            #endIf formatting bars
+
             chart.add_series(data)
 
         # Add a chart title and axis labels.

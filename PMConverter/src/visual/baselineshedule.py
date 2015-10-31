@@ -1,6 +1,7 @@
 __author__ = 'Eveline'
 from visual.visualization import Visualization
 from visual.charts.ganttchart import GanttChart
+from objects.activity import Activity
 
 
 class BaselineSchedule(Visualization):
@@ -19,7 +20,7 @@ class BaselineSchedule(Visualization):
         self.parameters = {}
 
     def draw(self, workbook, worksheet, project_object):
-        size = self.calculate_values(workbook, worksheet, project_object)
+        size, isWorkPackage_list = self.calculate_values(workbook, worksheet, project_object)
 
         chartsheet = workbook.add_worksheet("Gantt chart")
         self.change_order(workbook)
@@ -27,6 +28,9 @@ class BaselineSchedule(Visualization):
         names = "='" + worksheet.get_name() + "'!$B$4:$B$" + str(size)
         baseline_start = "='" + worksheet.get_name() + "'!$F$4:$F$" + str(size)
         baseline_duration = "='" + worksheet.get_name() + "'!$Q$4:$Q$" + str(size)
+
+        # remove the project object element in the isWorkPackage_list:
+        isWorkPackage_list.pop(0)
 
         data_series = [
             ["Baseline start",
@@ -41,7 +45,7 @@ class BaselineSchedule(Visualization):
 
         min_date = project_object.activities[0].baseline_schedule.start
         max_date = self.get_max_date(project_object)
-        chart = GanttChart(self.title, ["Date", ""], data_series, min_date, max_date)
+        chart = GanttChart(self.title, ["Date", ""], data_series, isWorkPackage_list ,min_date, max_date)
 
         options = {'height': 150 + size*20, 'width': 1000}
         chart.draw(workbook, chartsheet, options)
@@ -55,6 +59,7 @@ class BaselineSchedule(Visualization):
         :param workbook: Workbook
         :param worksheet: Worksheet
         :param project_object: ProjectObject
+        return: length of series, list of booleans indicating if the corresponding element in the series is a workpackage
         """
         header = workbook.add_format({'bold': True, 'bg_color': '#316AC5', 'font_color': 'white', 'text_wrap': True,
                                       'border': 1, 'font_size': 8})
@@ -63,6 +68,7 @@ class BaselineSchedule(Visualization):
         worksheet.write('Q2', 'Baseline duration (in days)', header)
 
         counter = 2
+        isWorkPackage_list = []
 
         for activity in project_object.activities:
             begin_date = activity.baseline_schedule.start
@@ -70,8 +76,10 @@ class BaselineSchedule(Visualization):
             delta = self.get_duration(end_date-begin_date) # delta is the difference in calendar days
             worksheet.write(counter, 16, delta, calculation)
             counter += 1
+            # update list:
+            isWorkPackage_list.append(Activity.is_not_lowest_level_activity(activity, project_object.activities))
 
-        return counter
+        return counter, isWorkPackage_list
 
     def get_max_date(self, project_object):
         """
