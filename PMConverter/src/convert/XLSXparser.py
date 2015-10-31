@@ -308,8 +308,9 @@ class XLSXParser(FileParser):
                 percentage_completed_str = str(percentage_completed_str)
                 if not percentage_completed_str[-1].isdigit():
                     percentage_completed_str = percentage_completed_str[:-1] # remove the % in the string
-                if float(percentage_completed_str) < 1:
-                    percentage_completed_str = float(float(percentage_completed_str)*100)
+                ### percentages can also be smaller than 1!!!!
+                #if float(percentage_completed_str) < 1: 
+                #    percentage_completed_str = float(float(percentage_completed_str)*100)
                 percentage_completed = float(percentage_completed_str)
                 if percentage_completed > 100:
                     if percentage_completed > 100 + 1e-5:
@@ -1309,11 +1310,11 @@ class XLSXParser(FileParser):
         # generate PV curve:
         generatedPVcurve = self.calculate_PVcurve(project_object)
         # DEBUG
-        workbookFilepath, fileextension = os.path.splitext(file_path_output)
-        with open(workbookFilepath + "-PV.csv", "w", newline='') as csvfile:
-            PVwriter = csv.writer(csvfile, delimiter=';')
-            for PVrow in generatedPVcurve:
-                PVwriter.writerow([PVrow[0], PVrow[1].strftime("%d/%m/%Y %H:%M:%S")])
+        #workbookFilepath, fileextension = os.path.splitext(file_path_output)
+        #with open(workbookFilepath + "-PV.csv", "w", newline='') as csvfile:
+        #    PVwriter = csv.writer(csvfile, delimiter=';')
+        #    for PVrow in generatedPVcurve:
+        #        PVwriter.writerow([PVrow[0], PVrow[1].strftime("%d/%m/%Y %H:%M:%S")])
 
         counter = 2
         for tracking_period in project_object.tracking_periods:
