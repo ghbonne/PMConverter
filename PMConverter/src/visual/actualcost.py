@@ -21,7 +21,7 @@ class ActualCost(Visualization):
 
     def __init__(self):
         self.title = "BC vs AC"
-        self.description = "Bar chart made for each tracking period that compares the work packages’ or activities’ actual cost with their baseline cost, expressed in monetary units or as relative percentages of the baseline costs."\
+        self.description = "Bar chart made for each tracking period that compares the work packages\' or activities\' actual cost with their baseline cost, expressed in monetary units or as relative percentages of the baseline costs. "\
                             +"The percentage completed of each activity at the considered tracking period is also shown."
         self.parameters = {"level_of_detail": [LevelOfDetail.WORK_PACKAGES, LevelOfDetail.ACTIVITIES],
                            "data_type": [DataType.ABSOLUTE, DataType.RELATIVE]}

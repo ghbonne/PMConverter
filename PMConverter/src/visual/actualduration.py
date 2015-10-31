@@ -21,7 +21,7 @@ class ActualDuration(Visualization):
 
     def __init__(self):
         self.title = "BD vs AD"
-        self.description = "Bar chart made for each tracking period that compares the work packages’ or activities’ actual duration with their baseline duration, expressed in working hours or as relative percentages of the baseline durations."\
+        self.description = "Bar chart made for each tracking period that compares the work packages\' or activities\' actual duration with their baseline duration, expressed in working hours or as relative percentages of the baseline durations. "\
                             +"The percentage completed of each activity at the considered tracking period is also shown."
         self.parameters = {"level_of_detail": [LevelOfDetail.WORK_PACKAGES, LevelOfDetail.ACTIVITIES],
                            "data_type": [DataType.ABSOLUTE, DataType.RELATIVE]}
