@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'UIView.ui'
 #
-# Created: Sat Oct 31 17:04:36 2015
+# Created: Sat Oct 31 18:00:17 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -443,17 +443,17 @@ class Ui_UIView(object):
         self.horizontalLayout_17.setObjectName(_fromUtf8("horizontalLayout_17"))
         spacerItem25 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout_17.addItem(spacerItem25)
-        self.cmdFinished_End = QtGui.QCommandLinkButton(self.pageFinished)
+        self.cmdRestart = QtGui.QCommandLinkButton(self.pageFinished)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.cmdFinished_End.sizePolicy().hasHeightForWidth())
-        self.cmdFinished_End.setSizePolicy(sizePolicy)
-        self.cmdFinished_End.setMinimumSize(QtCore.QSize(100, 0))
-        self.cmdFinished_End.setMaximumSize(QtCore.QSize(100, 50))
-        self.cmdFinished_End.setDefault(False)
-        self.cmdFinished_End.setObjectName(_fromUtf8("cmdFinished_End"))
-        self.horizontalLayout_17.addWidget(self.cmdFinished_End)
+        sizePolicy.setHeightForWidth(self.cmdRestart.sizePolicy().hasHeightForWidth())
+        self.cmdRestart.setSizePolicy(sizePolicy)
+        self.cmdRestart.setMinimumSize(QtCore.QSize(100, 0))
+        self.cmdRestart.setMaximumSize(QtCore.QSize(100, 50))
+        self.cmdRestart.setDefault(False)
+        self.cmdRestart.setObjectName(_fromUtf8("cmdRestart"))
+        self.horizontalLayout_17.addWidget(self.cmdRestart)
         self.verticalLayout_6.addLayout(self.horizontalLayout_17)
         self.pagesMain.addWidget(self.pageFinished)
         self.horizontalLayout_2.addWidget(self.pagesMain)
@@ -477,8 +477,8 @@ class Ui_UIView(object):
         UIView.setTabOrder(self.btnStep2_ImportSettings, self.btnStep2_ExportSettings)
         UIView.setTabOrder(self.btnStep2_ExportSettings, self.cmdStep2_Convert)
         UIView.setTabOrder(self.cmdStep2_Convert, self.textEdit_errorMessagebox)
-        UIView.setTabOrder(self.textEdit_errorMessagebox, self.cmdFinished_End)
-        UIView.setTabOrder(self.cmdFinished_End, self.listStep2_ChosenVisualisations)
+        UIView.setTabOrder(self.textEdit_errorMessagebox, self.cmdRestart)
+        UIView.setTabOrder(self.cmdRestart, self.listStep2_ChosenVisualisations)
         UIView.setTabOrder(self.listStep2_ChosenVisualisations, self.lineEditStep1_InputFilename)
 
     def retranslateUi(self, UIView):
@@ -515,7 +515,7 @@ class Ui_UIView(object):
         self.lblFinished_Title.setText(_translate("UIView", "<html><head/><body><p><span style=\" font-size:20pt;\">Done...</span></p></body></html>", None))
         self.lblFinished_Message.setText(_translate("UIView", "<html><head/><body><p><span style=\" font-size:16pt;\">Your file is saved to:</span></p></body></html>", None))
         self.lblFinished_OutputFilename.setText(_translate("UIView", "<html><head/><body><p>[output filename]</p></body></html>", None))
-        self.cmdFinished_End.setText(_translate("UIView", "Exit", None))
+        self.cmdRestart.setText(_translate("UIView", "Restart", None))
 
 from view.customWidgets.custom_QComboBox import Custom_QComboBox
 import view.designer_resource_rc

@@ -1029,7 +1029,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QCommandLinkButton" name="cmdFinished_End">
+          <widget class="QCommandLinkButton" name="cmdRestart">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
              <horstretch>0</horstretch>
@@ -1049,7 +1049,7 @@
             </size>
            </property>
            <property name="text">
-            <string>Exit</string>
+            <string>Restart</string>
            </property>
            <property name="default">
             <bool>false</bool>
@@ -1089,7 +1089,7 @@
   <tabstop>btnStep2_ExportSettings</tabstop>
   <tabstop>cmdStep2_Convert</tabstop>
   <tabstop>textEdit_errorMessagebox</tabstop>
-  <tabstop>cmdFinished_End</tabstop>
+  <tabstop>cmdRestart</tabstop>
   <tabstop>listStep2_ChosenVisualisations</tabstop>
   <tabstop>lineEditStep1_InputFilename</tabstop>
  </tabstops>

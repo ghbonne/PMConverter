@@ -14,6 +14,7 @@ from visual.enums import *
 import xml.etree.ElementTree as ET
 import ast # ast.literal_eval(node_or_string)
 import time
+import copy
 
 
 class UIView(QDialog, Ui_UIView):
@@ -43,7 +44,7 @@ class UIView(QDialog, Ui_UIView):
         self.lblStep2_ParamsSaved.setVisible(False)  # Message label to show when parameters are saved
         self.lblFinished_OutputFilename.setWordWrap(True)
         self.lblStep2_VisualisationDescription.setWordWrap(True)
-        self.connect(self.cmdFinished_End, SIGNAL("clicked(bool)"), self.done)  # finish PMConvert program
+        #self.connect(self.cmdFinished_End, SIGNAL("clicked(bool)"), self.done)  # finish PMConvert program
 
         self.loadingAnimation = QMovie("view/Loading.gif")
         if not self.loadingAnimation.isValid():
@@ -75,6 +76,9 @@ class UIView(QDialog, Ui_UIView):
         self.chosenVisualisations = []
         self.possibleVisualisationsStructured = {}  # translation dict, contains item.title as keys and their header as a value
         self.ddlStep2_VisualisationType.setModel(ddlVisualisationsModel)
+
+        # clear visualization list
+        self.listStep2_ChosenVisualisations.clear()
 
         # actual filling the ddl is done in handler which chooses to use conversion to excel       
 
@@ -154,29 +158,32 @@ class UIView(QDialog, Ui_UIView):
         "This function handles click events on the next button of step 1."
         if "Excel" in self.ddlStep1_OutputFormat.currentText():
             # Conversion contains one to Excel
-            self.ddlStep2_VisualisationType.blockSignals(True)
-            currentHeader = "TOPHEADER"
-            for item in self.processor.get_supported_visualisations():
-                if type(item) == str:
-                    # insert header here
-                    self.ddlStep2_VisualisationType.addParentItem(item)
-                    currentHeader = item
-                else:
-                    # insert selectable item here:
-                    self.ddlStep2_VisualisationType.addChildItem(item.title)
-                    self.possibleVisualisationsStructured[item.title] = currentHeader
-                    self.possibleVisualisations[item.title] = item
-        
             
-            # update parameter fields for currently preselected visualisation type
-            self.ddlStep2_VisualisationType.setCurrentIndex(1)  # set current index to 1 because 0 is a header item
-            self.on_ddlStep2_VisualisationType_currentIndexChanged(1)
+            # construct ddlStep2_VisualisationType, only if this is not yet constructed in a previous run of the application
+            if self.ddlStep2_VisualisationType.count() == 0:
+                self.ddlStep2_VisualisationType.blockSignals(True)
+                currentHeader = "TOPHEADER"
+                for item in self.processor.get_supported_visualisations():
+                    if type(item) == str:
+                        # insert header here
+                        self.ddlStep2_VisualisationType.addParentItem(item)
+                        currentHeader = item
+                    else:
+                        # insert selectable item here:
+                        self.ddlStep2_VisualisationType.addChildItem(item.title)
+                        self.possibleVisualisationsStructured[item.title] = currentHeader
+                        self.possibleVisualisations[item.title] = item
 
-            # re-enable signalling
-            self.ddlStep2_VisualisationType.blockSignals(False)
+                # update parameter fields for currently preselected visualisation type
+                self.ddlStep2_VisualisationType.setCurrentIndex(1)  # set current index to 1 because 0 is a header item
+                self.on_ddlStep2_VisualisationType_currentIndexChanged(1)
+            
+                # re-enable signalling
+                self.ddlStep2_VisualisationType.blockSignals(False)            
+            #endIf construct ddlStep2_VisualisationType
 
             self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageStep2))
-            self.listStep2_ChosenVisualisations.clear()
+            #self.listStep2_ChosenVisualisations.clear()
             self.btnStep2_ImportSettings.setDefault(True)
         else:
             self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageConverting))
@@ -737,7 +744,7 @@ class UIView(QDialog, Ui_UIView):
         self.loadingAnimation.stop()
 
         self.lblFinished_OutputFilename.setText(outputFilename)
-        self.cmdFinished_End.setDefault(True)
+        self.cmdRestart.setDefault(True)
 
     @pyqtSlot("QString")
     def ShowErrorMessage(self, errorMessage):
@@ -751,8 +758,48 @@ class UIView(QDialog, Ui_UIView):
 
         self.textEdit_errorMessagebox.append(str(errorMessage))
         
+    @pyqtSlot("bool")
+    def on_cmdRestart_clicked(self, clicked):
+        "This function handles click events on the restart button of finished page."
+        # custom Application inits
+        self.inputFilename = ""
+        self.processor = Processor()
+        # connect signals from Processor with GUI
+        self.connect(self.processor, self.processor.conversionSucceeded, self.ConversionSucceeded)
+        self.connect(self.processor, self.processor.conversionFailedErrorMessage, self.ShowErrorMessage)
 
+        # inits for page step 1
+        self.lineEditStep1_InputFilename.clear()
+        self.ddlStep1_InputFormat.clear()
+        self.ddlStep1_OutputFormat.clear()
+        self.cmdStep1_Next.setDefault(False)
+        self.cmdStep1_Next.setEnabled(False)
+        self.btnStep1_InputFile.setDefault(True)
+        self.btnStep1_InputFile.setFocus()
 
+        # copy settings of previous visualisations:
+        old_possibleVisualisations = self.possibleVisualisations
+
+        for item in self.processor.get_supported_visualisations():
+            if type(item) != str:
+                # copy previous visualisation item settings:
+                for key, value in item.parameters.items():
+                    if key == "level_of_detail":
+                        item.level_of_detail = copy.deepcopy(old_possibleVisualisations[item.title].level_of_detail)
+                    elif key == "x_axis":
+                        item.x_axis = copy.deepcopy(old_possibleVisualisations[item.title].x_axis)
+                    elif key == "data_type":
+                        item.data_type = copy.deepcopy(old_possibleVisualisations[item.title].data_type)
+                    elif key == "threshold":
+                        item.threshold = copy.deepcopy(old_possibleVisualisations[item.title].threshold)
+                        item.thresholdValues = copy.deepcopy(old_possibleVisualisations[item.title].thresholdValues)
+                #endFor setting possible parameters in object
+
+                # update visualisation:
+                self.possibleVisualisations[item.title] = item
+        #endFor constructing new possibleVisualisations
+
+        self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageStep1))
  
 
 if __name__ == '__main__':
