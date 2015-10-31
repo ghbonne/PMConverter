@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'UIView.ui'
 #
-# Created: Sat Oct 31 16:57:55 2015
+# Created: Sat Oct 31 17:04:36 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -492,7 +492,7 @@ class Ui_UIView(object):
         self.lblStep1_InputFormat.setText(_translate("UIView", "From:", None))
         self.lblStep1_OutputFormat.setText(_translate("UIView", "To:", None))
         self.cmdStep1_Next.setText(_translate("UIView", "Next", None))
-        self.lblStep2_Title.setText(_translate("UIView", "<html><head/><body><p><span style=\" font-size:20pt;\">Step 2: add visualisations</span></p></body></html>", None))
+        self.lblStep2_Title.setText(_translate("UIView", "<html><head/><body><p><span style=\" font-size:20pt;\">Step 2: Add visualizations</span></p></body></html>", None))
         self.btnStep2_ImportSettings.setText(_translate("UIView", "Import", None))
         self.btnStep2_ExportSettings.setText(_translate("UIView", "Export", None))
         self.grpbxStep2_VisualisationDescription.setTitle(_translate("UIView", "Title of the chosen visualisation", None))
