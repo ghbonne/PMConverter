@@ -80,7 +80,7 @@ class ActivityTrackingRecord(object):
         """
 
         #if actualDuration_hours > 0:
-        if actualStart.date() < datetime.datetime.max.date(): # if activity not yet started, its actualStart is set to datetime.max
+        if actualStart.date() < datetime.datetime.max.date() and actualDuration_hours > 0: # if activity not yet started, its actualStart is set to datetime.max
             # activity started or already finished: PAC depends on real actual duration!
             planned_actual_cost = activity.baseline_schedule.fixed_cost + actualDuration_hours * activity.baseline_schedule.hourly_cost
             # no fixed starting costs anymore for PRC:
@@ -118,13 +118,34 @@ class ActivityTrackingRecord(object):
         if remainingDuration_hours == 0:
             # activity finished
             earned_value = activity.baseline_schedule.total_cost
-        elif actualDuration_hours == 0:
-            # activity not yet started:
+        elif actualStart >= datetime.datetime.max or percentageComplete<1e-5 : #actualDuration_hours == 0:
+            # activity not yet started or Percentage completed = 0:
             earned_value = 0.
         else:
             # activity running:
-            earned_value = activity.baseline_schedule.fixed_cost + percentageComplete/100.0 * (activity.baseline_schedule.var_cost + activity.resource_cost)
-        
+            earned_value = activity.baseline_schedule.fixed_cost + percentageComplete/100.0 * (activity.baseline_schedule.var_cost)
+
+            # total activity duration in hours:
+            activityDuration_hours = agenda.get_workingDuration_workingHours(activity.baseline_schedule.duration)
+            # EV its resource contributions:
+            for resourceTuple in activity.resources:
+                resource = resourceTuple[0]
+                if resource.resource_type == ResourceType.CONSUMABLE:
+                    ## only add once the cost for its use!
+                    # check if fixed resource assignment:
+                    if resourceTuple[2]:
+                        # fixed resource assignment => variable cost is not multiplied by activity duration:
+                        earned_value += resource.cost_use + percentageComplete/100.0 * (resourceTuple[1] * resource.cost_unit)
+                    else:
+                        # non fixed resource assignment:
+                        earned_value += resource.cost_use + percentageComplete/100.0 * (resourceTuple[1] * resource.cost_unit * activityDuration_hours)
+                else:
+                    #resource type is renewable:
+                    #add cost_use and variable cost:
+                    earned_value += resourceTuple[1] * resource.cost_use + percentageComplete/100.0 * (resourceTuple[1] * resource.cost_unit * activityDuration_hours)
+
+            #endFor adding resource costs
+
         # Calculate PV:
         if statusdate_datetime >= activity.baseline_schedule.end:
             # activity should be finished according to baselinschedule
@@ -133,7 +154,7 @@ class ActivityTrackingRecord(object):
             # activity is not yet started according to baselineschedule
             planned_value = 0.
         else:
-            # activity is running
+            # activity should be running
             activityRunningDuration = agenda.get_time_between(activity.baseline_schedule.start, statusdate_datetime)
             activityRunningDuration_workingHours = activityRunningDuration.days * agenda.get_working_hours_in_a_day() + activityRunningDuration.seconds / 3600
         
@@ -150,7 +171,7 @@ class ActivityTrackingRecord(object):
                         planned_value += resource.cost_use + resourceTuple[1] * resource.cost_unit
                     else:
                         # non fixed resource assignment:
-                        planned_value += resource.cost_use + resourceTuple[1] * resource.cost_unit * activityRunningDuration_workingHours
+                        planned_value += resource.cost_use + resourceTuple[1] * resource.cost_unit * activityRunningDuration_workingHours  
                 else:
                     #resource type is renewable:
                     #add cost_use and variable cost:
@@ -183,8 +204,10 @@ class ActivityTrackingRecord(object):
                     # activity is definitely not finished yet
                     childActivity_latestDate = current_status_date
                 elif childActivityTrackingRecord.actual_start.date() < datetime.datetime.max.date():
+                    # activity is started and finished
                     childActivity_latestDate = agenda.get_end_date(childActivityTrackingRecord.actual_start, childActivityTrackingRecord.actual_duration.days, round(childActivityTrackingRecord.actual_duration.seconds / 3600.0))
                 else:
+                    # unreachable case?
                     childActivity_latestDate = current_status_date
 
                 if childActivity_latestDate > latest_finish:

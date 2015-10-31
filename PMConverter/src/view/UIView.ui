@@ -283,26 +283,6 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="lblStep1_OutputFormat">
-             <property name="text">
-              <string>To:</string>
-             </property>
-             <property name="margin">
-              <number>5</number>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="1">
-            <widget class="QCheckBox" name="chkStep1_ExcelExtendedVersion">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="text">
-              <string>Extended version</string>
-             </property>
-            </widget>
-           </item>
            <item row="1" column="1">
             <layout class="QHBoxLayout" name="horizontalLayout_21">
              <item>
@@ -318,7 +298,7 @@
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>100</width>
+                 <width>150</width>
                  <height>0</height>
                 </size>
                </property>
@@ -339,6 +319,16 @@
              </item>
             </layout>
            </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="lblStep1_OutputFormat">
+             <property name="text">
+              <string>To:</string>
+             </property>
+             <property name="margin">
+              <number>5</number>
+             </property>
+            </widget>
+           </item>
            <item row="2" column="1">
             <layout class="QHBoxLayout" name="horizontalLayout_22">
              <item>
@@ -348,7 +338,7 @@
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>100</width>
+                 <width>150</width>
                  <height>0</height>
                 </size>
                </property>
@@ -459,7 +449,7 @@
          <item>
           <widget class="QLabel" name="lblStep2_Title">
            <property name="text">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:20pt;&quot;&gt;Step 2: add visualisations&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:20pt;&quot;&gt;Step 2: Add visualizations&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
           </widget>
          </item>
@@ -635,7 +625,11 @@
                  </widget>
                 </item>
                 <item row="3" column="1">
-                 <widget class="QDoubleSpinBox" name="dblspnbxStep2_Param_StartThresholdValue"/>
+                 <widget class="QDoubleSpinBox" name="dblspnbxStep2_Param_StartThresholdValue">
+                  <property name="singleStep">
+                   <double>0.010000000000000</double>
+                  </property>
+                 </widget>
                 </item>
                 <item row="5" column="0">
                  <widget class="QLabel" name="lblStep2_Param_EndingThreshold">
@@ -648,7 +642,11 @@
                  </widget>
                 </item>
                 <item row="5" column="1">
-                 <widget class="QDoubleSpinBox" name="dblspnbxStep2_Param_EndThresholdValue"/>
+                 <widget class="QDoubleSpinBox" name="dblspnbxStep2_Param_EndThresholdValue">
+                  <property name="singleStep">
+                   <double>0.010000000000000</double>
+                  </property>
+                 </widget>
                 </item>
                </layout>
               </item>
@@ -995,7 +993,7 @@
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;[output filename]&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignCenter</set>
+          <set>Qt::AlignHCenter|Qt::AlignTop</set>
          </property>
          <property name="margin">
           <number>5</number>
@@ -1031,7 +1029,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QCommandLinkButton" name="cmdFinished_End">
+          <widget class="QCommandLinkButton" name="cmdRestart">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
              <horstretch>0</horstretch>
@@ -1051,7 +1049,7 @@
             </size>
            </property>
            <property name="text">
-            <string>Exit</string>
+            <string>Restart</string>
            </property>
            <property name="default">
             <bool>false</bool>
@@ -1078,7 +1076,6 @@
   <tabstop>btnStep1_InputFile</tabstop>
   <tabstop>ddlStep1_InputFormat</tabstop>
   <tabstop>ddlStep1_OutputFormat</tabstop>
-  <tabstop>chkStep1_ExcelExtendedVersion</tabstop>
   <tabstop>cmdStep1_Next</tabstop>
   <tabstop>ddlStep2_VisualisationType</tabstop>
   <tabstop>ddlStep2_Param_LevelOfDetail</tabstop>
@@ -1092,7 +1089,7 @@
   <tabstop>btnStep2_ExportSettings</tabstop>
   <tabstop>cmdStep2_Convert</tabstop>
   <tabstop>textEdit_errorMessagebox</tabstop>
-  <tabstop>cmdFinished_End</tabstop>
+  <tabstop>cmdRestart</tabstop>
   <tabstop>listStep2_ChosenVisualisations</tabstop>
   <tabstop>lineEditStep1_InputFilename</tabstop>
  </tabstops>

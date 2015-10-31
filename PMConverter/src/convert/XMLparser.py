@@ -35,7 +35,8 @@ class XMLParser(FileParser):
                     year=int(datestring[4:8])
                     hour=int(datestring[8:10])
                     minute=int(datestring[10:12])
-                    return datetime(year, month, day, hour, minute)
+                    # Round datetimes to the nearest hour for PMConverter
+                    return datetime(year, month, day, hour if minute <30 else hour + 1, 0)
                 elif len(datestring) == 8:
                     day=int(datestring[:2])
                     month=int(datestring[2:4])
@@ -51,7 +52,8 @@ class XMLParser(FileParser):
                     year=int(datestring[4:8])
                     hour=int(datestring[8:10])
                     minute=int(datestring[10:12])
-                    return datetime(year, month, day, hour, minute)
+                    # Round datetimes to the nearest hour for PMConverter
+                    return datetime(year, month, day, hour if minute < 30 else hour + 1, 0)
                 elif len(datestring) == 8:
                     month=int(datestring[:2])
                     day=int(datestring[2:4])
@@ -286,6 +288,7 @@ class XMLParser(FileParser):
                 res_type = ResourceType.RENEWABLE if int(resourceNode.find('FIELD769').text) else ResourceType.CONSUMABLE
                 cost_per_use = float(resourceNode.find('FIELD770').text)
                 cost_per_unit = float(resourceNode.find('FIELD771').text)
+                res_unit = resourceNode.find('FIELD778').text if resourceNode.find('FIELD778').text else ""
                 # total_resource_cost node can be unavailable?
                 total_resource_cost_Node = resourceNode.find('FIELD776')
                 total_resource_cost = ast.literal_eval(total_resource_cost_Node.text) if total_resource_cost_Node is not None else 0.0
@@ -296,7 +299,8 @@ class XMLParser(FileParser):
                     name = "None resource" + str(resourceNone_nr)
                     resourceNone_nr += 1
 
-                res_dict[res_ID] = Resource(res_ID, name, res_type, availability_default, cost_per_use, cost_per_unit, total_resource_cost, type_check = True)
+                res_dict[res_ID] = Resource(res_ID, name, res_type, availability_default, cost_per_use, cost_per_unit,
+                                            total_resource_cost, resource_unit=res_unit, type_check = True)
                 
 
         ### Risk Analysis ###
@@ -686,6 +690,9 @@ class XMLParser(FileParser):
         agendaNode = ET.fromstring(defaultFormat)
 
         startDate = self.get_date_string(projectStartdatetime, datetimeFormat) if projectStartdatetime < datetime.max else self.get_date_string(datetime.now(), datetimeFormat)
+        # BUG: ProTrack does not expect hour info in this field:
+        startDate = startDate[:-4] + "0000"
+
         XMLParser.find_xmlNode_and_set_text(agendaNode, "StartDate", startDate)
         # Non workinghours:
         for i in range(0,24):
@@ -1057,7 +1064,7 @@ class XMLParser(FileParser):
         customValues_dict = {}
         customValues_dict["FIELD0"] = str(resource.resource_id)
         customValues_dict["FIELD1"] = self.xml_escape(resource.name)
-        customValues_dict["FIELD778"] = "#{0}".format(resource.availability) if resource.resource_type == ResourceType.RENEWABLE else "#Inf"
+        customValues_dict["FIELD778"] = "{0}".format(resource.resource_unit) if resource.resource_type == ResourceType.RENEWABLE else "#Inf"
         customValues_dict["FIELD769"] = "1" if resource.resource_type == ResourceType.RENEWABLE else "0"
         customValues_dict["FIELD770"] = str(resource.cost_use)
         customValues_dict["FIELD771"] = str(resource.cost_unit)

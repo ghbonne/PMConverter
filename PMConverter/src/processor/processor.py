@@ -23,7 +23,6 @@ from visual.spi_t import SpiT
 from visual.spi_t_p_factor import SpiTvsPfactor
 from visual.performance import Performance
 from visual.budget import CV
-from visual.enums import ExcelVersion
 import traceback
 
 
@@ -32,11 +31,11 @@ class Processor(QThread):
 
     def __init__(self, parent = None):
         super(Processor, self).__init__(parent)
-        self.visualizations = ["Baseline schedule's visualisations", BaselineSchedule(),
-                               "Resources' visualisations", ResourceDistribution(),
-                               "Risk analysis' visualisations", RiskAnalysis(),
-                               "Tracking periods' visualisations", ActualDuration(), ActualCost(),
-                               "Tracking overview's visualisations", CostValueMetrics(), Performance(), SpiTvsPfactor(), SvT(), CV(), CPI(), SpiT()]
+        self.visualizations = ["Baseline schedule visualizations", BaselineSchedule(),
+                               "Resources visualizations", ResourceDistribution(),
+                               "Risk analysis visualizations", RiskAnalysis(),
+                               "Tracking periods visualizations", ActualDuration(), ActualCost(),
+                               "Tracking overview visualizations", CostValueMetrics(), Performance(), SpiTvsPfactor(), CV(), SvT(), CPI(), SpiT()]
         self.file_parsers = []
         self.inputFiletypes = {"Excel": ".xlsx", "ProTrack": ".p2x"}
 
@@ -49,7 +48,6 @@ class Processor(QThread):
         self.parser_to = ""
         self.file_path_from = ""
         self.wantedVisualisations = {}
-        self.excel_version = ExcelVersion.EXTENDED
 
     def run(self):
         " Main running function of processor"
@@ -78,34 +76,38 @@ class Processor(QThread):
                 return
 
         # Parse from project object
-        file_path_to = inputFilePath + "_converted_" + time.strftime("%d_%H%M%S") + self.inputFiletypes[self.parser_to]
-        if self.parser_to == "Excel":
+        file_path_to = inputFilePath + "_converted_" + time.strftime("%d_%H%M%S") 
+        # conversions to multiple formats are allowed:
+        file_path_to_dict = {}
+
+        if "Excel" in self.parser_to :
+            file_path_to_dict["Excel"] = file_path_to + self.inputFiletypes["Excel"]
             try:
                 xlsx_parser = XLSXParser()
-                workbook = xlsx_parser.from_schedule_object(project_object, file_path_to, self.excel_version)
+                workbook = xlsx_parser.from_schedule_object(project_object, file_path_to_dict["Excel"])
                 if self.wantedVisualisations:
                     current_tp = 0
                     for worksheet in workbook.worksheets():
                         if worksheet.get_name() == "Baseline Schedule":
-                            for visualisation in self.wantedVisualisations["Baseline schedule's visualisations"]:
-                                visualisation.draw(workbook, worksheet, project_object, self.excel_version)
+                            for visualisation in self.wantedVisualisations["Baseline schedule visualizations"]:
+                                visualisation.draw(workbook, worksheet, project_object)
                         if worksheet.get_name() == "Resources":
-                            for visualisation in self.wantedVisualisations["Resources' visualisations"]:
-                                visualisation.draw(workbook, worksheet, project_object, self.excel_version)
+                            for visualisation in self.wantedVisualisations["Resources visualizations"]:
+                                visualisation.draw(workbook, worksheet, project_object)
                         if worksheet.get_name() == "Risk Analysis":
-                            for visualisation in self.wantedVisualisations["Risk analysis' visualisations"]:
-                                visualisation.draw(workbook, worksheet, project_object, self.excel_version)
+                            for visualisation in self.wantedVisualisations["Risk analysis visualizations"]:
+                                visualisation.draw(workbook, worksheet, project_object)
                         if "TP" in worksheet.get_name():
                             #tp = int(re.search(r'\d+', worksheet.get_name()).group())
-                            for visualisation in self.wantedVisualisations["Tracking periods' visualisations"]:
+                            for visualisation in self.wantedVisualisations["Tracking periods visualizations"]:
                                 visualisation.tp = current_tp
-                                visualisation.draw(workbook, worksheet, project_object, self.excel_version)
+                                visualisation.draw(workbook, worksheet, project_object)
                             current_tp += 1
                         if worksheet.get_name() == "Tracking Overview":
-                            for visualisation in self.wantedVisualisations["Tracking overview's visualisations"]:
-                                visualisation.draw(workbook, worksheet, project_object, self.excel_version)
+                            for visualisation in self.wantedVisualisations["Tracking overview visualizations"]:
+                                visualisation.draw(workbook, worksheet, project_object)
                 #try:
-                    workbook.close()
+                workbook.close() # should be closed in any case
                 #except Exception:
                 #    #todo: back to gui: "Can't write to file_path_to, please first close Excel and try again"
                 #    pass
@@ -114,43 +116,47 @@ class Processor(QThread):
                 self.emit(self.conversionFailedErrorMessage, "Failed to convert {0} to Excel\nException of type {1} occurred.\nValue of exception = {2}\n {3}".format(inputfilename, 
                                                     sys.exc_info()[0], sys.exc_info()[1] if sys.exc_info()[1] is not None else "", traceback.format_exc()))
                 return
-        elif self.parser_to == "ProTrack":
+        if "ProTrack" in self.parser_to:
+            file_path_to_dict["ProTrack"] = file_path_to + self.inputFiletypes["ProTrack"]
             try:
                 xml_parser = XMLParser()
-                parsingSuccessful = xml_parser.from_schedule_object(project_object, file_path_to)
+                parsingSuccessful = xml_parser.from_schedule_object(project_object, file_path_to_dict["ProTrack"])
             except:
                 self.emit(self.conversionFailedErrorMessage, "Failed to convert {0} to ProTrack\nException of type {1} occurred.\nValue of exception = {2}\n\n {3}".format(inputfilename, 
                                                                                             sys.exc_info()[0], sys.exc_info()[1] if sys.exc_info()[1] is not None else "", traceback.format_exc()))
                 return
             
         # conversion successful:
-        self.emit(self.conversionSucceeded, file_path_to)
+        outputFilepaths = ""
+        counter = 0
+        for filename in file_path_to_dict.values():
+            outputFilepaths += filename
+            counter += 1
+            if counter != len(file_path_to_dict):
+                outputFilepaths += "\nand\n"
+
+        self.emit(self.conversionSucceeded, outputFilepaths)
         return   
 
-    def setConversionSettings(self, parser_from, parser_to, file_path_from, wantedVisualisations={}, excel_version=ExcelVersion.EXTENDED):
+    def setConversionSettings(self, parser_from, parser_to, file_path_from, wantedVisualisations={}):
         self.parser_from = parser_from
         self.parser_to = parser_to
         self.file_path_from = file_path_from
         self.wantedVisualisations = wantedVisualisations
-        self.excel_version = excel_version
     
     def create_all_file_parsers(self):
         self.file_parsers.append(XLSXParser())
         self.file_parsers.append(XMLParser())
 
-    def get_supported_visualisations(self, excel_version):
+    def get_supported_visualisations(self):
         supported_visualisations = []
-        # build new list
-        for item in self.visualizations:
-            if isinstance(item, Visualization):
-                if excel_version in item.support:
-                    supported_visualisations.append(item)
-            else:
-                supported_visualisations.append(item)
+        # build new list: can apply filtering here
+        supported_visualisations = copy.deepcopy(self.visualizations)
+
         # check for empty headers
         supported_copy = copy.deepcopy(supported_visualisations)
         previous_str = isinstance(supported_copy[0], str)
-        previous_item = None
+        previous_item = None if not previous_str else supported_copy[0]
         for i in range(1, len(supported_copy)):  #skip first element
             item = supported_copy[i]
             if isinstance(item, str):

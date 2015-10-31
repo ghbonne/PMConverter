@@ -1,6 +1,6 @@
 __author__ = 'Eveline'
 from visual.visualization import Visualization
-from visual.enums import XAxis, ExcelVersion
+from visual.enums import XAxis
 from visual.charts.linechart import LineChart
 
 
@@ -12,20 +12,18 @@ class SpiTvsPfactor(Visualization):
     :var title: str, title of the graph
     :var description, str description of the graph
     :var parameters: dict, the present keys indicate which parameters should be available for the user
-    :var supported: list of ExcelVersion, containing the version that are supported
 
     Settings:
     :var x_axis: XAxis, x-axis of the chart can be expressed in status dates or in tracking periods
     """
 
     def __init__(self):
-        self.title = "SPI(t), p-factor"
-        self.description = "A line graph showing the Schedule Performance Index as (earned schedule / actual duration) and the p-factor of the project, based on the available tracking periods."
+        self.title = "SPI, SPI(t), p-factor"
+        self.description = "Line graph showing the schedule performance indexes (based on earned value and on earned schedule) and the p-factor over the different tracking periods or on an absolute time scale."
         self.parameters = {"x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
-        self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
 
-    def draw(self, workbook, worksheet, project_object, excel_version):
+    def draw(self, workbook, worksheet, project_object):
         #todo: axis ranges aanpassen?
         if not self.x_axis:
             raise Exception("Please first set var x_axis")
@@ -45,6 +43,10 @@ class SpiTvsPfactor(Visualization):
 
         data_series = [
             ["SPI(t)",
+             names,
+             ['Tracking Overview', 2, 31, (1+tp_size), 31]
+             ],
+            ["SPI",
              names,
              ['Tracking Overview', 2, 33, (1+tp_size), 33]
              ],
@@ -74,13 +76,15 @@ class SpiTvsPfactor(Visualization):
                                       'border': 1, 'font_size': 8})
         calculation = workbook.add_format({'bg_color': '#FFF2CC', 'text_wrap': True, 'border': 1, 'font_size': 8})
 
-        worksheet.write('AH2', 'SPI(t)', header)
+        worksheet.write('AF2', 'SPI(t)', header)
+        worksheet.write('AH2', 'SPI', header)
         worksheet.write('AI2', 'p-factor', header)
 
         counter = 2
 
         for tp in project_object.tracking_periods:
-            worksheet.write_number(counter, 33, tp.spi_t, calculation)
+            worksheet.write_number(counter, 31, tp.spi_t, calculation)
+            worksheet.write_number(counter, 33, tp.spi, calculation)
             worksheet.write_number(counter, 34, tp.p_factor, calculation)
             counter += 1
 

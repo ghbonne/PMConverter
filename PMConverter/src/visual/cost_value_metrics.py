@@ -1,6 +1,6 @@
 __author__ = 'Eveline'
 from visual.visualization import Visualization
-from visual.enums import XAxis, ExcelVersion
+from visual.enums import XAxis
 from visual.charts.linechart import LineChart
 
 
@@ -12,7 +12,6 @@ class CostValueMetrics(Visualization):
     :var title: str, title of the graph
     :var description, str description of the graph
     :var parameters: dict, the present keys indicate which parameters should be available for the user
-    :var supported: list of ExcelVersion, containing the version that are supported
 
     Settings:
     :var x_axis: XAxis, x-axis of the chart can be expressed in status dates or in tracking periods
@@ -20,12 +19,11 @@ class CostValueMetrics(Visualization):
 
     def __init__(self):
         self.title = "AC, EV, PV"
-        self.description = "A cumulative graph of the actual cost, earned value and planned value of the project, based on the available tracking periods."
+        self.description = "Line graph showing the cumulative actual cost, earned value and planned value over the different tracking periods or on an absolute time scale."
         self.parameters = {"x_axis": [XAxis.TRACKING_PERIOD, XAxis.DATE]}
         self.x_axis = None
-        self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
 
-    def draw(self, workbook, worksheet, project_object, excel_version):
+    def draw(self, workbook, worksheet, project_object):
         if not self.x_axis:
             raise Exception("Please first set var x_axis")
 

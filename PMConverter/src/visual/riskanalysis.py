@@ -1,6 +1,6 @@
 __author__ = 'Eveline'
 from visual.visualization import Visualization
-from visual.enums import LevelOfDetail, DataType, ExcelVersion
+from visual.enums import LevelOfDetail, DataType
 from visual.charts.barchart import BarChart
 from objects.riskanalysisdistribution import DistributionType, ManualDistributionUnit
 from objects.activity import Activity
@@ -14,7 +14,6 @@ class RiskAnalysis(Visualization):
     :var title: str, title of the graph
     :var description, str description of the graph
     :var parameters: dict, the present keys indicate which parameters should be available for the user
-    :var supported: list of ExcelVersion, containing the version that are supported
 
     Settings:
     :var data_type: DataType, values expressed absolute (in hours) or relative (%)
@@ -22,13 +21,12 @@ class RiskAnalysis(Visualization):
 
     def __init__(self):
         self.title = "Risk analysis"
-        self.description = "A bar chart presenting of each activity its estimated optimistic, most probable and pessimistic duration. "\
-                            +"The values can be shown in absolute working hours or as percentages w.r.t. the planned baseline duration."
+        self.description = "Bar chart showing the optimistic, most probable and pessimistic durations of all activities,"\
+                            +" expressed in working hours or as relative percentages of the baseline duration."
         self.parameters = {"data_type": [DataType.ABSOLUTE, DataType.RELATIVE]}
         self.data_type = None
-        self.support = [ExcelVersion.EXTENDED, ExcelVersion.BASIC]
 
-    def draw(self, workbook, worksheet, project_object, excel_version):
+    def draw(self, workbook, worksheet, project_object):
         if not self.data_type:
             raise Exception("Please first set var data_type")
 
@@ -98,22 +96,24 @@ class RiskAnalysis(Visualization):
                                       'border': 1, 'font_size': 8})
         calculation = workbook.add_format({'bg_color': '#FFF2CC', 'text_wrap': True, 'border': 1, 'font_size': 8})
 
-        worksheet.write('W2', 'Optimistic', header)
-        worksheet.write('X2', 'Most probable', header)
-        worksheet.write('Y2', 'Pessimistic', header)
+        worksheet.write('W2', 'Optimistic (hours)' if self.data_type == DataType.ABSOLUTE else 'Optimistic (%)', header)
+        worksheet.write('X2', 'Most probable (hours)' if self.data_type == DataType.ABSOLUTE else 'Most probable (%)', header)
+        worksheet.write('Y2', 'Pessimistic (hours)' if self.data_type == DataType.ABSOLUTE else 'Pessimistic (%)', header)
 
         counter = 2
         for activity in project_object.activities:
             ra = activity.risk_analysis
             if ra:
-                if ra.distribution_type == DistributionType.MANUAL and ra.distribution_units == ManualDistributionUnit.ABSOLUTE and self.data_type == DataType.RELATIVE: # convert to relative values
+                if ra.distribution_type == DistributionType.MANUAL and ra.distribution_units == ManualDistributionUnit.ABSOLUTE and self.data_type == DataType.RELATIVE: 
+                    # convert to relative values
                     dur = self.get_hours(activity.baseline_schedule.duration, project_object.agenda)
                     if dur != 0:
                         worksheet.write(counter, 22, int((ra.optimistic_duration/dur)*100), calculation)
                         worksheet.write(counter, 23, int((ra.probable_duration/dur)*100), calculation)
                         worksheet.write(counter, 24, int((ra.pessimistic_duration/dur)*100), calculation)
 
-                elif (ra.distribution_type == DistributionType.STANDARD or (ra.distribution_type == DistributionType.MANUAL and ra.distribution_units == ManualDistributionUnit.RELATIVE)) and self.data_type == DataType.ABSOLUTE: #calculate absolute values
+                elif (ra.distribution_type == DistributionType.STANDARD or (ra.distribution_type == DistributionType.MANUAL and ra.distribution_units == ManualDistributionUnit.RELATIVE)) and self.data_type == DataType.ABSOLUTE: 
+                    # calculate absolute values
                     dur = self.get_hours(activity.baseline_schedule.duration, project_object.agenda)
                     if dur != 0:
                         worksheet.write(counter, 22, int((ra.optimistic_duration/100.0)*dur), calculation)

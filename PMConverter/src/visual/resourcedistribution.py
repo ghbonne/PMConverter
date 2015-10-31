@@ -1,6 +1,6 @@
 __author__ = 'Eveline'
 from visual.visualization import Visualization
-from visual.enums import DataType, ExcelVersion
+from visual.enums import DataType
 from visual.charts.piechart import PieChart
 
 
@@ -13,7 +13,6 @@ class ResourceDistribution(Visualization):
     :var title: str, title of the graph
     :var description, str description of the graph
     :var parameters: dict, the present keys indicate which parameters should be available for the user
-    :var supported: list of ExcelVersion, containing the version that are supported
 
     Settings:
     :var data_type: DataType, labels expressed in absolute(euro) or relative(%) values
@@ -21,13 +20,11 @@ class ResourceDistribution(Visualization):
 
     def __init__(self):
         self.title = "Resource costs"
-        self.description = "All resources are presented in a pie chart according to their total cost in the project. "\
-                            +"The values in the pie chart can be chosen to be presented in euros or as percentages."
+        self.description = "Pie chart showing the total cost of all resources, expressed in monetary units or in relative percentages."
         self.parameters = {'data_type': [DataType.ABSOLUTE, DataType.RELATIVE]}
         self.data_type = None
-        self.support = [ExcelVersion.EXTENDED]
 
-    def draw(self, workbook, worksheet, project_object, excel_version=ExcelVersion.EXTENDED):
+    def draw(self, workbook, worksheet, project_object):
         if not self.data_type:
             raise Exception("Please first set var data_type")
 
