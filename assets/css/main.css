@@ -191,8 +191,12 @@ img {
 
 #download{
     font-size: 24px;
-    padding: 17px 30px;
+    padding: 20px 40px 20px 20px;
     margin-top: 80px;
+}
+
+#download small{
+    font-size: 16px;
 }
 
 #format{
@@ -207,9 +211,10 @@ img {
     margin-top: -3px
 }
 
-.header-github{
-    color: #777777;
-    float: left;
-    padding: 15px 15px;
-    line-height: 20px;
+#myModal h3 {
+    color: #3bc492;
+}
+
+#myModal li {
+    margin: 10px;
 }

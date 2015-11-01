@@ -35,6 +35,12 @@
 	  ga('send', 'pageview');
 
 	</script>
+
+	<script>
+		function showModal() {
+		  $('#myModal').modal('show')
+		}
+	</script>
     
 
   </head>
@@ -151,10 +157,80 @@
 				<br>
 				<br>
 				<div class="col-lg-6 centered">
-					<a class="btn btn-lg btn-success" id="download" href="https://github.com/ghbonne/PMConverter/releases/download/v1.1/PMConverter.zip">
+					<a class="btn btn-lg btn-success" id="download" href="https://github.com/ghbonne/PMConverter/releases/download/v1.1/PMConverter.zip" onclick="showModal();">
   						<i class="fa fa-download fa-3x pull-left"></i> 
-	  					Download<br><small>Version 1.1</small>
+	  					Download<br><small>Version 1.1 (only <i class="fa fa-windows"></i>)</small>
 	  				</a>
+				</div>
+				<!-- Modal -->
+				<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+				  <div class="modal-dialog" role="document">
+				    <div class="modal-content">
+				      <div class="modal-header">
+				        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+				        <h4 class="modal-title" id="myModalLabel">Guidelines</h4>
+				      </div>
+				      <div class="modal-body">
+					      <ol>
+					      <li>Unzip the folder.</li>
+					      <li>Run PMConverter.exe<br/><b>Warning</b>: The first time Windows might ask if you trust this application.</li>
+						      <div class="col-lg-12 col-lg-offset-1">
+						      	<div class="row">
+							      <div class="accordion ac" id="accordion2">
+					                <div class="accordion-group">
+					                    <div class="accordion-heading">
+					                        <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1" href="#collapseOne">
+					                        Windows 10 & 8
+					                        </a>
+					                    </div><!-- /accordion-heading -->
+					                    <div id="collapseOne" class="accordion-body collapse">
+					                        <div class="accordion-inner">
+											<ul>
+												<li>Click on "<b>More info</b>"</li>
+												<li>Click on "<b>Run anyway</b>"</li>
+											</ul>
+											</div><!-- /accordion-inner -->
+					                    </div><!-- /collapse -->
+					                </div><!-- /accordion-group -->
+					                <!--<div class="accordion-group">
+					                    <div class="accordion-heading">
+					                        <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1" href="#collapseTwo">
+					                        Windows 8
+					                        </a>
+					                    </div><!-- /accordion-heading 
+					                    <div id="collapseTwo" class="accordion-body collapse">
+					                        <div class="accordion-inner">
+											<ul>
+												<li>Click on "<b>Run anyway</b>"</li>
+											</ul>
+											</div><!-- /accordion-inner 
+					                    </div><!-- /collapse 
+					                </div><!-- /accordion-group -->
+					                <div class="accordion-group">
+					                    <div class="accordion-heading">
+					                        <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1" href="#collapseThree">
+					                        Windows 7
+					                        </a>
+					                    </div><!-- /accordion-heading -->
+					                    <div id="collapseThree" class="accordion-body collapse">
+					                        <div class="accordion-inner">
+											<ul>
+												<li>Click on "<b>Run anyway</b>"</li>
+											</ul>
+											</div><!-- /accordion-inner -->
+					                    </div><!-- /collapse -->
+					                </div><!-- /accordion-group -->
+			                	</div>	<!-- /accordion -->			
+		                	</div>   <!-- /row -->	
+		                	</div> <!-- /col -->	
+	                		<li>Have fun!</li>   
+	                	</ol>
+				      </div>
+				      <div class="modal-footer">
+				        <button type="button" class="btn btn-default" data-dismiss="modal">Ok</button>
+				      </div>
+				    </div>
+				  </div>
 				</div>
 				
 				<div class="col-lg-6">
@@ -170,7 +246,10 @@
 		                    </div><!-- /accordion-heading -->
 		                    <div id="collapseOne" class="accordion-body collapse in">
 		                        <div class="accordion-inner">
-								<p>- Bug fixes</p>
+								<ul>
+									<li>Bug fixes</li>
+									<li>Improvements for better user experience</li>
+								</ul>
 								</div><!-- /accordion-inner -->
 		                    </div><!-- /collapse -->
 		                </div><!-- /accordion-group -->
