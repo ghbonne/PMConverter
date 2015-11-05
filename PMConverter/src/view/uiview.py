@@ -14,8 +14,6 @@ from visual.enums import *
 import xml.etree.ElementTree as ET
 import ast # ast.literal_eval(node_or_string)
 import time
-import copy
-
 
 class UIView(QDialog, Ui_UIView):
     """
@@ -779,25 +777,27 @@ class UIView(QDialog, Ui_UIView):
 
         # copy settings of previous visualisations:
         old_possibleVisualisations = self.possibleVisualisations
+        
+        # only copy visualisations when already defined:
+        if len(old_possibleVisualisations) > 0:
+            for item in self.processor.get_supported_visualisations():
+                if type(item) != str:
+                    # copy previous visualisation item settings:
+                    for key, value in item.parameters.items():
+                        if key == "level_of_detail":
+                            item.level_of_detail = old_possibleVisualisations[item.title].level_of_detail
+                        elif key == "x_axis":
+                            item.x_axis = old_possibleVisualisations[item.title].x_axis
+                        elif key == "data_type":
+                            item.data_type = old_possibleVisualisations[item.title].data_type
+                        elif key == "threshold":
+                            item.threshold = old_possibleVisualisations[item.title].threshold
+                            item.thresholdValues = old_possibleVisualisations[item.title].thresholdValues
+                    #endFor setting possible parameters in object
 
-        for item in self.processor.get_supported_visualisations():
-            if type(item) != str:
-                # copy previous visualisation item settings:
-                for key, value in item.parameters.items():
-                    if key == "level_of_detail":
-                        item.level_of_detail = copy.deepcopy(old_possibleVisualisations[item.title].level_of_detail)
-                    elif key == "x_axis":
-                        item.x_axis = copy.deepcopy(old_possibleVisualisations[item.title].x_axis)
-                    elif key == "data_type":
-                        item.data_type = copy.deepcopy(old_possibleVisualisations[item.title].data_type)
-                    elif key == "threshold":
-                        item.threshold = copy.deepcopy(old_possibleVisualisations[item.title].threshold)
-                        item.thresholdValues = copy.deepcopy(old_possibleVisualisations[item.title].thresholdValues)
-                #endFor setting possible parameters in object
-
-                # update visualisation:
-                self.possibleVisualisations[item.title] = item
-        #endFor constructing new possibleVisualisations
+                    # update visualisation:
+                    self.possibleVisualisations[item.title] = item
+            #endFor constructing new possibleVisualisations
 
         self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageStep1))
  
