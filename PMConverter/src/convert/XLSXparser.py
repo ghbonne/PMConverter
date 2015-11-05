@@ -1074,8 +1074,16 @@ class XLSXParser(FileParser):
         for activity in project_object.activities:
             if Activity.is_not_lowest_level_activity(activity, project_object.activities):
                 # activity group
-                ra_worksheet.write_number(counter, 0, activity.activity_id, yellow_cell)
-                ra_worksheet.write(counter, 1, str(activity.name), green_cell)
+                if activity.activity_id == 0:
+                    # Project Group:
+                    ra_worksheet.write_number(counter, 0, activity.activity_id, blue_cell)
+                    ra_worksheet.write(counter, 1, str(activity.name), green_cell)
+
+                else:
+                    # std activity group:
+                    ra_worksheet.write_number(counter, 0, activity.activity_id, yellow_cell)
+                    ra_worksheet.write(counter, 1, str(activity.name), yellow_cell)
+
                 ra_worksheet.write(counter, 2, self.get_duration_hours_str(activity.baseline_schedule.duration, project_object.agenda.get_working_hours_in_a_day()), blue_cell)
                 ra_worksheet.write(counter, 3, "", blue_cell)
                 ra_worksheet.write(counter, 4, "", blue_cell)
@@ -1083,7 +1091,7 @@ class XLSXParser(FileParser):
                 ra_worksheet.write(counter, 6, "", blue_cell)
             else:
                 # activity
-                ra_worksheet.write_number(counter, 0, activity.activity_id, yellow_cell)
+                ra_worksheet.write_number(counter, 0, activity.activity_id, green_cell)
                 ra_worksheet.write(counter, 1, str(activity.name), green_cell)
                 ra_worksheet.write(counter, 2, self.get_duration_hours_str(activity.baseline_schedule.duration, project_object.agenda.get_working_hours_in_a_day()), gray_cell)
                 description = str(activity.risk_analysis.distribution_type.value) + " - " \
@@ -1160,10 +1168,12 @@ class XLSXParser(FileParser):
                     # work package here:
                     if atr.activity.activity_id == 0:
                         # project group:
-                        tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, green_cell)
+                        tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, blue_cell)
+                        tracking_period_worksheet.write(counter, 1, atr.activity.name, green_cell)
                     else:
-                        tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, green_cell)
-                    tracking_period_worksheet.write(counter, 1, atr.activity.name, green_cell)
+                        tracking_period_worksheet.write_number(counter, 0, atr.activity.activity_id, yellow_cell)
+                        tracking_period_worksheet.write(counter, 1, atr.activity.name, yellow_cell)
+
                     tracking_period_worksheet.write_datetime(counter, 2, atr.activity.baseline_schedule.start, date_blue_cell)
                     tracking_period_worksheet.write_datetime(counter, 3, atr.activity.baseline_schedule.end, date_blue_cell)
                     tracking_period_worksheet.write(counter, 4, self.get_duration_str(atr.activity.baseline_schedule.duration), blue_cell)
