@@ -1,7 +1,7 @@
 __author__ = 'ghbonne'
 __license__ = "GPL"
 
-__version__ = "1.1"
+__version__ = "1.1.1"
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
