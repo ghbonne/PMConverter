@@ -2327,6 +2327,10 @@ fieldset[disabled] .btn-link:focus {
   line-height: 1.33;
   border-radius: 6px;
 }
+#download {
+  min-width: 278px;
+
+}
 
 .btn-sm,
 .btn-xs {
