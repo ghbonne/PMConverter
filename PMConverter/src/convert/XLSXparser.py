@@ -716,28 +716,57 @@ class XLSXParser(FileParser):
                 return atr.planned_value
         return None
 
-    def calculate_es(self, project_object, PVcurve, current_EV, currentTime):
+    def calculate_es(self, project_object, PVcurve, current_EV, current_PV, currentTime):
         """
         This function calculates the ES datetime based on given PVcurve, current EV value and current time
 
         :param project_object: ProjectObject, the project object corresponding to the PVcurve
         :param PVcurve: list of tuples, (PV cumsum value, datetime of this PV cumsum value) as calculated by calculate_PVcurve
         :param current_EV: float, Earned value for which to search the ES
+        :param current_PV: float, Planned Value at the current statusdate
         :param currentTime: datetime, statusdate
         """
         # algorithm:
-        # Find t such that EV ? PV(t) and EV < PV(t+1)
-        # ES = t
+        # if EV = PV(statusdate): ES = statusdate
+        # elif EV < PV(statusdate):
+            # Find t such that EV >= PV(t) and EV < PV(t+1)
+            # ES = t
+        # else EV > PV(statusdate):
+            # Find t such that EV > PV(t-1) and EV <= PV(t)
+            # ES = t
+
         ## according to PMKnowledgecenter the following line should be used, but an ES in the middle of non-working datetimes is not desirable!
         ## ES = t + (EV - PV(t)) / (PV(t+1) - PV(t)) * (next_t - t)
+
+        # if EV = PV(statusdate): ES = statusdate
+        if abs(current_EV - current_PV) < 1e-3:
+            # check if currentTime is not later than latest baseline date:
+            projectBaslineEndDate = max([activity.baseline_schedule.end for activity in project_object.activities]) # projectBaselineEndDate
+            if currentTime <= projectBaslineEndDate:
+                # make sure currentTime is a valid endTime:
+                return project_object.agenda.get_end_date(currentTime, 0,0)
+            else:
+                # ES can't be larger than the scheduled project end date:
+                return projectBaslineEndDate
 
         t = min([activity.baseline_schedule.start for activity in project_object.activities])  # projectBaselineStartDate
         lowerPV = -1
         pointFound = False
 
+        searchFirst_EVdate = current_EV > current_PV # boolean indicating which point on the PV curve to search: the first point where EV = PV or the last point
+
         # search first PV which is larger than EV
         for i in range(1, len(PVcurve)):
-            if PVcurve[i][0] > current_EV:
+            if searchFirst_EVdate and (abs(PVcurve[i][0] - current_EV) < 1e-3 or PVcurve[i][0] >= current_EV):
+                if abs(PVcurve[i][0] - current_EV) < 1e-3:
+                    # first PV point found which is equal to the given EV value
+                    t = PVcurve[i][1]
+                else:
+                    # found PV(i) is already larger than EV => take the previous PV(i-1)
+                    t = PVcurve[i-1][1]
+                pointFound = True
+                break
+            elif not searchFirst_EVdate and PVcurve[i][0] > current_EV and abs(PVcurve[i][0] - current_EV) >= 1e-3:
                 # first PV point found which is larger than the given EV value
                 t = PVcurve[i-1][1]
                 lowerPV = PVcurve[i-1][0]
@@ -1323,6 +1352,7 @@ class XLSXParser(FileParser):
         #workbookFilepath, fileextension = os.path.splitext(file_path_output)
         #with open(workbookFilepath + "-PV.csv", "w", newline='') as csvfile:
         #    PVwriter = csv.writer(csvfile, delimiter=';')
+        #    PVwriter.writerow(["PV(t)", "t"])
         #    for PVrow in generatedPVcurve:
         #        PVwriter.writerow([PVrow[0], PVrow[1].strftime("%d/%m/%Y %H:%M:%S")])
 
@@ -1342,7 +1372,7 @@ class XLSXParser(FileParser):
             overview_worksheet.write_number(counter, 4, EV, money_gray_cell)
             overview_worksheet.write_number(counter, 5, AC, money_gray_cell)
             # calculate ES
-            ES = self.calculate_es(project_object, generatedPVcurve, EV, tracking_period.tracking_period_statusdate)
+            ES = self.calculate_es(project_object, generatedPVcurve, EV, PV, tracking_period.tracking_period_statusdate)
             overview_worksheet.write_datetime(counter, 6, ES, date_gray_cell)
             # calculate SV
             sv = EV - PV
