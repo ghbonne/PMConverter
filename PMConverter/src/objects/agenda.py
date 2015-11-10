@@ -253,7 +253,7 @@ class Agenda(object):
         # ensure that a new datetime object is returned and drop all time data smaller than an hour:
         result = datetime(year= date.year, month= date.month, day= date.day, hour= date.hour)
 
-        if hour <= self.get_first_working_hour():
+        if hour <= self.get_first_working_hour() or not self.is_working_day(date.weekday()) or self.is_holiday(date.date()):
             result -= timedelta(days=1)
             result = result.replace(hour=self.get_last_working_hour()+1)
             while (not self.is_working_day(result.weekday())) or self.is_holiday(result.date()):
