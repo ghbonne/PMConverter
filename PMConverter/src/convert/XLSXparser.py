@@ -914,7 +914,9 @@ class XLSXParser(FileParser):
             denominator += PV_i_ES
         #endFor all activity tracking records
 
-        if denominator < 1e-10:
+        if denominator < 1e-10 and numerator < 1e-10:
+            return 1.0
+        elif denominator < 1e-10:
             return 0.0
         else:
             return numerator / denominator
