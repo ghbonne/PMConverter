@@ -739,7 +739,7 @@ class XLSXParser(FileParser):
         ## ES = t + (EV - PV(t)) / (PV(t+1) - PV(t)) * (next_t - t)
 
         # if EV = PV(statusdate): ES = statusdate
-        if abs(current_EV - current_PV) < 1e-3:
+        if abs(current_EV - current_PV) < 1e-2:
             # check if currentTime is not later than latest baseline date:
             projectBaslineEndDate = max([activity.baseline_schedule.end for activity in project_object.activities]) # projectBaselineEndDate
             if currentTime <= projectBaslineEndDate:
@@ -757,16 +757,18 @@ class XLSXParser(FileParser):
 
         # search first PV which is larger than EV
         for i in range(1, len(PVcurve)):
-            if searchFirst_EVdate and (abs(PVcurve[i][0] - current_EV) < 1e-3 or PVcurve[i][0] >= current_EV):
-                if abs(PVcurve[i][0] - current_EV) < 1e-3:
-                    # first PV point found which is equal to the given EV value
-                    t = PVcurve[i][1]
-                else:
-                    # found PV(i) is already larger than EV => take the previous PV(i-1)
-                    t = PVcurve[i-1][1]
+            if searchFirst_EVdate and (abs(PVcurve[i][0] - current_EV) < 1e-2 or PVcurve[i][0] >= current_EV):
+                t = PVcurve[i][1]
+                # Removed this algorithm for alignment with Protrack
+                #if abs(PVcurve[i][0] - current_EV) < 1e-3:
+                #    # first PV point found which is equal to the given EV value
+                #    t = PVcurve[i][1]
+                #else:
+                #    # found PV(i) is already larger than EV => take the previous PV(i-)
+                #    t = PVcurve[i-1][1]
                 pointFound = True
                 break
-            elif not searchFirst_EVdate and PVcurve[i][0] > current_EV and abs(PVcurve[i][0] - current_EV) >= 1e-3:
+            elif not searchFirst_EVdate and PVcurve[i][0] > current_EV and abs(PVcurve[i][0] - current_EV) >= 1e-2:
                 # first PV point found which is larger than the given EV value
                 t = PVcurve[i-1][1]
                 lowerPV = PVcurve[i-1][0]
@@ -1349,12 +1351,12 @@ class XLSXParser(FileParser):
         # generate PV curve:
         generatedPVcurve = self.calculate_PVcurve(project_object)
         # DEBUG
-        #workbookFilepath, fileextension = os.path.splitext(file_path_output)
-        #with open(workbookFilepath + "-PV.csv", "w", newline='') as csvfile:
-        #    PVwriter = csv.writer(csvfile, delimiter=';')
-        #    PVwriter.writerow(["PV(t)", "t"])
-        #    for PVrow in generatedPVcurve:
-        #        PVwriter.writerow([PVrow[0], PVrow[1].strftime("%d/%m/%Y %H:%M:%S")])
+        workbookFilepath, fileextension = os.path.splitext(file_path_output)
+        with open(workbookFilepath + "-PV.csv", "w", newline='') as csvfile:
+            PVwriter = csv.writer(csvfile, delimiter=';')
+            PVwriter.writerow(["PV(t)", "t"])
+            for PVrow in generatedPVcurve:
+                PVwriter.writerow([PVrow[0], PVrow[1].strftime("%d/%m/%Y %H:%M:%S")])
 
         counter = 2
         for tracking_period in project_object.tracking_periods:
