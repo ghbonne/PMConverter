@@ -707,7 +707,7 @@ class XLSXParser(FileParser):
 
     def calculate_eac(self, ac, bac, ev, pf):
         if pf == 0:
-            return 0
+            return ac + (bac - ev) # Protrack default
         return ac + (bac - ev)/float(pf)
 
     def get_pv(self, tracking_period):
@@ -1436,14 +1436,27 @@ class XLSXParser(FileParser):
             overview_worksheet.write_datetime(counter, 14, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv1_days, round(EAC_t_pv1 - EAC_t_pv1_days * workingHours_inDay)), date_gray_cell)
 
             # write EAC(t) - Planned Value method (PF = spi)
-            EAC_t_pv2 = PD_workingHours / spi if bool(spi)  else 0
-            EAC_t_pv2_days = int(EAC_t_pv2 / workingHours_inDay)
-            overview_worksheet.write_datetime(counter, 15, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv2_days, round(EAC_t_pv2 - EAC_t_pv2_days * workingHours_inDay)), date_gray_cell)
+            if bool(spi):
+                EAC_t_pv2 = PD_workingHours / spi
+                EAC_t_pv2_days = int(EAC_t_pv2 / workingHours_inDay)
+                overview_worksheet.write_datetime(counter, 15, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv2_days, round(EAC_t_pv2 - EAC_t_pv2_days * workingHours_inDay)), date_gray_cell)
+            else:
+                # project not yet started, Protrack default:
+                EAC_t_pv2 = PD_workingHours
+                EAC_t_pv2_days = int(EAC_t_pv2 / workingHours_inDay)
+                # use as starting date the current status date, because the project is not yet started on its planned instant
+                overview_worksheet.write_datetime(counter, 15, project_object.agenda.get_end_date(tracking_period.tracking_period_statusdate, EAC_t_pv2_days, round(EAC_t_pv2 - EAC_t_pv2_days * workingHours_inDay)), date_gray_cell)
 
             # write EAC(t) - Planned Value method (PF = SCI = SPI * CPI)
-            EAC_t_pv3 = PD_workingHours / (spi * cpi) if bool(spi * cpi)  else 0
-            EAC_t_pv3_days = int(EAC_t_pv3 / workingHours_inDay)
-            overview_worksheet.write_datetime(counter, 16, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv3_days, round(EAC_t_pv3 - EAC_t_pv3_days * workingHours_inDay)), date_gray_cell)
+            if bool(spi * cpi):
+                EAC_t_pv3 = PD_workingHours / (spi * cpi)
+                EAC_t_pv3_days = int(EAC_t_pv3 / workingHours_inDay)
+                overview_worksheet.write_datetime(counter, 16, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_pv3_days, round(EAC_t_pv3 - EAC_t_pv3_days * workingHours_inDay)), date_gray_cell)
+            else:
+                # project not yet started, Protrack default:
+                EAC_t_pv3 = PD_workingHours
+                EAC_t_pv3_days = int(EAC_t_pv3 / workingHours_inDay)
+                overview_worksheet.write_datetime(counter, 16, project_object.agenda.get_end_date(tracking_period.tracking_period_statusdate, EAC_t_pv3_days, round(EAC_t_pv3 - EAC_t_pv3_days * workingHours_inDay)), date_gray_cell)
 
             # write EAC(t) - Earned duration method (PF = 1)
             ED = AT_duration_workingHours * spi
@@ -1455,7 +1468,7 @@ class XLSXParser(FileParser):
             if bool(spi):
                 EAC_t_ed2 = AT_duration_workingHours + (max(PD_workingHours, AT_duration_workingHours) - ED) / spi
             else:
-                EAC_t_ed2 = AT_duration_workingHours
+                EAC_t_ed2 = AT_duration_workingHours + (max(PD_workingHours, AT_duration_workingHours) - ED) # Protrack default
             EAC_t_ed2_days = int(EAC_t_ed2 / workingHours_inDay)
             overview_worksheet.write_datetime(counter, 18, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed2_days, round(EAC_t_ed2 - EAC_t_ed2_days * workingHours_inDay)), date_gray_cell)
 
@@ -1463,7 +1476,7 @@ class XLSXParser(FileParser):
             if bool(spi) and bool(cpi) :
                 EAC_t_ed3 = AT_duration_workingHours + (max(PD_workingHours, AT_duration_workingHours) - ED) / (spi * cpi)
             else:
-                EAC_t_ed3 = AT_duration_workingHours
+                EAC_t_ed3 = AT_duration_workingHours + (max(PD_workingHours, AT_duration_workingHours) - ED) # Protrack default
             EAC_t_ed3_days = int(EAC_t_ed3 / workingHours_inDay)
             overview_worksheet.write_datetime(counter, 19, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_ed3_days, round(EAC_t_ed3 - EAC_t_ed3_days * workingHours_inDay)), date_gray_cell)
 
@@ -1476,7 +1489,8 @@ class XLSXParser(FileParser):
             if bool(spi_t):
                 EAC_t_es2 = AT_duration_workingHours + (PD_workingHours - ES_duration_workingHours) / spi_t
             else:
-                EAC_t_es2 = AT_duration_workingHours
+                # Protrack default?
+                EAC_t_es2 = AT_duration_workingHours + (PD_workingHours - ES_duration_workingHours)
             EAC_t_es2_days = int(EAC_t_es2 / workingHours_inDay)
             overview_worksheet.write_datetime(counter, 21, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_es2_days, round(EAC_t_es2 - EAC_t_es2_days * workingHours_inDay)), date_gray_cell)
 
@@ -1484,7 +1498,8 @@ class XLSXParser(FileParser):
             if bool(spi_t) and bool(cpi):
                 EAC_t_es3 = AT_duration_workingHours + (PD_workingHours - ES_duration_workingHours) / (spi_t * cpi)
             else:
-                EAC_t_es3 = AT_duration_workingHours
+                # Protrack default?
+                EAC_t_es3 = AT_duration_workingHours + (PD_workingHours - ES_duration_workingHours)
             EAC_t_es3_days = int(EAC_t_es3 / workingHours_inDay)
             overview_worksheet.write_datetime(counter, 22, project_object.agenda.get_end_date(generatedPVcurve[0][1], EAC_t_es3_days, round(EAC_t_es3 - EAC_t_es3_days * workingHours_inDay)), date_gray_cell)
 
@@ -1504,13 +1519,34 @@ class XLSXParser(FileParser):
             overview_worksheet.write_number(counter, 27, self.calculate_eac(AC, BAC, EV, spi * cpi), money_gray_cell)
 
             # write EAC(PF = SCI(t) = SPI(t) * CPI
-            overview_worksheet.write_number(counter, 28, self.calculate_eac(AC, BAC, EV, spi_t * cpi), money_gray_cell)
+            if spi_t * cpi:
+                overview_worksheet.write_number(counter, 28, self.calculate_eac(AC, BAC, EV, spi_t * cpi), money_gray_cell)
+            elif spi_t:
+                # Protrack default: spi_t != 0 but cpi = 0, EAC(PF= SPI(t))
+                overview_worksheet.write_number(counter, 28, self.calculate_eac(AC, BAC, EV, spi_t), money_gray_cell)
+            else:
+                # Protrack default: cpi != 0 but spi_t = 0, EAC(PF = CPI)
+                overview_worksheet.write_number(counter, 28, self.calculate_eac(AC, BAC, EV, cpi), money_gray_cell)
+            
+            if cpi and spi:
+                # write EAC(PF = 0.8*CPI+0.2*SPI)
+                overview_worksheet.write_number(counter, 29, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi), money_gray_cell)
+            elif cpi:
+                # Protrack default: EAC(PF = CPI)
+                overview_worksheet.write_number(counter, 29, self.calculate_eac(AC, BAC, EV, cpi), money_gray_cell)
+            else:
+                # Protrack default: EAC(PF = SPI)
+                overview_worksheet.write_number(counter, 29, self.calculate_eac(AC, BAC, EV, spi), money_gray_cell)
 
-            # write EAC(PF = 0.8*CPI+0.2*SPI)
-            overview_worksheet.write_number(counter, 29, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi), money_gray_cell)
-
-            # write EAC(PF = 0.8*CPI+0.2*SPI(t))
-            overview_worksheet.write_number(counter, 30, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi_t), money_gray_cell)
+            if cpi and spi_t:
+                # write EAC(PF = 0.8*CPI+0.2*SPI(t))
+                overview_worksheet.write_number(counter, 30, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi_t), money_gray_cell)
+            elif cpi:
+                # Protrack default: EAC(PF = CPI)
+                overview_worksheet.write_number(counter, 30, self.calculate_eac(AC, BAC, EV, cpi), money_gray_cell)
+            else:
+                # Protrack default: EAC(PF = SPI(t))
+                overview_worksheet.write_number(counter, 30, self.calculate_eac(AC, BAC, EV, spi_t), money_gray_cell)
 
 
             counter += 1
