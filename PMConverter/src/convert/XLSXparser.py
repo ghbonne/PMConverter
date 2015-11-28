@@ -1352,13 +1352,13 @@ class XLSXParser(FileParser):
 
         # generate PV curve:
         generatedPVcurve = self.calculate_PVcurve(project_object)
-        # DEBUG
-        workbookFilepath, fileextension = os.path.splitext(file_path_output)
-        with open(workbookFilepath + "-PV.csv", "w", newline='') as csvfile:
-            PVwriter = csv.writer(csvfile, delimiter=';')
-            PVwriter.writerow(["PV(t)", "t"])
-            for PVrow in generatedPVcurve:
-                PVwriter.writerow([PVrow[0], PVrow[1].strftime("%d/%m/%Y %H:%M:%S")])
+        ## DEBUG
+        #workbookFilepath, fileextension = os.path.splitext(file_path_output)
+        #with open(workbookFilepath + "-PV.csv", "w", newline='') as csvfile:
+        #    PVwriter = csv.writer(csvfile, delimiter=';')
+        #    PVwriter.writerow(["PV(t)", "t"])
+        #    for PVrow in generatedPVcurve:
+        #        PVwriter.writerow([PVrow[0], PVrow[1].strftime("%d/%m/%Y %H:%M:%S")])
 
         counter = 2
         for tracking_period in project_object.tracking_periods:
