@@ -1516,7 +1516,14 @@ class XLSXParser(FileParser):
             overview_worksheet.write_number(counter, 26, self.calculate_eac(AC, BAC, EV, spi_t), money_gray_cell)
 
             # write EAC(PF = SCI = SPI * CPI)
-            overview_worksheet.write_number(counter, 27, self.calculate_eac(AC, BAC, EV, spi * cpi), money_gray_cell)
+            if spi * cpi:
+                overview_worksheet.write_number(counter, 27, self.calculate_eac(AC, BAC, EV, spi * cpi), money_gray_cell)
+            elif spi:
+                # ProTrack default:
+                overview_worksheet.write_number(counter, 27, self.calculate_eac(AC, BAC, EV, spi), money_gray_cell)
+            else:
+                # ProTrack default:
+                overview_worksheet.write_number(counter, 27, self.calculate_eac(AC, BAC, EV, cpi), money_gray_cell)
 
             # write EAC(PF = SCI(t) = SPI(t) * CPI
             if spi_t * cpi:
@@ -1528,8 +1535,8 @@ class XLSXParser(FileParser):
                 # Protrack default: cpi != 0 but spi_t = 0, EAC(PF = CPI)
                 overview_worksheet.write_number(counter, 28, self.calculate_eac(AC, BAC, EV, cpi), money_gray_cell)
             
+            # write EAC(PF = 0.8*CPI+0.2*SPI)
             if cpi and spi:
-                # write EAC(PF = 0.8*CPI+0.2*SPI)
                 overview_worksheet.write_number(counter, 29, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi), money_gray_cell)
             elif cpi:
                 # Protrack default: EAC(PF = CPI)
@@ -1538,8 +1545,8 @@ class XLSXParser(FileParser):
                 # Protrack default: EAC(PF = SPI)
                 overview_worksheet.write_number(counter, 29, self.calculate_eac(AC, BAC, EV, spi), money_gray_cell)
 
+            # write EAC(PF = 0.8*CPI+0.2*SPI(t))
             if cpi and spi_t:
-                # write EAC(PF = 0.8*CPI+0.2*SPI(t))
                 overview_worksheet.write_number(counter, 30, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi_t), money_gray_cell)
             elif cpi:
                 # Protrack default: EAC(PF = CPI)
