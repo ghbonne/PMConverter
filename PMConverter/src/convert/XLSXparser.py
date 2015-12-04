@@ -1539,21 +1539,27 @@ class XLSXParser(FileParser):
             if cpi and spi:
                 overview_worksheet.write_number(counter, 29, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi), money_gray_cell)
             elif cpi:
-                # Protrack default: EAC(PF = CPI)
-                overview_worksheet.write_number(counter, 29, self.calculate_eac(AC, BAC, EV, cpi), money_gray_cell)
+                # Protrack default: EAC(PF = 0.8 * cpi + 0.2)
+                overview_worksheet.write_number(counter, 29, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2), money_gray_cell)
+            elif spi:
+                # Protrack default: EAC(PF = 0.8 + 0.2*spi)
+                overview_worksheet.write_number(counter, 29, self.calculate_eac(AC, BAC, EV, 0.8 + 0.2*spi), money_gray_cell)
             else:
-                # Protrack default: EAC(PF = SPI)
-                overview_worksheet.write_number(counter, 29, self.calculate_eac(AC, BAC, EV, spi), money_gray_cell)
+                # Protrack default:
+                overview_worksheet.write_number(counter, 29, self.calculate_eac(AC, BAC, EV, 1), money_gray_cell)
 
             # write EAC(PF = 0.8*CPI+0.2*SPI(t))
             if cpi and spi_t:
                 overview_worksheet.write_number(counter, 30, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2*spi_t), money_gray_cell)
             elif cpi:
-                # Protrack default: EAC(PF = CPI)
-                overview_worksheet.write_number(counter, 30, self.calculate_eac(AC, BAC, EV, cpi), money_gray_cell)
+                # Protrack default: EAC(PF = 0.8*cpi+0.2)
+                overview_worksheet.write_number(counter, 30, self.calculate_eac(AC, BAC, EV, 0.8*cpi+0.2), money_gray_cell)
+            elif spi_t:
+                # Protrack default: EAC(PF = 0.8+0.2*spi_t)
+                overview_worksheet.write_number(counter, 30, self.calculate_eac(AC, BAC, EV, 0.8 + 0.2*spi_t), money_gray_cell)
             else:
-                # Protrack default: EAC(PF = SPI(t))
-                overview_worksheet.write_number(counter, 30, self.calculate_eac(AC, BAC, EV, spi_t), money_gray_cell)
+                # Protrack default:
+                overview_worksheet.write_number(counter, 30, self.calculate_eac(AC, BAC, EV, 1), money_gray_cell)
 
 
             counter += 1
