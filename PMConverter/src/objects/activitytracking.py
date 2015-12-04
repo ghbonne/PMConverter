@@ -150,8 +150,8 @@ class ActivityTrackingRecord(object):
         if statusdate_datetime >= activity.baseline_schedule.end:
             # activity should be finished according to baselinschedule
             planned_value = activity.baseline_schedule.total_cost
-        elif statusdate_datetime < activity.baseline_schedule.start:
-            # activity is not yet started according to baselineschedule
+        elif statusdate_datetime <= activity.baseline_schedule.start:
+            # activity is not yet started according to baselineschedule -> only if activity start date > than statusdate the fixed costs are attributed
             planned_value = 0.
         else:
             # activity should be running
