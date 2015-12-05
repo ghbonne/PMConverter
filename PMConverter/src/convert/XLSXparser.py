@@ -143,7 +143,7 @@ class XLSXParser(FileParser):
                     and not sheet.cell(row=header_lines, column=1).value.isdigit()):
             header_lines += 1
             if header_lines == 100:  # An after-deadline hack to avoid infinite loops
-                print("Error:XLSXParser:get_nr_of_header_lines: After-deadline hack to avoid infinite loops was needed!")
+                print("Error:XLSXParser:get_nr_of_header_lines: No content found below header lines: After-deadline hack to avoid infinite loops was needed!")
                 break
         return header_lines
 
@@ -648,7 +648,7 @@ class XLSXParser(FileParser):
             if baseline_var_cost_field is not None and str(baseline_var_cost_field).strip():
                 baseline_var_cost = float(baseline_var_cost_field)
                 # calculate hourly cost:
-                baseline_hourly_cost = baseline_var_cost / baseline_duration_workingHours if baseline_duration_workingHours != 0 else 0
+                baseline_hourly_cost = baseline_var_cost / baseline_duration_workingHours if baseline_duration_workingHours != 0 else 0.0
 
             elif baseline_hourly_cost_field is not None and str(baseline_hourly_cost_field).strip():
                 baseline_hourly_cost = float(baseline_hourly_cost_field)
