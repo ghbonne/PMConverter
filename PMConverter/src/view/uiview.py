@@ -1,7 +1,7 @@
 __author__ = 'ghbonne'
 __license__ = "GPL"
 
-__version__ = "1.1.2"
+
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
@@ -11,6 +11,7 @@ import ntpath
 import os
 from processor.processor import Processor
 from visual.enums import *
+from _version import __version__
 import xml.etree.ElementTree as ET
 import ast # ast.literal_eval(node_or_string)
 import time
@@ -182,7 +183,8 @@ class UIView(QDialog, Ui_UIView):
 
             self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageStep2))
             #self.listStep2_ChosenVisualisations.clear()
-            self.btnStep2_ImportSettings.setDefault(True)
+            #self.btnStep2_ImportSettings.setDefault(True)
+            self.cmdStep2_Convert.setDefault(True)
         else:
             self.pagesMain.setCurrentIndex(self.pagesMain.indexOf(self.pageConverting))
             self.loadingAnimation.start()

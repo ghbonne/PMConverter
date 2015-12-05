@@ -18,6 +18,7 @@ from convert.fileparser import FileParser
 import math
 import ast
 from exceptions import XMLParseError
+from _version import __version__
 
 
 
@@ -574,14 +575,14 @@ class XMLParser(FileParser):
         :returns: xml Elementnode
         """
         defaultFormat = """<ProjectInfo>
-	        <LastSavedBy>PMConverter</LastSavedBy>
+	        <LastSavedBy>PMConverter_v{0}</LastSavedBy>
 	        <Name>ProjectInfo</Name> 									
 	        <SavedWithMayorBuild>3</SavedWithMayorBuild>
 	        <SavedWithMinorBuild>0</SavedWithMinorBuild>
 	        <SavedWithVersion>0</SavedWithVersion>
 	        <UniqueID>-1</UniqueID>
 	        <UserID>0</UserID>
-        </ProjectInfo>"""
+        </ProjectInfo>""".format(__version__)
         return ET.fromstring(defaultFormat)
 
     def generate_ProTrack_settings(self, projectStartDatetime, projectBaselineEndDatetime, datetimeFormat):
@@ -611,7 +612,7 @@ class XMLParser(FileParser):
             <ESSLSSFloat>-99999999</ESSLSSFloat>
             <GanttStartDate>290420150000</GanttStartDate>
             <GanttZoomLevel>1.0</GanttZoomLevel>
-            <GroupFilter>0</GroupFilter>
+            <GroupFilter>0</GroupFilter>valuta
             <HideGraphMarks>0</HideGraphMarks>
             <Name>Settings</Name>
             <PlanningEndThreshold>60</PlanningEndThreshold>
