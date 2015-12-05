@@ -52,6 +52,9 @@ class UIView(QDialog, Ui_UIView):
         self.loadingAnimation.setScaledSize(QSize(50, 50))
         self.lblConverting_WaitingSpinner.setMovie(self.loadingAnimation)
 
+        # set version in GUI:
+        self.lblVersion.setText("""<html><head/><body><p><span style=" color:#808080;">Version {0}</span></p></body></html>""".format(__version__))
+
          # custom Application inits
         self.inputFilename = ""
         self.processor = Processor()

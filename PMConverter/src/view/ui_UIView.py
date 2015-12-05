@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'UIView.ui'
 #
-# Created: Sat Oct 31 18:00:17 2015
+# Created: Sun Dec  6 00:05:51 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -67,6 +67,10 @@ class Ui_UIView(object):
         self.lblWelcome_Message = QtGui.QLabel(self.StartPage)
         self.lblWelcome_Message.setObjectName(_fromUtf8("lblWelcome_Message"))
         self.verticalLayout.addWidget(self.lblWelcome_Message)
+        self.lblVersion = QtGui.QLabel(self.StartPage)
+        self.lblVersion.setAlignment(QtCore.Qt.AlignCenter)
+        self.lblVersion.setObjectName(_fromUtf8("lblVersion"))
+        self.verticalLayout.addWidget(self.lblVersion)
         spacerItem2 = QtGui.QSpacerItem(20, 194, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem2)
         self.horizontalLayout_3 = QtGui.QHBoxLayout()
@@ -485,6 +489,7 @@ class Ui_UIView(object):
         UIView.setWindowTitle(_translate("UIView", "PMConverter", None))
         self.lblWelcome_Title.setText(_translate("UIView", "<html><head/><body><p><span style=\" font-size:20pt;\">Welcome!</span></p></body></html>", None))
         self.lblWelcome_Message.setText(_translate("UIView", "<html><head/><body><p align=\"center\"><span style=\" font-size:16pt;\">Welcome to PMConverter!</span></p></body></html>", None))
+        self.lblVersion.setText(_translate("UIView", "<html><head/><body><p><span style=\" color:#707070;\">Version 1.0.0</span></p></body></html>", None))
         self.cmdStep0_Start.setText(_translate("UIView", "Start", None))
         self.lblStep1_Title.setText(_translate("UIView", "<html><head/><body><p><span style=\" font-size:20pt;\">Step 1: Select a file...</span></p></body></html>", None))
         self.lblStep1_InputFile.setText(_translate("UIView", "I want to convert:", None))
